@@ -2,11 +2,15 @@
 
 Run:  python core/server.py   (or start_dashboard.bat)
 """
+import sys
+
+if sys.version_info < (3, 12):
+    sys.exit(f"Racing Dashboard needs Python 3.12 or newer, this is {sys.version.split()[0]}. Run install.bat.")
+
 import importlib.util
 import json
 import mimetypes
 import socket
-import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -298,9 +302,11 @@ def lan_ip() -> str:
         return "127.0.0.1"
 
 
-def main() -> None:
-    global cfg, games, settings, address
+def setup(file_log: bool = True) -> str:
+    """Load config and games; returns the start game."""
+    global cfg, games, settings
     cfg = config.load()
+    cfg["log"]["enabled"] = cfg["log"]["enabled"] and file_log
     log.setup(cfg["log"])
     games = config.load_games(cfg)
     if not games:
@@ -312,16 +318,59 @@ def main() -> None:
     if wanted not in games:
         log.line("game", "unknown", f"'{wanted}', using '{next(iter(games))}'")
         wanted = next(iter(games))
+    return wanted
+
+
+def check() -> None:
+    """--check: load everything, print a summary, exit. Used by the installer."""
+    wanted = setup(file_log=False)
+    port = cfg["dashboard"]["port"]
+    names = ", ".join(f"{game_id} ({game['game']['name']})" for game_id, game in games.items())
+    print("Racing Dashboard check")
+    print(f"  Python        {sys.version.split()[0]}")
+    print(f"  Games         {names}")
+    print(f"  Start game    {wanted}")
+    print(f"  Web port      {port}")
+    print(f"  Address       http://{lan_ip()}:{port}")
+    print(f"  Keypresses    {'available' if keys.available else 'not available (Windows only)'}")
+    print("  Result        OK")
+
+
+def banner(port: int) -> None:
+    line = "=" * 64
+    print(f"\n{line}\n  Racing Dashboard is running  ({active['game']['name']})\n")
+    print("  On your phone or tablet (same Wi-Fi), open in the browser:\n")
+    print(f"      {address}\n")
+    print(f"      Gear + Rev   {address}/gear")
+    print(f"      Dash         {address}/dash\n")
+    print("  Tip: Share > Add to Home Screen runs it full screen.")
+    print(f"  Close this window (or press Ctrl+C) to stop.\n{line}\n", flush=True)
+
+
+def main() -> None:
+    global address
+    if "--check" in sys.argv:
+        return check()
+    if sys.platform == "win32":
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleTitleW("Racing Dashboard")
+    wanted = setup()
     activate(wanted)
     if not keys.available:
         log.line("keys", "unavailable", "not on Windows: buttons are sent only to the demo game")
+    host, port = cfg["dashboard"]["host"], cfg["dashboard"]["port"]
+    try:
+        server = ThreadingHTTPServer((host, port), Handler)
+    except OSError as error:
+        log.line("server", "error", f"port {port}: {error}")
+        raise SystemExit(f"\nPort {port} is in use: Racing Dashboard is probably running already in another window.\n"
+                         f"Close it first, or set another [dashboard] port in config/config.toml.")
+    server.daemon_threads = True
     threading.Thread(target=reader, daemon=True).start()
     threading.Thread(target=hold_watchdog, daemon=True).start()
-    host, port = cfg["dashboard"]["host"], cfg["dashboard"]["port"]
-    server = ThreadingHTTPServer((host, port), Handler)
-    server.daemon_threads = True
     address = f"http://{lan_ip()}:{port}"
-    log.line("server", "open", f"{address}   (Gear + Rev: {address}/gear, Dash: {address}/dash)")
+    log.line("server", "open", address)
+    banner(port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

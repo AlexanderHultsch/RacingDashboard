@@ -16,17 +16,43 @@ Every device can open every page. The live data streams at up to 60 updates per 
 - Windows PC with the game; Python 3.12 or newer (standard library only, no packages)
 - Phone or tablet in the same network as the PC (iOS 16 or newer, or a current Chrome)
 
-## Getting started
+## Install
 
-1. **Python.** Run `python --version` in a command prompt; it must show 3.12 or newer. Otherwise install Python from [python.org](https://www.python.org/downloads/) and tick **Add python.exe to PATH**.
-2. **This repo.** Download it with **Code → Download ZIP** and unzip it, or clone it with git.
-3. **Run.** Double-click `start_dashboard.bat` (or run `python core\server.py`). It prints the address, for example `http://<PC address>:8080`. If Windows asks to allow Python on the network, allow it for private networks.
-4. **Phone / tablet.** Open the address in the browser and choose a page, or open `/gear` or `/dash` directly. To run it full screen: Share → **Add to Home Screen**.
-5. **Game.** Start Assetto Corsa EVO and drive; the pages follow as soon as the car is on track. No game set-up is needed: ACE publishes its shared memory by itself.
+Choose one of the two ways. Both are run on the gaming PC and are safe to run again: that updates or repairs the installation and keeps your settings.
 
-To try it without the game, open the settings (gear button, bottom right) and choose **DEMO** under GAME.
+**A: one line (downloads the latest version).** Press Start, type `PowerShell`, open it and paste:
 
-Stop the bridge with Ctrl+C or close the window.
+```powershell
+irm https://raw.githubusercontent.com/AlexanderHultsch/Racing-Dashboard/main/tools/install.ps1 | iex
+```
+
+**B: from the ZIP.** On GitHub click **Code → Download ZIP**, unzip it where you want to keep it, and double-click **`install.bat`**. If Windows warns about a file from the internet, choose **More info → Run anyway**.
+
+The installer walks you through five steps and asks before it changes anything:
+
+1. **Python.** Finds Python 3.12 or newer, or installs Python 3.13 for your user (with winget).
+2. **Program files.** Way A installs to `%LOCALAPPDATA%\RacingDashboard`; way B uses the unzipped folder.
+3. **Check.** Starts the dashboard once in test mode to see that everything loads.
+4. **Network.** Adds a Windows firewall rule so phones and tablets can connect (one admin prompt). It warns you if your network is set to *Public*, which blocks them, and offers to switch it to *Private*.
+5. **Shortcuts.** Adds Start menu entries (start, uninstall, open the folder) and, if you like, a desktop shortcut.
+
+At the end it shows the address to open on your phone and offers to start the dashboard.
+
+**Remove:** Start menu → Racing Dashboard → **Uninstall Racing Dashboard**. It removes the shortcuts and the firewall rule, and the program folder if way A installed it. Python stays.
+
+Unattended options for `tools\install.ps1`: `-Yes` (accept all defaults), `-InstallDir <folder>`, `-NoShortcuts`, `-NoFirewall`, `-Uninstall`.
+
+## Use
+
+1. **Start** Racing Dashboard from the Start menu or the desktop (or double-click `start_dashboard.bat`). The window shows the address, for example `http://192.168.1.20:8080`. Keep the window open while you drive.
+2. **Phone / tablet** (same Wi-Fi as the PC): open the address in the browser and choose a page, or open `/gear` or `/dash` directly. For full screen: Share → **Add to Home Screen**.
+3. **Game.** Start Assetto Corsa EVO and drive; the pages follow as soon as the car is on track. ACE needs no set-up: it publishes its shared memory by itself.
+
+No game at hand? Open the settings (gear button, bottom right) and choose **DEMO** under GAME.
+
+**Phone cannot connect?** Check that phone and PC are in the same network, that the PC's network is *Private* (Settings → Network & internet), and run the installer again to repair the firewall rule.
+
+Manual set-up without the installer: install Python 3.12 or newer from [python.org](https://www.python.org/downloads/) (tick **Add python.exe to PATH**) and run `python core\server.py`.
 
 ## Settings
 
@@ -59,6 +85,7 @@ A button without a key is greyed out. `tools/ace_probe.py` prints the live value
 ## Repository
 
 ```
+install.bat               the installer (runs tools/install.ps1)
 start_dashboard.bat       starts the bridge
 core/                     the bridge, the same for every game
   server.py               entry point: reads the connector, web server, live stream, buttons
@@ -72,11 +99,13 @@ games/                    one folder per game
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
   index.html, gear.html, dash.html    the pages
+  icon.ico, apple-touch-icon.png      icons for the Windows shortcut and the home screen
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml and settings.json are local and ignored)
 docs/                     SPEC.md (the engine), ACE/NOTES.md (ACE shared memory and keys)
 tests/                    python -m unittest discover tests
+tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/ace_probe.py        prints the live ACE values (Windows, game running)
 ```

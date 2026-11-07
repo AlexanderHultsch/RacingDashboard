@@ -130,15 +130,21 @@ LED strip; a telemetry strip with the gear, rpm, speed, RPM bar and pedal bars, 
 
 Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*`, ACC also UDP broadcasting), iRacing (irsdk shared memory), rFactor 2 and Le Mans Ultimate (shared memory plugin / native), Automobilista 2 and Project CARS 2 (shared memory `$pcars2$`, UDP), F1 (UDP), BeamNG (OutGauge UDP), Forza (Data Out UDP), Dirt Rally / EA WRC (UDP). `core/winmem.py` reads any Windows shared memory block.
 
-## 8. Configuration
+## 8. Installation
+
+`install.bat` runs `tools/install.ps1` (Windows PowerShell 5.1, plain ASCII, no `exit` so it can also run as `irm <raw url> | iex`). Steps: find Python 3.12+ (`py -3`, `python`, the usual install folders) or install Python 3.13 with winget (`--scope user`); use the copy the script is in, or download `main.zip` from GitHub to `%LOCALAPPDATA%\RacingDashboard` (an update removes the code folders `core ui games docs tools tests` and merges the rest with robocopy, so `config\config.toml` stays; a marker file `.installed-by-script` allows the uninstall to delete the folder); run `core/server.py --check`; add the inbound firewall rule "Racing Dashboard" (TCP `[dashboard] port`, profiles Private and Domain) with one elevated PowerShell; warn about networks set to Public and offer to switch them to Private; create Start menu entries (start, uninstall, folder) and an optional desktop shortcut. The start shortcut runs the found `python.exe` with `core\server.py` directly. `-Uninstall` removes shortcuts, the rule and (for a downloaded copy) the folder. Every change is asked first; `-Yes` accepts the defaults.
+
+`server.py --check` loads the config and all games without starting the server and prints Python version, games, start game, port, address and `Result OK`.
+
+## 9. Configuration
 
 `config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[log]`; `[games.<id>.keys]` key overrides.
 
-## 9. Tests
+## 10. Tests
 
 `python -m unittest discover tests`: the ACE struct layout and translation against synthetic shared memory, and a bridge smoke test with the demo game (pages, path safety, state, info, commands, stream rate). On Windows with ACE running, `python tools/ace_probe.py` prints the live values.
 
-## 10. Future development and out of scope
+## 11. Future development and out of scope
 
 Ideas: more games; more pages and styles (e.g. a round rev counter, a timing page); flags and tyre data; external displays such as an ESP32 reading `/state`; a virtual joystick (vJoy) as an alternative to keypresses, for buttons that should work while the game is not the active window.
 
