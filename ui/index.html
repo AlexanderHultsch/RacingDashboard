@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Racing Dash">
+<meta name="theme-color" content="#0a0c0f">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Racing Dashboard</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet">
+<style>
+  .home {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 16px;
+    padding: calc(16px + var(--safe-t)) calc(20px + var(--safe-r)) calc(16px + var(--safe-b)) calc(20px + var(--safe-l));
+    overflow-y: auto;
+  }
+  h1 { margin: 0; font-size: 22px; letter-spacing: 0.16em; }
+  h1 small { display: block; margin-top: 4px; font-size: 13px; color: var(--dim); letter-spacing: 0.1em; }
+  .pages { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; align-content: center; }
+  .page {
+    display: grid;
+    gap: 10px;
+    align-content: center;
+    min-height: 150px;
+    padding: 20px;
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line);
+    text-decoration: none;
+    color: var(--text);
+  }
+  .page:active { background: var(--panel-2); }
+  .page b { font-size: 26px; letter-spacing: 0.1em; }
+  .page span { color: var(--dim); font-size: 15px; line-height: 1.4; }
+  .status { color: var(--dim); font-size: 14px; letter-spacing: 0.06em; padding-right: 60px; }
+  .status b { color: var(--text); }
+</style>
+</head>
+<body data-page="index">
+<main class="home">
+  <h1>RACING DASHBOARD<small>CHOOSE A PAGE FOR THIS DEVICE</small></h1>
+  <div class="pages">
+    <a class="page" href="/gear"><b>GEAR + REV</b><span>Big gear and shift lights. For a phone, portrait or landscape.</span></a>
+    <a class="page" href="/dash"><b>DASH</b><span>Telemetry and button groups (aids, car, view, pit). For a tablet.</span></a>
+  </div>
+  <div class="status">GAME <b id="game">-</b> &middot; DATA <b id="data">-</b> &middot; CAR <b data-rd="car">-</b></div>
+</main>
+<script src="js/rd.js"></script>
+<script>
+  RD.start();
+  RD.loadInfo().then((info) => { document.getElementById("game").textContent = info.game_name; });
+  RD.listeners.push((f) => { document.getElementById("data").textContent = f.connected ? "LIVE" : "WAITING"; });
+</script>
+</body>
+</html>

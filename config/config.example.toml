@@ -1,0 +1,36 @@
+# Optional. Without a config/config.toml the dashboard runs with the defaults shown here.
+# To change something, copy this file to config/config.toml and keep only the lines you change.
+# config/config.toml is ignored by git, so your local settings stay private.
+
+[dashboard]
+# Web server for the phones and tablets. 0.0.0.0 = reachable from the local network.
+host = "0.0.0.0"
+port = 8080
+# Start game (folder name in games/). The GAME switch on the settings page overrides it and is remembered.
+game = "ace"
+
+[telemetry]
+# How often the game is read. The fastest update rate a device can choose (60 Hz) cannot be higher.
+read_hz = 60
+# Seconds without new game data before the pages show "NO DATA".
+stale_s = 2.0
+
+[input]
+# How long a tap holds the key, in milliseconds. Raise it (120, 150) if the game misses taps.
+tap_ms = 80
+# A held button (HORN, LOOK LEFT ...) is released after this many seconds if the device never sends "up".
+hold_max_s = 10.0
+
+[log]
+enabled = true
+file = "logs/racing-dashboard.log"
+max_mb = 5
+backups = 2
+
+# Your own keys for a game: overrides of games/<game>/game.toml, one line per key you changed.
+# Format: modifiers and key joined by "+"; the key names are listed in games/ace/game.toml.
+# An empty string disables a button.
+# [games.ace.keys]
+# tc_up = "LCtrl+T"
+# tc_down = "LCtrl+LShift+T"
+# pit_limiter = "LCtrl+LShift+P"

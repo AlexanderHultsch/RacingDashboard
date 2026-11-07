@@ -1,0 +1,53 @@
+# Assetto Corsa EVO (PC). Reads the game's shared memory, sends buttons as keypresses.
+# Do not edit for your own key changes: put overrides in config/config.toml under [games.ace.keys].
+
+[game]
+name = "Assetto Corsa EVO"
+
+[window]
+# The game window gets the keypresses; the core brings it to the front if needed.
+process = "AssettoCorsaEVO.exe"
+title = "Assetto Corsa EVO"
+
+# Action -> key combo. Modifiers and key joined by "+": LCtrl RCtrl LShift RShift LAlt RAlt,
+# A-Z, 0-9, F1-F12, Num0-Num9, NumPlus, NumMinus, NumMultiply, NumDivide, NumEnter, NumDecimal,
+# Esc, Tab, Space, Enter, Backspace, Home, End, PageUp, PageDown, Insert, Delete, Up, Down, Left, Right,
+# Minus, Equals, LBracket, RBracket, Semicolon, Apostrophe, Grave, Backslash, Comma, Period, Slash.
+# Empty = no key, the button is greyed out.
+#
+# ACE's own keyboard defaults could not be confirmed (Nov 2026). Keys marked "AC" are the defaults of
+# the original Assetto Corsa and are likely the same in ACE; keys marked "set" are a proposal that
+# you bind once in ACE (Options > Controls). Check both in the game and change what differs.
+[keys]
+tc_down = "LCtrl+LShift+T"        # set
+tc_up = "LCtrl+T"                 # AC (cycles TC in AC)
+abs_down = "LCtrl+LShift+A"       # set
+abs_up = "LCtrl+A"                # AC (toggles ABS in AC)
+bias_rear = "LCtrl+LShift+B"      # set
+bias_front = "LCtrl+B"            # set
+map_down = "LCtrl+LShift+M"       # set
+map_up = "LCtrl+LShift+N"         # set
+pit_limiter = "LCtrl+LShift+P"    # set
+lights = "L"                      # AC
+flash = "LCtrl+LShift+F"          # set
+wipers = "LCtrl+LShift+W"         # set
+ignition = "LCtrl+LShift+I"       # set
+starter = "LCtrl+LShift+S"        # set
+indicator_left = "LCtrl+LShift+Comma"    # set
+indicator_right = "LCtrl+LShift+Period"  # set
+hazards = "LCtrl+LShift+H"        # set
+horn = "H"                        # AC
+camera = "F1"                     # AC
+hud = "LCtrl+LShift+U"            # set
+mirror = "F8"                     # AC (virtual mirror)
+display = "LCtrl+LShift+D"        # set (next page on the car display)
+look_left = "Q"                   # AC
+look_back = "LCtrl+LShift+K"      # set
+look_right = "W"                  # AC
+leaderboard = "F7"                # AC
+pause = "Esc"
+auto_shifter = "LCtrl+L"          # AC
+shift_down = "Z"                  # AC
+shift_up = "X"                    # AC
+neutral = ""
+save_replay = ""

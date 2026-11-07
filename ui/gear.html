@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gear + Rev">
+<meta name="theme-color" content="#0a0c0f">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Gear + Rev</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/gear/classic.css">
+</head>
+<!-- Gear + Rev: the page for a phone. Every style in styles/gear/ uses the same elements below;
+     a style shows, hides and arranges them. Add a style: a new CSS file plus its name in data-styles. -->
+<body data-page="gear" data-styles="classic,bar">
+<main class="gear-page">
+  <div class="rd-leds" data-count="15" data-range="0.25"></div>
+  <div class="rd-rpmbar"><i class="fill"></i><i class="mark"></i></div>
+  <div class="gear" data-rd="gear" data-fmt="gear">N</div>
+  <div class="rpm"><span class="num" data-rd="rpm" data-fmt="rpm">0</span><span class="unit">RPM</span></div>
+  <div class="speed"><span class="num" data-rd="speed_kmh" data-fmt="speed">0</span><span class="unit" data-rd="speed_kmh" data-fmt="speedunit">KM/H</span></div>
+  <div class="chips">
+    <span class="chip pit" data-rd-on="pit_limiter">PIT</span>
+    <span class="chip tc" data-rd-on="tc_active">TC</span>
+    <span class="chip abs" data-rd-on="abs_active">ABS</span>
+  </div>
+</main>
+<div class="rd-nodata">NO DATA &middot; WAITING FOR THE GAME</div>
+<script src="js/rd.js"></script>
+<script>RD.start();</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Demo: a simulated car on a simulated track, for trying the pages without a game.
+# Every button works and changes the simulated car (TC, ABS, lights, gears ...); no keys are sent.
+
+[game]
+name = "Demo (simulated car)"
+
+[keys]

@@ -1,0 +1,145 @@
+# Racing-Dashboard – Spec
+
+The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md).
+
+## 1. Purpose and principles
+
+A self-made dashboard for PC racing games on a phone and a tablet. It shows the live car data (gear, RPM and shift lights first) and replaces keyboard shortcuts with touch buttons. It is an open-source hobby project; the sister project for DCS World is DCS-Dashboard, whose structure it follows.
+
+Principles:
+
+- **Universal.** The UI looks the same for every game. A game is a connector that translates its data into one universal model ([section 3](#3-the-universal-telemetry-model)) and maps the universal buttons ([section 4](#4-buttons)) to its keys. The game is chosen in the settings.
+- **Keep it simple.** Python standard library only, plain HTML, CSS and JavaScript (no framework, no build step, no external files).
+- **Adaptable pages.** Pages are small HTML files that use shared building blocks; each page can have several styles, one CSS file each, cycled on the device.
+- **Not every edge case is handled:** a lost packet or a crash is fine, a restart fixes it. A connector error never stops the bridge.
+- Public repo: no personal data in code, docs, logs or commits; everything machine-specific lives in the ignored `config/config.toml`.
+
+### Fixed decisions
+
+| Topic | Decision |
+| --- | --- |
+| First game | Assetto Corsa EVO on PC (shared memory) |
+| Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
+| Pages | GEAR + REV (phone, 2 styles), DASH (tablet); every device can open every page |
+| Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
+| Buttons | Keypresses with scan codes (SendInput); tap or hold |
+| Shift lights | The game's own shift signal; the strip is scaled to the learned shift point |
+| Units | km/h by default, mph per device |
+| Code | Public GitHub repo `Racing-Dashboard`, main branch |
+
+## 2. Architecture
+
+```
+Game (e.g. Assetto Corsa EVO)
+ └─ shared memory / UDP / ...           ▲ keypresses (SendInput, scan codes)
+        │                               │
+        ▼                               │
+Python bridge (core/server.py)
+ ├─ Connector (games/<game>/connector.py) ... read() at [telemetry] read_hz -> universal model
+ ├─ State .................................. the latest frame, with a sequence number
+ ├─ Web server ............................. the pages (ui/), /stream, /state, /api/*
+ ├─ Buttons ................................ the connector, or a keypress to the game window
+ └─ Rolling log ............................ logs/racing-dashboard.log
+        ▲▼ HTTP: SSE /stream?hz=N, POST /api/command
+Phone / tablet pages (ui/)
+```
+
+- **Threads.** One reader thread calls the connector at `read_hz` (60) and stores the frame; the web server answers each request in its own thread; each open page holds one `/stream` connection that sends the latest frame at the rate the page asked for (only when it changed, plus a heartbeat every second). A watchdog thread releases held keys whose release never arrived.
+- **Game switch.** The GAME setting closes the old connector and loads the new one; held keys are released first. The choice is saved in `config/settings.json`.
+- **Local network only.** The server listens on `[dashboard] host` / `port` (default `0.0.0.0:8080`) and prints the address at start.
+
+## 3. The universal telemetry model
+
+`core/telemetry.py` (`FIELDS`) is the contract between connectors and pages. A connector returns a dict with these names from `read()`, or `None` while the game is not running; missing names keep their defaults. Units are fixed:
+
+| Field | Meaning |
+| --- | --- |
+| `connected`, `status` | fresh data from the game; `off` / `live` / `pause` / `replay` |
+| `car`, `track` | names as the game reports them |
+| `gear`, `max_gears` | −1 = R, 0 = N, 1.. forward; number of forward gears |
+| `rpm`, `rpm_max`, `rpm_pct` | engine speed, redline, rpm as a share of the redline (0..1) |
+| `shift_up`, `shift_down`, `limiter` | the game's shift signals and the rev limiter |
+| `speed_kmh`, `gas`, `brake`, `clutch` | km/h; pedals 0..1 |
+| `tc_level`, `abs_level`, `engine_map` | driver settings, `None` if the car has none |
+| `tc_active`, `abs_active` | the aid is working right now |
+| `brake_bias` | front share 0..1 |
+| `pit_limiter`, `ignition`, `engine_running`, `lights`, `wipers` | car systems (lights / wipers are stages, 0 = off) |
+| `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | litres |
+| `lap`, `position`, `cars` | completed laps, position, number of cars |
+| `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
+| `flag` | `none`, `blue`, `yellow`, ... (not filled for ACE yet) |
+
+Each frame also carries `game` (the active game id).
+
+## 4. Buttons
+
+`core/actions.py` (`GROUPS`) is the universal button set, the same for every game:
+
+| Group | Buttons |
+| --- | --- |
+| AIDS | TC − / +, ABS − / +, BB REAR / FRONT, MAP − / + |
+| CAR | PIT LIMITER, LIGHTS, FLASH (hold), WIPERS, IGNITION, STARTER (hold), IND LEFT / RIGHT, HAZARDS, HORN (hold) |
+| VIEW | CAMERA, HUD, MIRROR, DISPLAY PAGE, LOOK LEFT / BACK / RIGHT (hold), LEADERBOARD |
+| PIT | PAUSE / ESC, AUTO SHIFT, SHIFT − / +, NEUTRAL, SAVE REPLAY |
+
+- A **tap** button sends one keypress per touch (held `[input] tap_ms`, default 80 ms). A **hold** button presses the key on touch and releases it when the finger lifts; the watchdog releases it after `hold_max_s` (10 s) if the release never arrives.
+- A button with a telemetry `field` shows its live value (TC level, brake bias, ON / OFF) and lights up while the state is on.
+- A game maps an action to a key in `[keys]` of its `game.toml`; `[games.<id>.keys]` in `config/config.toml` overrides single keys. An action without a key is greyed out ("NO KEY"). Invalid keys are logged at start and their button is greyed out.
+- A connector can carry out actions itself (`HANDLES` plus `handle()`); the demo game does this for all buttons.
+- Keys are sent with `SendInput` and `KEYEVENTF_SCANCODE`, because games read scan codes. Input goes to the foreground window: if the game window (`[window] process` or `title`) is not in front, the bridge taps LShift (Windows lets a program change the active window only right after input), brings it to the front and waits 0.3 s. If it is not found, the button is refused with "game window not found".
+- Key names: modifiers `LCtrl RCtrl LShift RShift LAlt RAlt`; `A`–`Z`, `0`–`9`, `F1`–`F12`, `Num0`–`Num9`, `NumPlus NumMinus NumMultiply NumDivide NumEnter NumDecimal`, `Esc Tab Space Enter Backspace Home End PageUp PageDown Insert Delete Up Down Left Right`, `Minus Equals LBracket RBracket Semicolon Apostrophe Grave Backslash Comma Period Slash`.
+
+## 5. Requests
+
+| Request | Reply |
+| --- | --- |
+| `GET /`, `/gear`, `/dash`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
+| `GET /stream?hz=N` | Server-Sent Events, one `data: {frame}` per tick at N Hz (capped at `read_hz`), `retry: 1000` |
+| `GET /state` | the latest frame as JSON (for polling clients, e.g. an ESP32 display) |
+| `GET /api/info` | `{"game", "game_name", "games": [{"id", "name"}], "groups": [...buttons with "enabled"], "address", "hz_choices", "keys_available"}` |
+| `POST /api/command` | `{"action": "tc_up"}` (tap) or `{"action": "horn", "state": "down" / "up"}` → `{"ok": true}` or HTTP 409 `{"error": ...}` |
+| `POST /api/settings` | `{"game": "demo"}` → the new `/api/info`; HTTP 400 for an unknown game |
+
+The command errors are `unknown action`, `state '...' not valid for a ... button`, `no key set for ...`, `keypresses work on Windows only` and `game window not found`; the page shows them briefly.
+
+## 6. The pages
+
+`ui/` holds the pages and their building blocks. Every page loads `css/base.css` and `js/rd.js` and calls `RD.start()`.
+
+- **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `rpm`, `speed`, `speedunit`, `level`, `bias`, `fuel`, `onoff`, `lap`, `delta`, `position`, `fuellaps`, `pct`, `int`, `text`; more in `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
+- **Body classes** for styles: `rd-stale` (no data for 2.5 s or not connected; a "NO DATA" chip shows), `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`.
+- **Widgets.** `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
+- **Styles.** `<body data-page="gear" data-styles="classic,bar">` and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
+- **Toolbar and settings.** Bottom right: the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). The settings are listed in the [README](../README.md#settings).
+- **Buttons** (`js/buttons.js`, DASH): built from `/api/info`, one tab per group, the chosen tab is stored on the device; pointer events, so a hold works with the finger resting on it.
+- **Design rules.** Dark background, white bold labels, touch targets at least 56 px, no emoji code points (icons are inline SVG), page locked for home-screen use (no zoom, no selection, no scroll bounce). GEAR + REV works in portrait and landscape on phones; DASH is designed for 1180 × 820 landscape and fits 1024 × 768 and portrait.
+
+### GEAR + REV
+
+Elements: LED strip, RPM bar, gear, rpm, speed, chips (PIT, TC, ABS). **CLASSIC**: LED strip on top, a huge gear (blue at the shift point, red on the limiter), rpm and speed below. **BAR**: the gear in a box that turns blue / red, the rpm number, a full-width RPM bar with the shift mark, the speed.
+
+### DASH
+
+LED strip; a telemetry strip with the gear, rpm, speed, RPM bar and pedal bars, the TC / ABS / BB / MAP cells (TC and ABS light amber while working), PIT / fuel / laps of fuel / position, and the lap times with the delta (green faster, red slower); the four button tabs below.
+
+## 7. Adding a game
+
+1. Make a folder `games/<id>/` with `game.toml` (`[game] name`, `[window] process` / `title`, `[keys]`) and `connector.py` with `class Connector(telemetry.Connector)`.
+2. `read()` returns the universal fields the game provides (or `None` while the game is not running); `open()` / `close()` attach and detach; `handle()` optional.
+3. The bridge loads every folder with a `game.toml`; the game appears in the GAME setting.
+
+Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*`, ACC also UDP broadcasting), iRacing (irsdk shared memory), rFactor 2 and Le Mans Ultimate (shared memory plugin / native), Automobilista 2 and Project CARS 2 (shared memory `$pcars2$`, UDP), F1 (UDP), BeamNG (OutGauge UDP), Forza (Data Out UDP), Dirt Rally / EA WRC (UDP). `core/winmem.py` reads any Windows shared memory block.
+
+## 8. Configuration
+
+`config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[log]`; `[games.<id>.keys]` key overrides.
+
+## 9. Tests
+
+`python -m unittest discover tests`: the ACE struct layout and translation against synthetic shared memory, and a bridge smoke test with the demo game (pages, path safety, state, info, commands, stream rate). On Windows with ACE running, `python tools/ace_probe.py` prints the live values.
+
+## 10. Future development and out of scope
+
+Ideas: more games; more pages and styles (e.g. a round rev counter, a timing page); flags and tyre data; external displays such as an ESP32 reading `/state`; a virtual joystick (vJoy) as an alternative to keypresses, for buttons that should work while the game is not the active window.
+
+Out of scope: multiplayer cheating aids, security beyond the local network, hardware.

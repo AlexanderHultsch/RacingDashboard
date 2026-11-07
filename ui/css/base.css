@@ -1,0 +1,253 @@
+/* Racing Dashboard base: colours, page lock, LED strip, RPM bar, toolbar, settings, buttons.
+   Page styles (ui/styles/<page>/<style>.css) build on these tokens and classes. */
+
+:root {
+  --bg: #0a0c0f;
+  --panel: #14181d;
+  --panel-2: #1c2128;
+  --line: #2a313a;
+  --text: #f3f5f7;
+  --dim: #8a94a0;
+  --green: #22d36b;
+  --yellow: #ffcc1f;
+  --red: #ff3434;
+  --blue: #2f7dff;
+  --amber: #ff9f1a;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --touch: 56px;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ------------------------------------------------------------ LED shift strip */
+
+/* The LEDs are round and as tall as the strip: give .rd-leds a height. */
+.rd-leds {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+.rd-leds i {
+  flex: none;
+  height: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #1b2027;
+  box-shadow: inset 0 0 0 1px #262d36;
+}
+.rd-leds i.on.g { background: var(--green); box-shadow: 0 0 12px var(--green); }
+.rd-leds i.on.y { background: var(--yellow); box-shadow: 0 0 12px var(--yellow); }
+.rd-leds i.on.r { background: var(--red); box-shadow: 0 0 12px var(--red); }
+.rd-leds.shift i, .rd-leds.shift i.on { background: var(--blue); box-shadow: 0 0 16px var(--blue); animation: rd-flash 0.16s steps(1) infinite; }
+.rd-leds.limiter i, .rd-leds.limiter i.on { background: var(--red); box-shadow: 0 0 16px var(--red); animation: rd-flash 0.1s steps(1) infinite; }
+
+@keyframes rd-flash { 50% { opacity: 0.15; } }
+
+/* ------------------------------------------------------------ RPM bar */
+
+.rd-rpmbar {
+  --rpm: 0;
+  --shift: 0.95;
+  position: relative;
+  overflow: hidden;
+  background: #161a20;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rd-rpmbar .fill {
+  position: absolute;
+  inset: 0;
+  /* the gradient stays fixed over the whole bar; the clip shows the part up to the rpm */
+  clip-path: inset(0 calc((1 - var(--rpm)) * 100%) 0 0);
+  background: linear-gradient(90deg, #1aa857, var(--green) 55%, var(--yellow) 80%, var(--red));
+}
+.rd-rpmbar.high .fill { filter: brightness(1.15); }
+.rd-rpmbar.shift .fill { background: var(--blue); animation: rd-flash 0.16s steps(1) infinite; }
+.rd-rpmbar .mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--shift) * 100%);
+  width: 3px;
+  margin-left: -1px;
+  background: var(--text);
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------ no data */
+
+.rd-nodata {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + var(--safe-b));
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #3a1d1d;
+  color: #ffb3b3;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  z-index: 5;
+}
+.rd-stale .rd-nodata { display: block; }
+
+/* ------------------------------------------------------------ toolbar */
+
+.rd-toolbar {
+  position: fixed;
+  right: calc(8px + var(--safe-r));
+  bottom: calc(8px + var(--safe-b));
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+.rd-tool {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0.55;
+}
+.rd-tool:active { opacity: 1; background: rgba(255, 255, 255, 0.15); }
+.rd-tool svg { width: 24px; height: 24px; }
+
+/* ------------------------------------------------------------ toast */
+
+#rd-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(16px + var(--safe-t));
+  transform: translate(-50%, -150%);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #2a2f37;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: transform 0.2s;
+  z-index: 30;
+  max-width: 90vw;
+  text-align: center;
+}
+#rd-toast.show { transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------ settings overlay */
+
+#rd-settings {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: calc(12px + var(--safe-t)) calc(16px + var(--safe-r)) calc(12px + var(--safe-b)) calc(16px + var(--safe-l));
+}
+#rd-settings header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+#rd-settings h2 { margin: 0; font-size: 20px; letter-spacing: 0.12em; }
+.rd-back {
+  min-width: 96px;
+  min-height: var(--touch);
+  border-radius: 10px;
+  background: var(--panel-2);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.rd-set-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 0 24px; }
+.rd-set-row { padding: 10px 0; border-bottom: 1px solid var(--panel-2); }
+.rd-set-row h3 { margin: 0 0 8px; font-size: 13px; color: var(--dim); letter-spacing: 0.12em; }
+.rd-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.rd-choice {
+  min-height: var(--touch);
+  min-width: 96px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.rd-choice.active { background: var(--text); color: var(--bg); box-shadow: none; }
+.rd-note { margin: 8px 0 0; color: var(--dim); font-size: 13px; }
+.rd-info dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 15px; }
+.rd-info dt { color: var(--dim); letter-spacing: 0.06em; }
+.rd-info dd { margin: 0; overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------ game buttons */
+
+.rd-btn {
+  position: relative;
+  min-height: var(--touch);
+  min-width: var(--touch);
+  border-radius: 12px;
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--line), 0 2px 0 #050608;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.rd-btn .val { font-size: 0.8em; color: var(--dim); font-weight: 700; }
+.rd-btn.on { box-shadow: inset 0 0 0 2px var(--green), 0 2px 0 #050608; }
+.rd-btn.on .val { color: var(--green); }
+.rd-btn.pressed, .rd-btn:active { background: #2c333d; transform: translateY(1px); }
+.rd-btn.hold::after {
+  content: "HOLD";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+}
+.rd-btn:disabled { opacity: 0.3; box-shadow: inset 0 0 0 1px var(--line); }
+.rd-btn:disabled .val::after { content: "NO KEY"; }

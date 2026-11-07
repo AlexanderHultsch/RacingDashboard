@@ -1,0 +1,67 @@
+/* Gear + Rev, style CLASSIC: LED shift strip on top, a huge gear, rpm and speed below. */
+
+.gear-page {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "leds  leds"
+    "gear  gear"
+    "rpm   speed";
+  padding: calc(10px + var(--safe-t)) calc(16px + var(--safe-r)) calc(14px + var(--safe-b)) calc(16px + var(--safe-l));
+}
+
+.rd-leds { grid-area: leds; height: min(11vh, 7vw); padding: 0 2%; }
+.rd-rpmbar { display: none; }
+
+.gear {
+  grid-area: gear;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  line-height: 1;
+  font-size: min(74vh, 60vw);
+  letter-spacing: -0.04em;
+  transition: color 0.05s;
+}
+.rd-shift .gear { color: var(--blue); }
+.rd-limiter .gear { color: var(--red); }
+.rd-stale .gear { color: #3a414b; }
+
+.rpm, .speed { display: flex; align-items: baseline; gap: 8px; }
+.rpm { grid-area: rpm; }
+.speed { grid-area: speed; justify-content: flex-end; padding-right: 104px; }
+.num { font-size: min(9vh, 7vw); font-weight: 700; }
+.unit { font-size: min(3.2vh, 2.6vw); color: var(--dim); font-weight: 700; letter-spacing: 0.1em; }
+
+.chips { position: fixed; top: calc(min(11vh, 7vw) + 18px + var(--safe-t)); left: calc(16px + var(--safe-l)); display: flex; gap: 8px; }
+.chip {
+  visibility: hidden;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+}
+.chip.on { visibility: visible; }
+.chip.pit { background: var(--yellow); }
+.chip.tc { background: var(--amber); }
+.chip.abs { background: var(--amber); }
+
+@media (orientation: portrait) {
+  .gear-page {
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-columns: 1fr;
+    grid-template-areas: "leds" "gear" "rpm" "speed";
+    gap: 8px;
+  }
+  .rd-leds { height: 5.2vw; padding: 0; }
+  .gear { font-size: min(52vh, 92vw); }
+  .rpm, .speed { justify-content: center; padding-right: 0; }
+  .num { font-size: min(7vh, 13vw); }
+  .unit { font-size: min(2.6vh, 4.4vw); }
+  .speed { padding-bottom: 56px; }
+  .chips { top: auto; bottom: calc(60px + var(--safe-b)); }
+}
