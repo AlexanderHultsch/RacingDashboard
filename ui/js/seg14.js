@@ -19,8 +19,8 @@
     "0": "a b c d e f", "1": "b c", "2": "a b g1 g2 e d", "3": "a b g1 g2 c d", "4": "f g1 g2 b c",
     "5": "a f g1 g2 c d", "6": "a f e d c g1 g2", "7": "a b c", "8": "a b c d e f g1 g2", "9": "a b c d f g1 g2",
     "R": "a b f e g1 g2 m", "N": "f e b c h m", "G": "a f e d c g2", "E": "a f e d g1 g2", "A": "a b c e f g1 g2",
-    // gearbox letters: P park, D drive, S sport (top diagonal, so it is never read as 5), B regen, L low, M manual
-    "P": "a b f e g1 g2", "D": "a b c d i l", "S": "a h g2 c d", "B": "a b c d g2 i l", "L": "f e d", "M": "f e b c h j",
+    // gearbox letters: P park, D drive, S sport (the standard S, like a 5), B regen, L low, M manual
+    "P": "a b f e g1 g2", "D": "a b c d i l", "S": "a f g1 g2 c d", "B": "a b c d g2 i l", "L": "f e d", "M": "f e b c h j",
     "-": "g1 g2", " ": "",
   };
 
