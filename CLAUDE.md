@@ -1,6 +1,6 @@
 # Racing-Dashboard – notes for Claude
 
-Start with [docs/HANDOVER.md](docs/HANDOVER.md): current state, the first-test plan on Windows, what is not verified yet, and the owner's design decisions. Then [README.md](README.md) and [docs/SPEC.md](docs/SPEC.md).
+Start with [docs/HANDOVER.md](docs/HANDOVER.md): current state, what was verified in the game and what is still open, what a cloud session can and cannot do, and the owner's design decisions. Then [README.md](README.md) and [docs/SPEC.md](docs/SPEC.md).
 
 - Run: `python core\server.py` (or `start_dashboard.bat`); check: `python core\server.py --check`; tests: `python -m unittest discover tests`; ACE live values: `py tools\ace_probe.py` (analysis values and car slots: `--analysis`); recorded analysis data: `python tools\analysis_check.py`.
 - Log: `logs\racing-dashboard.log`; live frame: `http://localhost:8080/state`; served dash map and buttons: `http://localhost:8080/api/info`.
