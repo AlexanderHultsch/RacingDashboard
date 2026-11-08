@@ -297,8 +297,9 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "diff_coast": level(el.diff_coast_level, can.diff_coast_level),
         "launch": bool(gr.launch_active),
         "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
-        # automatic gearbox assist on: the gear page shows D (ACE reports no P / S selector or sport mode)
-        "gear_mode": "D" if gr.assists_state.flags[0] else None,
+        # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
+        # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
+        "gear_mode": None,
         **warnings(ph, gr),
         "limits": limits(gr),
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
@@ -320,6 +321,30 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     }
 
 
+INSTRUMENTATION = ("main_light_stage", "special_light_stage", "cockpit_light_stage", "wiper_level", "rain_lights",
+                   "direction_light_left", "direction_light_right", "flashing_lights", "warning_lights",
+                   "selected_display_index", "are_headlights_visible")
+ASSISTS = ("auto_gear", "auto_blip", "auto_clutch", "auto_clutch_on_start", "manual_ignition_e_start",
+           "auto_pit_limiter", "standing_start_assist")
+
+
+def watched(gr) -> dict:
+    """Rarely changing raw values, logged on change to check their meaning in the game
+    (lights / wipers stages and their range on this car, the assists order)."""
+    inst, low, high = gr.instrumentation, gr.instrumentation_min_limit, gr.instrumentation_max_limit
+    out = {name: int(getattr(inst, name)) for name in INSTRUMENTATION}
+    for name in ("main_light_stage", "wiper_level"):
+        out[name + "_range"] = f"{int(getattr(low, name))}..{int(getattr(high, name))}"
+    out.update((name, int(gr.assists_state.flags[i])) for i, name in enumerate(ASSISTS))
+    return out
+
+
+def changes(before: dict | None, after: dict) -> str:
+    if before is None:
+        return " ".join(f"{name}={value}" for name, value in after.items())
+    return " ".join(f"{name} {before[name]}->{value}" for name, value in after.items() if before[name] != value)
+
+
 class Connector(telemetry.Connector):
     def __init__(self, game, cfg):
         super().__init__(game, cfg)
@@ -330,6 +355,7 @@ class Connector(telemetry.Connector):
         self.last_change = 0.0
         self.stale_s = cfg["telemetry"]["stale_s"]
         self.version = None
+        self.watched = None
 
     def attach(self) -> bool:
         now = time.monotonic()
@@ -359,6 +385,10 @@ class Connector(telemetry.Connector):
             return None
         physics, graphics, static = (block.read() for block in self.blocks)
         values = parse(physics, graphics, static)
+        raw = watched(Graphics.from_buffer_copy(graphics[:sizeof(Graphics)]))
+        if raw != self.watched:
+            log.line("ace", "raw", changes(self.watched, raw))
+            self.watched = raw
         now = time.monotonic()
         packet = (physics[:4], graphics[:4])
         if packet != self.last_packet:

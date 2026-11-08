@@ -33,7 +33,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `warn_engine` | graphics `is_ignition_on`, `is_engine_running` | yellow with ignition on and engine off; red when the coolant is overheating |
 | `warn_oil` | graphics `oil_pressure_bar`, `oil_temperature_c` | red with the engine off (no pressure) or below 0.5 bar; yellow from 135 °C |
 | `warn_coolant` | graphics `water_temperature_c` | blue below 50 °C, yellow from 108 °C, red from 118 °C; all lamps off with ignition off. Thresholds follow road-car dashes and are not verified in ACE |
-| `gear_mode` | graphics `assists_state.auto_gear` | `D` while the automatic gearbox assist is on; ACE reports no P / S selector, sport mode or electric drive yet (`engine_type` numbers unpublished) |
+| `gear_mode` | – | always `None`: ACE's `assists_state.auto_gear` is an auto-shifter on a manual gearbox, so the gear page shows the gear number (first test, Nov 2026: showing `D` for it was wrong). ACE reports no P / D / S selector, sport mode or electric drive yet (`engine_type` numbers unpublished) |
 | `tc_active`, `abs_active` | graphics `tc_active` / `abs_active` or physics `tcInAction` / `absInAction` | |
 | `brake_bias` | physics `brakeBias` | 0.56 = 56 % front |
 | `pit_limiter` | physics `pitLimiterOn` or `electronics.is_pitlimiter_on` | |
@@ -51,20 +51,23 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 - [ ] `rpm_percent` range (0..1 expected).
 - [ ] `status` numbers (pause and replay).
 - [ ] TC / ABS / MAP levels and brake bias follow the in-game changes.
-- [ ] Lights and wiper stages.
+- [ ] Lights and wiper stages (ACE menu: up to 3 light stages, 5 wiper stages; the `ace | raw` log lines show the numbers).
+- [ ] Keys: bind them as in [KEYS.md](KEYS.md) (ACE has no keyboard defaults for the car tab), then check each DASH card.
 - [ ] Lap times, delta, position.
 - [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), tyre data.
 
 `python tools/ace_probe.py` prints these values live.
 
+The bridge also writes an `ace | raw | ...` line to the log whenever one of the rarely changing raw values changes: every `instrumentation` field (light and wiper stages, indicators, flash, hazards, display), the min..max range of `main_light_stage` and `wiper_level` on this car, and the seven `assists_state` flags by name. The first line after attaching lists them all. Switch lights or wipers in the game and the log shows which number each stage is.
+
 ## Controlling: keypresses
 
 ACE has no input API; the buttons are keypresses (`core/keys.py`, scan codes) to the ACE window (`AssettoCorsaEVO.exe`, title "Assetto Corsa EVO").
 
-ACE's keyboard defaults could not be confirmed from a public source (Nov 2026; the lists found online are for the original Assetto Corsa). So `game.toml` uses:
+ACE has no keyboard defaults for the car controls (checked in the game, Nov 2026: Options → Controls → Car is empty). [KEYS.md](KEYS.md) has the proposed key for each ACE control; `game.toml` uses the same keys.
 
-- `AC` keys: defaults of the original AC that ACE probably kept: lights `L`, horn `H`, look left / right `Q` / `W`, shift `Z` / `X`, camera `F1`, leaderboard `F7`, mirror `F8`, auto shifter `LCtrl+L`, TC `LCtrl+T`, ABS `LCtrl+A` (in AC these two cycle / toggle).
-- `set` keys: `LCtrl+LShift+<letter>` proposals for actions without a known default (TC / ABS down, stability − / +, brake bias, engine map, pit limiter, flash, wipers, ignition, starter, indicators, hazards, HUD, look back, display page). Bind them in ACE under Options → Controls, or change them in `config/config.toml` to the keys you use.
+- Car tab (TC, TC CUT, ABS, ESC, engine map, brake bias, pit limiter, lights, flash, wipers, ignition, starter, indicators, hazards, horn, display page): plain keys from KEYS.md, bound once in ACE.
+- Other tabs, not checked yet: camera `F1`, mirror `F8`, leaderboard `F7`, look left / right `Q` / `W`, shift `Z` / `X`, auto shifter `LCtrl+L` (original AC defaults), HUD and look back as `LCtrl+LShift+<letter>` proposals.
 - `NEUTRAL` and `SAVE REPLAY` have no key yet (greyed out).
 
 If ACE ignores the keys: raise `[input] tap_ms` (e.g. 150), and check that ACE is the active window (windowed or borderless helps). A virtual joystick (vJoy) is the fallback if keypresses do not work for some actions.

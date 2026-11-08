@@ -81,6 +81,22 @@ class Parse(unittest.TestCase):
         gr.is_ignition_on = False
         self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["warn_coolant"], "off")
 
+    def test_auto_gear_assist_keeps_the_gear_number(self):
+        ph, gr, st = self.build()
+        gr.assists_state.flags[0] = 1                   # auto_gear assist: a manual gearbox shifted for the driver
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertIsNone(values["gear_mode"])
+        self.assertEqual(values["gear"], 3)
+
+    def test_raw_change_log(self):
+        ph, gr, st = self.build()
+        before = ace.watched(gr)
+        self.assertIn("main_light_stage=1", ace.changes(None, before))
+        gr.instrumentation.main_light_stage, gr.instrumentation.wiper_level = 2, 1
+        gr.instrumentation_max_limit.wiper_level = 3
+        self.assertEqual(ace.changes(before, ace.watched(gr)),
+                         "main_light_stage 1->2 wiper_level 0->1 wiper_level_range 0..0->0..3")
+
     def test_reverse_neutral_and_percent_guard(self):
         ph, gr, st = self.build()
         ph.gear, gr.rpm_percent = 0, 45.0

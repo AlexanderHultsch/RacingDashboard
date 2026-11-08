@@ -74,12 +74,12 @@ The gear button at the bottom right of every page opens the settings:
 
 The buttons are keypresses (scan codes, like a real keyboard). ACE has to be the active window on the PC; the bridge brings it to the front if needed.
 
-The keys are in `games/ace/game.toml`. Keys marked `AC` there are defaults of the original Assetto Corsa and are probably the same in ACE. Keys marked `set` are a proposal: bind them once in ACE under **Options → Controls**. Check both and, if your ACE keys differ, put your own in `config/config.toml`:
+ACE has no keyboard defaults for the car controls, so bind the keys once in ACE under **Options → Controls → Car**. [docs/ACE/KEYS.md](docs/ACE/KEYS.md) lists every ACE control by its exact name with the proposed key (numpad for TC / ABS / ESC / map / brake bias, the Insert-to-PageDown block for pit limiter, lights, flash, wipers, ignition and starter), what is not needed, and what to check after binding. The same keys are set in `games/ace/game.toml`. If you bind other keys, put yours in `config/config.toml`:
 
 ```toml
 [games.ace.keys]
-tc_up = "LCtrl+T"
-pit_limiter = "LCtrl+LShift+P"
+tc_up = "Num9"
+pit_limiter = "P"
 ```
 
 A button without a key is greyed out. `tools/ace_probe.py` prints the live values the bridge reads from ACE, which is useful for checking the connector in the game.

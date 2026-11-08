@@ -15,40 +15,37 @@ title = "Assetto Corsa EVO"
 # Minus, Equals, LBracket, RBracket, Semicolon, Apostrophe, Grave, Backslash, Comma, Period, Slash.
 # Empty = no key, the button is greyed out.
 #
-# ACE's own keyboard defaults could not be confirmed (Nov 2026). Keys marked "AC" are the defaults of
-# the original Assetto Corsa and are likely the same in ACE; keys marked "set" are a proposal that
-# you bind once in ACE (Options > Controls). Check both in the game and change what differs.
+# ACE has no keyboard defaults for the car controls (first test, Nov 2026), so every key below is a
+# proposal you bind once in ACE (Options > Controls > Car). The full list with the exact ACE names,
+# and what to check after binding: docs/ACE/KEYS.md. Plain keys, no Ctrl / Shift.
 [keys]
-# ACE binding names (Options > Controls > Car): "Traction Control Setting Increase / Decrease",
-# "ABS Setting Increase / Decrease", "ESC Setting Increase / Decrease", "Brake Bias Front / Rear",
-# "Traction Control Cut Setting Increase / Decrease", "Engine Map Increase / Decrease",
-# "Toggle Ignition", "Toggle Starter".
-tc_down = "LCtrl+LShift+T"        # set
-tc_up = "LCtrl+T"                 # AC (cycles TC in AC)
-tc_cut_down = "LCtrl+LShift+Y"    # set
-tc_cut_up = "LCtrl+Y"             # set
-abs_down = "LCtrl+LShift+A"       # set
-abs_up = "LCtrl+A"                # AC (toggles ABS in AC)
-esc_down = "LCtrl+LShift+E"       # set
-esc_up = "LCtrl+E"                # set
-bias_rear = "LCtrl+LShift+B"      # set
-bias_front = "LCtrl+B"            # set
-map_down = "LCtrl+LShift+M"       # set
-map_up = "LCtrl+LShift+N"         # set
-pit_limiter = "LCtrl+LShift+P"    # set
-lights = "L"                      # AC
-flash = "LCtrl+LShift+F"          # set
-wipers = "LCtrl+LShift+W"         # set
-ignition = "LCtrl+LShift+I"       # set
-starter = "LCtrl+LShift+S"        # set
-indicator_left = "LCtrl+LShift+Comma"    # set
-indicator_right = "LCtrl+LShift+Period"  # set
-hazards = "LCtrl+LShift+H"        # set
-horn = "H"                        # AC
+tc_down = "Num7"                  # Traction Control Cycle -
+tc_up = "Num8"                    # Traction Control Cycle +
+tc_cut_down = "Num4"              # Traction Control Cut Cycle -
+tc_cut_up = "Num5"                # Traction Control Cut Cycle +
+abs_down = "Num1"                 # ABS Cycle -
+abs_up = "Num2"                   # ABS Cycle +
+esc_down = "Num0"                 # ESC Cycle -
+esc_up = "NumDecimal"             # ESC Cycle +
+map_down = "NumMinus"             # Engine Map Cycle -
+map_up = "NumPlus"                # Engine Map Cycle +
+bias_rear = "NumDivide"           # Brake Bias Rear
+bias_front = "NumMultiply"        # Brake Bias Front
+pit_limiter = "Insert"            # Pit Limiter Toggle
+lights = "Home"                   # Light Cycle +
+flash = "PageUp"                  # Flashing Lights (held)
+wipers = "Delete"                 # Wiper Cycle +
+ignition = "End"                  # Toggle Ignition
+starter = "PageDown"              # Starter (held)
+indicator_left = "Comma"          # Left Direction Indicator
+indicator_right = "Period"        # Right Direction Indicator
+hazards = "Slash"                 # Hazard Lights
+horn = "Backslash"                # Horn
+display = "NumEnter"              # Display Page Cycle +
+# Other tabs, not checked in ACE yet: guesses from the original Assetto Corsa ("AC") or proposals ("set").
 camera = "F1"                     # AC
 hud = "LCtrl+LShift+U"            # set
 mirror = "F8"                     # AC (virtual mirror)
-display = "LCtrl+LShift+D"        # set (next page on the car display)
 look_left = "Q"                   # AC
 look_back = "LCtrl+LShift+K"      # set
 look_right = "W"                  # AC
