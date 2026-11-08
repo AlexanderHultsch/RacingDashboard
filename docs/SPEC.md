@@ -133,6 +133,8 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 | `GET /api/analysis` | the analysis state: `version`, `active`, game / car / track, `track_length_m`, `section_m`, `sections`, `outline` ([x, y, p] every 5 m), `borders` ([x, y, nx, ny] per section start), `lines` (`best`, `last` as [x, y]), `red_lap`, `blue_lap`, `base_lap`, `offers`, `undo`, `ended` |
 | `GET /api/analysis/live?since=k` | `version`, `recording`, `sec` (current section), `deltas` (`lap_best`, `lap_last`, `sec_best`, `sec_last`, `lap_time`), `strip` (per section `best`, `last`, `times`, `attempts`, `base`), the red line from point k (`now_from`, `now_line`), `offers` (count) |
 | `GET /api/analysis/section?n=` | one section (0-based): `best`, `last`, `now` as rows [d, t, v, thr, brk, str, g, x, y] (d metres and t seconds from the section start), their times, `now_attempt` |
+| `GET /api/trainer` | AI trainer status: `provider`, `level`, `model`, `models`, `keys` (hints only, never a key), `ok`, `state`, `error`, `detail`, `checked`, `busy`, `history` (the last 5 answers) |
+| `POST /api/trainer/ask` | `{"mode": "track" / "section", "section": 4}` → `{"entry", "trainer"}` after the AI answered; HTTP 409 `{"error", "detail"}` when it failed; `/settings` `{"provider", "level", "key", "key_for"}` and `/test` → the status ([TRAINER.md](TRAINER.md)) |
 | `POST /api/analysis/offer` | `{"id": 3, "save": true}` SAVE or SKIP one offer → the analysis state; `/save-all`, `/skip-all`, `/undo`, `/end` (END RUN), `/finish` `{"keep": "all" / "baselines"}` (end-of-run menu); HTTP 409 when not possible, 404 with `[analysis] enabled = false` |
 
 The command errors are `unknown action`, `state '...' not valid for a ... button`, `no key set for ...`, `keypresses work on Windows only` and `game window not found`; the page shows them briefly.
@@ -187,6 +189,8 @@ Files (JSON Lines, every file starts with a header line `{"type": "header", "for
 - `data/runs/<game>/<track>/<car>/<date_time>/lap-007.jsonl`: header (`racing-dashboard.lap`, run, lap, out_lap), sample lines `{"type": "s", "t", "p", "x", "y", "v", "thr", "brk", "str", "g", "sec", "att", "line"}` (t seconds from the lap start; `sec` 1-based; `att` the attempt the sample belongs to; `line` 1 = part of the lap's line), one `section` line per attempt (`sec`, `att`, `time`, `t_in`, `complete`, `broken`), one `ambient` line, one `summary` line (`time`, `game_time` (the game's own lap time in seconds, from `last_ms` once it changes after the line, within 5 s; null if the game sends none), `complete`, `valid`, `invalid_at` (lap position where the game first said invalid, or null), `counts`, `out_lap`, `repeated`, `broken`, `sections`). `run.jsonl` logs laps, offers, saves, skips, undos and the end.
 - `data/baselines/<game>/<track>/<car>/lap.jsonl` (`racing-dashboard.lap-baseline`) and `sections/section-07.jsonl` (`racing-dashboard.section-baseline`, with `section`, `from_m`, `to_m`; samples with `d` metres and `t` seconds from the section start), each with a `source` (run, lap, attempt), and the backups `lap.prev.jsonl`, `section-07.prev.jsonl`.
 
+**AI trainer** (`core/trainer.py`): an AI TRAINER button on the map and a TRAINER tab; the bridge computes the facts of the whole lap or the zoomed section, asks the AI the owner set up in the settings (Claude, ChatGPT, Gemini, Ollama; FAST / BEST = a fixed model + effort pair per provider) with a fixed prompt, checks the JSON answer and keeps the last 5 answers in `data/trainer.jsonl`. Full definition, prompt and answer format: [TRAINER.md](TRAINER.md).
+
 The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 
 ## 7. Adding a game
@@ -205,7 +209,7 @@ Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*`, A
 
 ## 9. Configuration
 
-`config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[analysis]` enabled, data_dir, hz, section_m; `[log]`; `[games.<id>.keys]` key overrides.
+`config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[analysis]` enabled, data_dir, hz, section_m; `[trainer]` timeout_s, ollama_url, models (FAST / BEST overrides); `[log]`; `[games.<id>.keys]` key overrides.
 
 ## 10. Tests
 

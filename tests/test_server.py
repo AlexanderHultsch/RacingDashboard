@@ -32,6 +32,8 @@ def setUpModule():
     global data_dir
     data_dir = tempfile.TemporaryDirectory()
     server.recorder = server.recording.Recorder(data_dir.name)
+    server.cfg["trainer"]["ollama_url"] = "http://127.0.0.1:9"     # nothing listens: no real AI in the tests
+    server.trainer = server.training.Trainer(server.cfg, Path(data_dir.name) / "trainer.json", data_dir.name)
     server.activate("demo")
     threading.Thread(target=server.reader, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -44,6 +46,7 @@ def setUpModule():
 def tearDownModule():
     httpd.shutdown()
     server.recorder = None
+    server.trainer = None
     time.sleep(0.05)
     data_dir.cleanup()
 
@@ -70,6 +73,17 @@ class Bridge(unittest.TestCase):
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)
         self.assertIn("text/html", get("/gear")[1])
+
+    def test_trainer_api_keeps_the_key(self):
+        status, _, body = get("/api/trainer")
+        self.assertEqual((status, json.loads(body)["state"]), (200, "unchecked"))
+        code, reply = post("/api/trainer/settings", {"provider": "ollama", "key": "sk-ant-SECRET-abcd1234", "key_for": "claude"})
+        self.assertEqual(code, 200)
+        self.assertEqual(reply["error"], "OLLAMA NOT RUNNING")
+        self.assertNotIn("SECRET", json.dumps(reply))
+        self.assertNotIn("SECRET", get("/api/trainer")[2].decode())
+        code, reply = post("/api/trainer/ask", {"mode": "track"})
+        self.assertEqual(code, 409)                                  # no run recorded yet, or no AI
 
     def test_home_link(self):
         # the home page to save on the tablet: /Racing_Dashboard (other dashboards share the address)

@@ -7,7 +7,7 @@
  * - RD.widgets         rev lights (.rd-revlights), LED shift strip (.rd-leds), RPM bar (.rd-rpmbar);
  *                      js/seg14.js adds 14-segment displays (.rd-seg, .rd-seg-text)
  * - RD.styles          the visual styles of a page, cycled with the style button
- * - RD.settings        the settings overlay (game, update rate, units, screen, info)
+ * - RD.settings        the settings overlay (game, update rate, units, screen, AI trainer, info)
  * - RD.command()       sends a button to the game
  *
  * A page needs: <body data-page="gear" data-styles="classic,bar"> and
@@ -416,6 +416,54 @@
     return row;
   }
 
+  /* AI trainer rows (docs/TRAINER.md): provider, API key (kept on the PC, only a hint comes back),
+     FAST / BEST, connection status with TEST */
+  function aiRows(box, t) {
+    const send = (url, body) => fetch(url, { method: "POST", body: JSON.stringify(body || {}) })
+      .then((r) => r.json()).then((next) => { if (next.providers) aiRows(box, next); }).catch(() => {});
+    box.innerHTML = "";
+    const row = choice("AI TRAINER (ALL DEVICES, KEPT ON THE PC)", t.providers, t.provider, (p) => send("/api/trainer/settings", { provider: p }));
+    if (t.provider !== "off") {
+      const grid = document.createElement("div");
+      grid.className = "rd-ai-grid";
+      if (t.provider !== "ollama") {
+        const k = document.createElement("span"); k.className = "k"; k.textContent = "API KEY";
+        const keyBox = document.createElement("div"); keyBox.className = "rd-ai-key";
+        const input = document.createElement("input");
+        input.type = "password"; input.autocomplete = "off"; input.spellcheck = false;
+        input.placeholder = t.keys[t.provider] ? "saved: " + t.keys[t.provider] + " (paste a new one to replace)" : "paste the API key";
+        const save = document.createElement("button"); save.className = "rd-choice"; save.textContent = "SAVE";
+        save.addEventListener("click", () => { if (input.value.trim()) send("/api/trainer/settings", { key: input.value.trim(), key_for: t.provider }); });
+        keyBox.append(input, save);
+        grid.append(k, keyBox);
+      }
+      const mk = document.createElement("span"); mk.className = "k"; mk.textContent = "MODEL";
+      const levels = choice("", [["fast", "FAST"], ["best", "BEST"]], t.level, (lv) => send("/api/trainer/settings", { level: lv })).querySelector(".rd-choices");
+      const name = document.createElement("span"); name.className = "rd-ai-model";
+      name.textContent = t.model || (t.models[t.provider] || {})[t.level] || "";
+      levels.appendChild(name);
+      const ck = document.createElement("span"); ck.className = "k"; ck.textContent = "CONNECTION";
+      const status = document.createElement("div");
+      status.className = "rd-ai-status " + (t.ok ? "ok" : t.state === "unchecked" ? "" : "error");
+      status.innerHTML = "<i></i><b></b><span></span>";
+      status.querySelector("b").textContent = t.ok ? "CONNECTED" : t.state === "unchecked" ? "CHECKING…" : (t.error || "NOT CONNECTED");
+      status.querySelector("span").textContent = (t.checked ? "checked " + t.checked + (t.ms !== null ? " · " + (t.ms / 1000).toFixed(1) + " s" : "") : "")
+        + (!t.ok && t.detail ? " · " + t.detail : "");
+      const test = document.createElement("button"); test.className = "rd-choice"; test.textContent = "TEST";
+      test.addEventListener("click", () => { status.querySelector("b").textContent = "CHECKING…"; send("/api/trainer/test"); });
+      status.appendChild(test);
+      grid.append(mk, levels, ck, status);
+      row.appendChild(grid);
+    }
+    const note = document.createElement("p");
+    note.className = "rd-note";
+    note.textContent = "The AI TRAINER button on the analysis page asks this AI. FAST answers in seconds for a fraction of a cent; "
+      + "BEST thinks longer (a few cents per question with a cloud AI). The key is sent once to the PC and stored there (config\\trainer.json, "
+      + "not in git); it is never shown again. Ollama runs on the PC and needs no key.";
+    row.appendChild(note);
+    box.appendChild(row);
+  }
+
   RD.settings = {
     open() {
       RD.loadInfo().then((info) => this.draw(info)).catch(() => this.draw(null));
@@ -450,6 +498,9 @@
       }
       const awakeNote = "wakeLock" in navigator ? "" : "Not available on this connection: set Auto-Lock to Never in the iPhone / iPad settings.";
       body.appendChild(choice("KEEP SCREEN ON (THIS DEVICE)", [[false, "OFF"], [true, "ON"]], store.get("awake", false), (on) => RD.keepAwake(on), awakeNote));
+      const ai = document.createElement("div");
+      body.appendChild(ai);
+      fetch("/api/trainer", { cache: "no-store" }).then((r) => r.json()).then((t) => { if (t.providers) aiRows(ai, t); }).catch(() => {});
       const infoRow = document.createElement("section");
       infoRow.className = "rd-set-row rd-info";
       infoRow.innerHTML = "<h3>INFO</h3><dl></dl>";

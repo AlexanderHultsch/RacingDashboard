@@ -24,6 +24,7 @@ import config  # noqa: E402
 import keys  # noqa: E402
 import log  # noqa: E402
 import recorder as recording  # noqa: E402
+import trainer as training  # noqa: E402
 import telemetry  # noqa: E402
 
 HZ_CHOICES = (10, 20, 30, 60)
@@ -44,6 +45,7 @@ latched: set[str] = set()         # latch actions whose key is down until the ne
 address = ""
 HOME = "Racing_Dashboard"     # the home page: http://<pc>:8080/Racing_Dashboard (other dashboards share the address)
 recorder: recording.Recorder | None = None    # the analysis page's lap recorder ([analysis] enabled)
+trainer: training.Trainer | None = None       # the AI trainer of the analysis page (docs/TRAINER.md)
 
 
 # ---------------------------------------------------------------- games and connectors
@@ -321,6 +323,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(200, info())
         if url.path.startswith("/api/analysis"):
             return self.analysis_get(url.path, parse_qs(url.query))
+        if url.path == "/api/trainer":
+            if trainer is None:
+                return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+            return self.reply_json(200, trainer.public())
         self.static(url.path)
 
     def analysis_get(self, path: str, query: dict) -> None:
@@ -379,6 +385,25 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(200, info())
         if path.startswith("/api/analysis/"):
             return self.analysis_post(path, body)
+        if path.startswith("/api/trainer/"):
+            return self.trainer_post(path, body)
+        self.reply_json(404, {"error": "not found"})
+
+    def trainer_post(self, path: str, body: dict) -> None:
+        """AI trainer: ask (may take up to [trainer] timeout_s), settings, test. Keys never come back."""
+        if trainer is None or recorder is None:
+            return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+        if path == "/api/trainer/ask":
+            try:
+                entry = trainer.ask(recorder, body.get("mode"), body.get("section"), active["game"]["name"])
+            except training.TrainerError as error:
+                log.line("trainer", "error", str(error)[:200])
+                return self.reply_json(409, {"error": error.code, "detail": error.detail, "trainer": trainer.public()})
+            return self.reply_json(200, {"entry": entry, "trainer": trainer.public()})
+        if path == "/api/trainer/settings":
+            return self.reply_json(200, trainer.update(body))
+        if path == "/api/trainer/test":
+            return self.reply_json(200, trainer.test())
         self.reply_json(404, {"error": "not found"})
 
     def static(self, path: str) -> None:
@@ -434,7 +459,7 @@ def lan_ip() -> str:
 
 def setup(file_log: bool = True) -> str:
     """Load config and games; returns the start game."""
-    global cfg, games, settings, recorder
+    global cfg, games, settings, recorder, trainer
     cfg = config.load()
     cfg["log"]["enabled"] = cfg["log"]["enabled"] and file_log
     log.setup(cfg["log"])
@@ -448,6 +473,7 @@ def setup(file_log: bool = True) -> str:
     if cfg["analysis"]["enabled"]:
         recorder = recording.Recorder(cfg["analysis"]["data_dir"], int(cfg["analysis"]["hz"]),
                                       float(cfg["analysis"]["section_m"]), log=log.line)
+        trainer = training.Trainer(cfg, config.TRAINER_FILE, cfg["analysis"]["data_dir"], log=log.line)
     wanted = settings.get("game") or cfg["dashboard"]["game"]
     if wanted not in games:
         log.line("game", "unknown", f"'{wanted}', using '{next(iter(games))}'")
@@ -503,6 +529,8 @@ def main() -> None:
     server.daemon_threads = True
     threading.Thread(target=reader, daemon=True).start()
     threading.Thread(target=hold_watchdog, daemon=True).start()
+    if trainer is not None:
+        trainer.test_later()                       # greys the AI TRAINER button in or out
     address = f"http://{lan_ip()}:{port}"
     log.line("server", "open", address)
     banner(port)

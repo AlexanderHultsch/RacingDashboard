@@ -1,6 +1,6 @@
 # Analysis page – agreed strategy
 
-The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Tested with the demo car and simulated laps; not yet with Assetto Corsa EVO or DiRT Rally 2.0. No coaching and no tips: the page only shows data (an AI coach may come later).
+The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Tested with the demo car and simulated laps; not yet with Assetto Corsa EVO or DiRT Rally 2.0. The page itself only shows data; tips come only from the **AI trainer**, on a tap ([TRAINER.md](TRAINER.md), agreed November 2026, not built yet). This replaces the earlier rule "no coaching, no tips".
 
 ## The page (one page; iPad landscape; right side: REVIEW and GRAPHS tabs)
 
@@ -63,4 +63,4 @@ The bridge records at 30 Hz from the frame it already reads and writes only at l
 1. PNG mockup of the page (map left, graphs right, deltas, offers, end-of-run menu) - done; feedback taken over above.
 2. Build: recorder and files in the bridge, API, page; tests with the demo car - done.
 3. Verify the new ACE / DR2 fields on the PC (lap position, position, steering, session id; whether the map is mirrored).
-4. Later, if wanted: choose any lap of the run as the red line after the session (now: the last lap, blue the one before); an AI coach.
+4. Later, if wanted: choose any lap of the run as the red line after the session (now: the last lap, blue the one before). The AI coach is defined in [TRAINER.md](TRAINER.md).

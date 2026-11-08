@@ -5,6 +5,7 @@
  *   GET  /api/analysis/live?since=  4 x per second: deltas, section strip, current section, red line
  *   GET  /api/analysis/section?n=   one section: best / last / now samples [d, t, v, thr, brk, str, g, x, y]
  *   POST /api/analysis/offer {id, save}, /save-all, /skip-all, /undo, /end, /finish {keep: "all" | "baselines"}
+ *   GET  /api/trainer, POST /api/trainer/ask {mode: "track" | "section", section}   AI trainer (docs/TRAINER.md)
  * The car dot on the map comes from the normal telemetry stream (pos_x, pos_y).
  */
 (function () {
@@ -34,7 +35,11 @@
     endArmed: 0,
     endDismissed: null,
     offline: false,
-    tab: "review",        // right side: REVIEW (start) or GRAPHS
+    tab: "review",        // right side: REVIEW (start), GRAPHS or TRAINER
+    trainer: null,        // /api/trainer: connection, settings, last answers
+    trEntry: null,        // the answer shown in TRAINER
+    trAsking: null,       // what is being asked right now: {mode, section, title}
+    trError: null,        // why the last question failed
   };
 
   /* ------------------------------------------------------------ helpers */
@@ -724,7 +729,117 @@
     document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
     $("pane-review").hidden = tab !== "review";
     $("pane-graphs").hidden = tab !== "graphs";
+    $("pane-trainer").hidden = tab !== "trainer";
     if (tab === "graphs") renderGraphs();
+    if (tab === "trainer") renderTrainer();
+  }
+
+  /* ------------------------------------------------------------ AI trainer */
+
+  function loadTrainer() {
+    return get("/api/trainer").then((t) => { if (t.providers) { S.trainer = t; renderAi(); } }).catch(() => {});
+  }
+
+  function aiView() {                                  // what a tap on the button analyses: the map decides
+    const n = S.sel + 1;
+    return S.zoom ? { mode: "section", section: S.sel, title: "SECTION " + n } : { mode: "track", section: null, title: "WHOLE TRACK" };
+  }
+
+  function renderAi() {
+    const btn = $("ai"), what = $("ai-what");
+    const t = S.trainer;
+    const usable = !!(t && t.ok && S.state && S.state.active && !S.trAsking);
+    let text = aiView().title;
+    if (S.trAsking) text = "ASKING…";
+    else if (!t) text = "-";
+    else if (t.provider === "off") text = "OFF";
+    else if (!t.ok) text = t.error || "NOT CONNECTED";
+    else if (!(S.state && S.state.active)) text = "NO RUN YET";
+    if (what.textContent !== text) what.textContent = text;
+    btn.disabled = !usable;
+    btn.classList.toggle("off", !usable && !S.trAsking);
+  }
+
+  function ask(v) {
+    if (S.trAsking) return;
+    S.trAsking = v;
+    S.trError = null;
+    setTab("trainer");
+    renderAi();
+    post("/api/trainer/ask", { mode: v.mode, section: v.section }).then((r) => {
+      if (r.trainer) S.trainer = r.trainer;
+      if (r.entry) S.trEntry = r.entry;
+      else S.trError = { code: r.error || "NO ANSWER", detail: r.detail || "" };
+    }).catch(() => { S.trError = { code: "NO CONNECTION TO THE PC", detail: "" }; })
+      .finally(() => { S.trAsking = null; renderAi(); renderTrainer(); });
+  }
+
+  const ERRORS = {
+    "NO KEY": "No API key yet: add it in the settings (gear button) under AI TRAINER.",
+    "KEY REJECTED": "The AI rejected the API key: check it in the settings.",
+    "MODEL NOT FOUND": "The model is not available for this key: try the other level (FAST / BEST) in the settings.",
+    "NO CONNECTION": "The PC cannot reach the AI: check the internet connection.",
+    "OLLAMA NOT RUNNING": "Ollama is not running on the PC.",
+    "RATE LIMITED": "Too many questions: wait a moment and ask again.",
+    "NO ANSWER IN TIME": "The AI took too long: ask again, or use FAST.",
+    "ANSWER NOT READABLE": "The AI answer could not be read: ask again.",
+    "NO DATA": "Not enough laps recorded here yet to compare.",
+    "BUSY": "A question is already on its way.",
+    "AI REFUSED": "The AI declined to answer: ask again.",
+  };
+
+  function renderTrainer() {
+    const pane = $("pane-trainer");
+    const t = S.trainer;
+    const history = (t && t.history) || [];
+    const v = aiView();
+    let entry = S.trEntry;
+    if (!entry && !S.trAsking) entry = history.find((e) => e.title === v.title && S.state && e.car === S.state.car && e.track === S.state.track) || null;
+    const level = t ? (t.level || "").toUpperCase() : "";
+    let html;
+    if (S.trAsking) {
+      html = "<div class='tr-head'><div><b>" + esc(S.trAsking.title) + "</b><span>ASKING " + esc(t ? t.provider_name : "THE AI")
+        + " · " + esc(level) + (t && t.model ? " · " + esc(t.model) : "") + "</span></div></div>"
+        + "<div class='tr-sum'>Asking the AI… this takes a few seconds" + (t && t.level === "best" ? " (BEST thinks longer)" : "") + ".</div>";
+    } else if (S.trError) {
+      html = "<div class='tr-head'><div><b>" + esc(v.title) + "</b><span>NO ANSWER</span></div>"
+        + "<button class='sbtn' id='tr-again'>ASK AGAIN</button></div>"
+        + "<div class='tr-sum err'>" + esc(ERRORS[S.trError.code] || S.trError.code)
+        + (S.trError.detail ? "<small>" + esc(S.trError.code + ": " + S.trError.detail) + "</small>" : "") + "</div>";
+    } else if (entry) {
+      const a = entry.answer || {};
+      const tips = (a.tips || []).map((tip, i) => "<div class='tip' data-sec='" + tip.section + "' data-m='" + tip.from_m + "'><i>" + (i + 1)
+        + "</i><div><h4>" + esc(tip.title) + "<span>SECTION " + tip.section + " · " + tip.from_m + "–" + tip.to_m + " M</span></h4><p>"
+        + esc(tip.text) + "</p></div><em>≈ " + Number(tip.gain_s).toFixed(2) + " s</em></div>").join("");
+      const at = (entry.at || "").slice(11, 16);
+      const chips = history.filter((e) => e.at !== entry.at).map((e) => "<button data-at='" + esc(e.at) + "'>" + esc(e.title)
+        + " " + esc((e.at || "").slice(11, 16)) + "</button>").join("");
+      html = "<div class='tr-head'><div><b>" + esc(entry.title) + "</b><span>" + esc(entry.times || "") + "</span></div>"
+        + "<button class='sbtn' id='tr-again'>ASK AGAIN</button></div>"
+        + "<div class='tr-sum'>" + esc(a.summary || "") + "</div>"
+        + "<div class='tips'>" + (tips || "<div class='tr-none'>No tips: nothing worth changing here.</div>")
+        + (a.note ? "<div class='tr-note'>" + esc(a.note) + "</div>" : "") + "</div>"
+        + "<div class='tr-foot'><span>" + esc([(entry.provider || "").toUpperCase(), (entry.level || "").toUpperCase(), entry.model, at,
+          entry.seconds + " s"].filter(Boolean).join(" · ")) + "</span>"
+        + (chips ? "<span class='tr-hist'>EARLIER: " + chips + "</span>" : "") + "</div>";
+    } else {
+      const why = !t ? "" : t.provider === "off" ? "The AI trainer is OFF: choose an AI in the settings (gear button)."
+        : !t.ok ? (ERRORS[t.error] || "The AI is not connected: check the settings.") : "";
+      html = "<div class='tr-none'>Tap <b>AI TRAINER</b> on the map: in the overview it analyses the whole track, zoomed into a section only that section.<br>Best, last and now are compared; you get up to 3 tips."
+        + (why ? "<br><br>" + esc(why) : "") + "</div>";
+    }
+    if (pane.innerHTML !== html) pane.innerHTML = html;
+    const again = $("tr-again");
+    if (again) again.onclick = () => ask(entry && !S.trError ? { mode: entry.mode, section: entry.section ? entry.section - 1 : null, title: entry.title } : aiView());
+    pane.querySelectorAll(".tr-hist button").forEach((b) => { b.onclick = () => {
+      S.trEntry = history.find((e) => e.at === b.dataset.at) || null; S.trError = null; renderTrainer();
+    }; });
+    pane.querySelectorAll(".tip").forEach((el) => { el.onclick = () => {   // look at the place in the graphs
+      select(+el.dataset.sec - 1, true);
+      S.cursor = +el.dataset.m;
+      mapDirty = true;
+      renderAll();
+    }; });
   }
 
   function renderModal() {
@@ -764,6 +879,7 @@
     renderDeltas();
     renderStrip();
     drawMap();
+    renderAi();
     if (S.tab === "graphs") renderGraphs();
   }
 
@@ -816,6 +932,9 @@
     $("map").addEventListener("pointerup", mapUp);
     $("map").addEventListener("pointercancel", () => { drag = null; });
     $("back").addEventListener("click", () => { S.zoom = false; mapDirty = true; renderAll(); });
+    $("ai").addEventListener("click", () => ask(aiView()));
+    loadTrainer();
+    setInterval(loadTrainer, 15000);
     $("cells").addEventListener("click", (e) => {
       const el = e.target.closest("[data-n]");
       if (el) select(+el.dataset.n, true);

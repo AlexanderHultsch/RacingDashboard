@@ -8,6 +8,7 @@ GAMES = ROOT / "games"
 UI = ROOT / "ui"
 CONFIG_FILE = ROOT / "config" / "config.toml"
 SETTINGS_FILE = ROOT / "config" / "settings.json"
+TRAINER_FILE = ROOT / "config" / "trainer.json"    # AI trainer: provider, level, API keys (ignored by git)
 
 DEFAULTS = {
     "dashboard": {"host": "0.0.0.0", "port": 8080, "game": "ace"},
@@ -15,6 +16,9 @@ DEFAULTS = {
     "input": {"tap_ms": 80, "hold_max_s": 10.0},
     # Analysis page: lap recording (core/recorder.py); data_dir relative to the program folder
     "analysis": {"enabled": True, "data_dir": "data", "hz": 30, "section_m": 250},
+    # AI trainer (core/trainer.py, docs/TRAINER.md): seconds to wait for an answer, the Ollama address,
+    # and overrides of the FAST / BEST models, e.g. [trainer.models.claude.best] model = "claude-opus-5-5"
+    "trainer": {"timeout_s": 90, "ollama_url": "http://localhost:11434", "models": {}},
     "log": {"enabled": True, "file": "logs/racing-dashboard.log", "max_mb": 5, "backups": 2},
     # Per game overrides of games/<game>/game.toml, e.g. [games.ace.keys] tc_up = "LCtrl+T"
     "games": {},

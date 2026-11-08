@@ -1,6 +1,7 @@
 # Local, machine-specific settings
 config/config.toml
 config/settings.json
+config/trainer.json
 
 # Logs
 logs/

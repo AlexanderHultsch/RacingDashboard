@@ -29,6 +29,16 @@ data_dir = "data"
 hz = 30
 section_m = 250
 
+[trainer]
+# AI trainer of the analysis page (docs/TRAINER.md). Provider, FAST / BEST and the API keys are chosen in
+# the settings on any device and kept in config/trainer.json; here only the technical defaults.
+timeout_s = 90                          # seconds to wait for an answer
+ollama_url = "http://localhost:11434"   # a local Ollama
+# Other models for FAST / BEST, one table per provider and level (claude, chatgpt, gemini, ollama):
+# [trainer.models.claude.best]
+# model = "claude-opus-5-5"
+# effort = "high"
+
 [log]
 enabled = true
 file = "logs/racing-dashboard.log"
