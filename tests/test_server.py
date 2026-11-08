@@ -77,7 +77,7 @@ class Bridge(unittest.TestCase):
         self.assertEqual([g["name"] for g in info["groups"]], ["AIDS", "CAR", "VIEW", "PIT"])
         self.assertIn("ace", [g["id"] for g in info["games"]])
         self.assertEqual([c["label"] for c in info["dash"]],
-                         ["TC", "ABS", "STABILITY", "BRAKE BIAS", "DIFF", "PIT LIMITER", "LAUNCH", "AUTO CLUTCH"])
+                         ["TC", "ABS", "STABILITY", "BRAKE BIAS", "FUEL", "DIFF", "PIT LIMITER", "LAUNCH", "AUTO CLUTCH", "WARNINGS"])
         self.assertTrue(info["dash"][0]["enabled"]["tc_up"])
 
     def test_commands(self):

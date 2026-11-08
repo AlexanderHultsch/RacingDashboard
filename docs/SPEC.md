@@ -64,6 +64,8 @@ Phone / tablet pages (ui/)
 | `tc_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | driver settings, `None` if the car has none |
 | `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
 | `launch`, `auto_clutch` | launch control active, auto clutch assist on (`None` = not available) |
+| `esc_active` | stability control working right now |
+| `warn_brake`, `warn_engine`, `warn_oil`, `warn_coolant` | warning lamps as a state, no value: `None` (not reported), `off`, `cold`, `warn` (yellow), `alert` (red) |
 | `tc_active`, `abs_active` | the aid is working right now |
 | `brake_bias` | front share 0..1 |
 | `pit_limiter`, `ignition`, `engine_running`, `lights`, `wipers` | car systems (lights / wipers are stages, 0 = off) |
@@ -146,10 +148,14 @@ The tablet page (`dash.html`, `js/dashbox.js`, style **CARDS** `styles/dash/card
 | `bias` | brake bias % front (segments) and a front / rear bar | ◀ FRONT / REAR ▶, holding repeats (after 0.4 s, every 0.16 s) | `field`, `front`, `rear` |
 | `toggle` | a lamp with the state text (`on` / `off`), `style` `amber` (lights up) or `green` | the whole lamp, if the card has an `action`; else display only | `field`, `action`?, `on`, `off`, `style` |
 | `pair` | two values side by side (e.g. differential power / coast) | none | `fields`, `labels` |
+| `fuel` | litres (segments), a tank bar (yellow below 15 %, red below 7 %), laps left (or "OF n L") | none | `field`, `max`?, `per_lap`? |
+| `lamps` | warning lamps as icons, state only: grey off, blue cold, yellow warning, red alert (icons `brake`, `engine`, `oil`, `coolant`) | none | `fields`, `icons`, `labels` |
 
-Every card has `label` and an optional `hint` (small text at the bottom, e.g. "Set in the game's assist menu"). Every value is read back from the game, so the card shows what the game applied; after a press the card is outlined ("pending") until the value changes or 1.2 s pass. A card whose value is `None` (the car does not have it) is greyed out with "NOT ON THIS CAR" and takes no presses; a button whose action has no key for the game is disabled. While there is an error ([Errors](#errors)) all cards show "-" and take no presses, and the chip sits in a strip above the cards. The bridge checks the map at start (`check_dash`: known type, action and field names; a bad card is logged and left out) and serves it in `/api/info` as `dash`, with `enabled` per action.
+Every card has `label` and an optional `hint` (small text at the bottom, e.g. "Set in the game's assist menu"). A stepper may name an `active` field (`tc_active`, `abs_active`, `esc_active`): while it is true the digits, dots and frame turn amber. Every value is read back from the game, so the card shows what the game applied. A card **lights up** (yellow outline) after a press until the new value arrives (at most 1.2 s), and for 0.7 s whenever its value changes in the game, so a change made in the car looks the same as one made on the tablet (fuel and lamps do not light up). A card whose value is `None` (the car does not have it) is greyed out with "NOT ON THIS CAR" and takes no presses; a button whose action has no key for the game is disabled. While there is an error ([Errors](#errors)) all cards show "-" and take no presses, and the chip sits in a strip above the cards. The bridge checks the map at start (`check_dash`: known type, action and field names; a bad card is logged and left out) and serves it in `/api/info` as `dash`, with `enabled` per action.
 
-Assetto Corsa EVO: TC, ABS, STABILITY (steppers), BRAKE BIAS, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LAUNCH (shown only: activated in the car by holding brake and throttle), AUTO CLUTCH (shown only: set in the game's assist menu). The demo game has the same map; its car has no stability control.
+Landscape: 4 × 2 cards, 5 × 2 for 9 or 10 cards; portrait: 2 columns, 3 for 9 or 10 cards.
+
+Assetto Corsa EVO: TC, ABS, STABILITY (steppers, amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LAUNCH (shown only: activated in the car by holding brake and throttle), AUTO CLUTCH (shown only: set in the game's assist menu), WARNINGS (brake, engine, oil, coolant). The demo game has the same map; its car has no stability control, warms up from cold and overheats with engine map 5.
 
 The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 

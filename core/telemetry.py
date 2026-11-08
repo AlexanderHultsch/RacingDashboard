@@ -36,10 +36,16 @@ FIELDS = {
     "brake_bias": None,      # front share 0..1
     "engine_map": None,
     "esc_level": None,       # stability control setting, None = not on this car
+    "esc_active": False,     # stability control is working right now
     "diff_power": None,      # differential power (on throttle) setting, None = not adjustable
     "diff_coast": None,      # differential coast (off throttle) setting
     "launch": None,          # launch control active right now (True / False), None = not available
     "auto_clutch": None,     # auto clutch assist on (True / False), None = not available
+    # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
+    "warn_brake": None,      # brake warning (!): handbrake on, brake system
+    "warn_engine": None,     # check engine: ignition on with the engine off, engine trouble
+    "warn_oil": None,        # oil: no / low oil pressure, oil too hot
+    "warn_coolant": None,    # coolant temperature: cold (blue), hot (yellow), overheating (red)
     # range of the stepped settings for this car: {"tc_level": [0, 11], ...}; missing = unknown
     "limits": {},
     "pit_limiter": False,
@@ -84,8 +90,11 @@ RANGES = {
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
     "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
 }
-REQUIRED = ("gear", "rpm", "rpm_pct")
-GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")    # what the gear page needs; must be present and numeric
+REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
+GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")
+# states of a warning lamp (fields warn_*): None = the game does not report it
+LAMP_STATES = (None, "off", "cold", "warn", "alert")
+LAMPS = ("warn_brake", "warn_engine", "warn_oil", "warn_coolant")
 
 
 def check(values: dict) -> str | None:
@@ -106,6 +115,9 @@ def check(values: dict) -> str | None:
         return f"GEAR {values.get('gear')}"
     if values.get("gear_mode") not in GEAR_MODES:
         return f"GEAR MODE {values.get('gear_mode')}"
+    for name in LAMPS:
+        if values.get(name) not in LAMP_STATES:
+            return f"{name.upper()} {str(values.get(name)).upper()}"
     rpm, rpm_max = values.get("rpm"), values.get("rpm_max")
     if rpm_max and rpm > rpm_max * 1.3:
         return f"RPM {rpm:g} ABOVE MAX {rpm_max:g}"

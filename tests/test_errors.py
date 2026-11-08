@@ -47,6 +47,7 @@ class Errors(unittest.TestCase):
             "SPEED_KMH 900": dict(speed_kmh=900.0),
             "RPM 20000 ABOVE MAX 8000": dict(rpm=20000),
             "GEAR MODE X": dict(gear_mode="X"),
+            "WARN_OIL ORANGE": dict(warn_oil="orange"),
         }
         for text, changes in cases.items():
             result = frame(**changes)

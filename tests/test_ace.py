@@ -66,6 +66,21 @@ class Parse(unittest.TestCase):
         self.assertEqual(values["status"], "live")
         self.assertTrue(set(values) <= set(telemetry.FIELDS), set(values) - set(telemetry.FIELDS))
 
+    def test_warning_lamps(self):
+        ph, gr, st = self.build()
+        gr.is_ignition_on, gr.is_engine_running = True, False          # ignition on, engine not started
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["warn_engine"], values["warn_oil"]), ("warn", "alert"))
+        gr.is_engine_running, gr.oil_pressure_bar, gr.water_temperature_c, gr.handbrake_percent = True, 4.0, 40, 1.0
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["warn_engine"], values["warn_oil"], values["warn_coolant"], values["warn_brake"]),
+                         ("off", "off", "cold", "alert"))
+        gr.water_temperature_c, gr.handbrake_percent = 120, 0.0
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["warn_coolant"], values["warn_engine"], values["warn_brake"]), ("alert", "alert", "off"))
+        gr.is_ignition_on = False
+        self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["warn_coolant"], "off")
+
     def test_reverse_neutral_and_percent_guard(self):
         ph, gr, st = self.build()
         ph.gear, gr.rpm_percent = 0, 45.0

@@ -218,6 +218,32 @@ STEPPED = {"tc_level": "tc_level", "abs_level": "abs_level", "esc_level": "esc_l
            "engine_map": "engine_map_level", "diff_power": "diff_power_level", "diff_coast": "diff_coast_level"}
 
 
+# Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
+COOLANT_COLD_C = 50
+COOLANT_HOT_C = 108
+COOLANT_ALERT_C = 118
+OIL_HOT_C = 135
+OIL_LOW_BAR = 0.5
+HANDBRAKE_ON = 0.05
+
+
+def warnings(ph, gr) -> dict:
+    """Warning lamp states from the values ACE reports (see core/telemetry.py, warn_*)."""
+    ignition, running = bool(gr.is_ignition_on), bool(gr.is_engine_running)
+    water, oil_c, oil_bar = gr.water_temperature_c, gr.oil_temperature_c, gr.oil_pressure_bar
+    if not ignition:
+        return {"warn_brake": "off", "warn_engine": "off", "warn_oil": "off", "warn_coolant": "off"}
+    coolant = ("alert" if water >= COOLANT_ALERT_C else "warn" if water >= COOLANT_HOT_C
+               else "cold" if 0 < water < COOLANT_COLD_C else "off")
+    oil = "alert" if not running or (oil_bar > 0 and oil_bar < OIL_LOW_BAR) else "warn" if oil_c >= OIL_HOT_C else "off"
+    return {
+        "warn_brake": "alert" if gr.handbrake_percent > HANDBRAKE_ON else "off",
+        "warn_engine": "warn" if not running else "alert" if coolant == "alert" else "off",
+        "warn_oil": oil,
+        "warn_coolant": coolant,
+    }
+
+
 def limits(gr) -> dict:
     """The range of each stepped setting the car has, from the min / max limit blocks."""
     out = {}
@@ -265,12 +291,14 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "brake_bias": round(ph.brakeBias, 4) if ph.brakeBias > 0 else None,
         "engine_map": level(el.engine_map_level, can.engine_map_level),
         "esc_level": level(el.esc_level, can.esc_level),
+        "esc_active": bool(gr.esc_active),
         "diff_power": level(el.diff_power_level, can.diff_power_level),
         "diff_coast": level(el.diff_coast_level, can.diff_coast_level),
         "launch": bool(gr.launch_active),
         "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
         # automatic gearbox assist on: the gear page shows D (ACE reports no P / S selector or sport mode)
         "gear_mode": "D" if gr.assists_state.flags[0] else None,
+        **warnings(ph, gr),
         "limits": limits(gr),
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
         "ignition": bool(gr.is_ignition_on),

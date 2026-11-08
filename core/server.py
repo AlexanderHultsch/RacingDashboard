@@ -74,7 +74,11 @@ DASH_TYPES = {
     "bias": {"need": ("field", "front", "rear"), "actions": ("front", "rear")},
     "toggle": {"need": ("field",), "actions": ("action",)},
     "pair": {"need": ("fields", "labels"), "actions": ()},
+    "fuel": {"need": ("field",), "actions": ()},
+    "lamps": {"need": ("fields", "icons"), "actions": ()},
 }
+DASH_FIELD_KEYS = ("field", "active", "max", "per_lap")   # map keys that name one telemetry field
+LAMP_ICONS = ("brake", "engine", "oil", "coolant")
 
 
 def check_dash(game: dict) -> None:
@@ -88,8 +92,9 @@ def check_dash(game: dict) -> None:
         elif missing := [key for key in kind["need"] if not control.get(key)]:
             problem = f"missing {', '.join(missing)}"
         else:
-            fields = control["fields"] if control["type"] == "pair" else [control["field"]]
+            fields = list(control.get("fields", [])) + [control[key] for key in DASH_FIELD_KEYS if control.get(key)]
             unknown = [f for f in fields if f not in telemetry.FIELDS]
+            unknown += [icon for icon in control.get("icons", []) if icon not in LAMP_ICONS]
             unknown += [control[key] for key in kind["actions"] if control.get(key) and control[key] not in actions.BY_NAME]
             if unknown:
                 problem = f"unknown {', '.join(unknown)}"

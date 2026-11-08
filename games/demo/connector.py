@@ -50,6 +50,7 @@ class Connector(telemetry.Connector):
         self.last_ms = None
         self.best_ms = None
         self.fuel = 42.0
+        self.coolant = 35.0                      # starts cold: blue lamp until about 50 C
         self.state = {"tc_level": 3, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
                       "lights": 0, "wipers": 0, "ignition": True, "engine_running": True, "auto_shifter": True}
         self.gearbox = 0
@@ -89,6 +90,17 @@ class Connector(telemetry.Connector):
     def shift(self, gear: int) -> None:
         self.gear = gear
         self.shift_until = time.monotonic() + 0.12
+
+    def warnings(self, running: bool) -> dict:
+        """Lamps of the demo car: it warms up from cold; engine map 5 makes it overheat (yellow, then red)."""
+        s = self.state
+        target = 35.0 if not running else 92.0 + (34.0 if s["engine_map"] >= 5 else 0.0)
+        self.coolant += (target - self.coolant) * 0.0015
+        if not s["ignition"]:
+            return {"warn_brake": "off", "warn_engine": "off", "warn_oil": "off", "warn_coolant": "off"}
+        coolant = "alert" if self.coolant >= 118 else "warn" if self.coolant >= 108 else "cold" if self.coolant < 50 else "off"
+        return {"warn_brake": "off", "warn_engine": "off" if running else "warn",
+                "warn_oil": "off" if running else "alert", "warn_coolant": coolant}
 
     def rpm_for(self, gear: int) -> float:
         if gear <= 0:
@@ -146,7 +158,7 @@ class Connector(telemetry.Connector):
         delta = None
         if self.best_ms:
             delta = int(lap_ms - self.best_ms * self.pos)
-        slip = gas > 0.9 and self.gear <= 2 and s["tc_level"] > 0
+        slip = gas > 0.9 and self.speed < 160 and s["tc_level"] > 0      # corner exits: TC cuts
         return {
             "connected": True, "status": "live", "car": "Demo GT", "track": "Demo Ring",
             "gear": self.gear, "max_gears": GEARS,
@@ -162,6 +174,7 @@ class Connector(telemetry.Connector):
             "launch": running and self.gear == 1 and self.speed < 8 and gas > 0.5,
             "auto_clutch": s["auto_shifter"],
             "gear_mode": GEARBOXES[self.gearbox][2],
+            **self.warnings(running),
             "limits": {"tc_level": [0, 11], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],
             "fuel_l": round(self.fuel, 2), "fuel_max_l": FUEL_MAX, "fuel_per_lap_l": 2.6,

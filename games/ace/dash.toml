@@ -9,6 +9,10 @@
 # type = "toggle"    a switch: field (true / false), action (leave out: shows the state only),
 #                    on / off (texts), style = "amber" (lights up when on) or "green" (calm state)
 # type = "pair"      two values side by side, shown only: fields, labels
+# type = "fuel"      fuel in litres with a tank bar: field, max (full tank), per_lap (laps left)
+# type = "lamps"     warning lamps, state only (grey off, blue cold, yellow warning, red alert):
+#                    fields, icons (brake, engine, oil, coolant), labels
+# active             (stepper) a field that is true while the system works: the digits light amber
 # label              card title;  hint: small text at the bottom of the card
 #
 # Actions are the names of core/actions.py; their keys are in [keys] of game.toml.
@@ -16,6 +20,7 @@
 [[control]]
 type = "stepper"
 label = "TC"
+active = "tc_active"
 field = "tc_level"
 down = "tc_down"
 up = "tc_up"
@@ -23,6 +28,7 @@ up = "tc_up"
 [[control]]
 type = "stepper"
 label = "ABS"
+active = "abs_active"
 field = "abs_level"
 down = "abs_down"
 up = "abs_up"
@@ -30,6 +36,7 @@ up = "abs_up"
 [[control]]
 type = "stepper"
 label = "STABILITY"
+active = "esc_active"
 field = "esc_level"
 down = "esc_down"
 up = "esc_up"
@@ -40,6 +47,13 @@ label = "BRAKE BIAS"
 field = "brake_bias"
 front = "bias_front"
 rear = "bias_rear"
+
+[[control]]
+type = "fuel"
+label = "FUEL"
+field = "fuel_l"
+max = "fuel_max_l"
+per_lap = "fuel_per_lap_l"
 
 [[control]]
 type = "pair"
@@ -75,3 +89,10 @@ on = "ON"
 off = "OFF"
 style = "green"
 hint = "Set in the game's assist menu"
+
+[[control]]
+type = "lamps"
+label = "WARNINGS"
+fields = ["warn_brake", "warn_engine", "warn_oil", "warn_coolant"]
+icons = ["brake", "engine", "oil", "coolant"]
+labels = ["BRAKE", "ENGINE", "OIL", "TEMP"]

@@ -5,15 +5,20 @@
  *   bias     brake bias % front with a front / rear bar; holding a button repeats
  *   toggle   a lamp that shows the state; a button when the card has an action
  *   pair     two values side by side, shown only
+ *   fuel     litres with a tank bar and laps left
+ *   lamps    warning lamps as icons, state only: off (grey), cold (blue), warn (yellow), alert (red)
  *
- * Every value comes from the game, so the card shows what the game applied. After a press the card
- * is "pending" until the value changes (or 1.2 s pass). A card whose value the car does not have is
- * greyed out ("NOT ON THIS CAR"); while there is an error all cards show "-" and do not take presses.
+ * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
+ * when it is pressed (until the new value arrives) and whenever its value changes in the game, so a
+ * change made in the car looks the same as one made on the tablet. A stepper with an "active" field
+ * shows amber digits while the system works (TC cutting, ABS braking). A card whose value the car does
+ * not have is greyed out ("NOT ON THIS CAR"); while there is an error all cards show "-" and take no presses.
  */
 (function () {
   "use strict";
 
-  const PENDING_MS = 1200;
+  const PENDING_MS = 1200;       // a press lights the card at most this long while waiting for the game
+  const LIT_MS = 700;            // a changed value keeps the card lit this long
   const REPEAT_DELAY = 400;
   const REPEAT_EVERY = 160;
 
@@ -61,20 +66,22 @@
     const card = el("section", "card " + kind);
     card.appendChild(el("header", "top", `<span class="lab"></span><span class="rng"></span>`));
     card.querySelector(".lab").textContent = def.label;
-    card._pendingSince = 0;
-    card._pendingValue = undefined;
+    let litTimer = null, seen = false, last;
+    const light = (ms) => {
+      card.classList.add("lit");
+      clearTimeout(litTimer);
+      litTimer = setTimeout(() => card.classList.remove("lit"), ms);
+    };
     card.press = (action) => {
-      card._pendingSince = performance.now();
-      card._pendingValue = card._value;
-      card.classList.add("pending");
+      light(PENDING_MS);
       RD.command(action);
     };
+    // called with the card's current value on every frame: a change lights the card
     card.settle = (value) => {
-      card._value = value;
-      if (card._pendingSince && (value !== card._pendingValue || performance.now() - card._pendingSince > PENDING_MS)) {
-        card._pendingSince = 0;
-        card.classList.remove("pending");
-      }
+      const key = JSON.stringify(value === undefined ? null : value);
+      if (seen && key !== last) light(LIT_MS);
+      seen = true;
+      last = key;
     };
     if (def.hint) card.appendChild(el("footer", "hint")).textContent = def.hint;
     return card;
@@ -124,6 +131,7 @@
       }
       const lit = error || missing || !range ? 0 : range[0] === 0 ? v : v - range[0] + 1;
       [...pips.children].forEach((pip, i) => pip.classList.toggle("on", i < lit));
+      card.classList.toggle("active", !!def.active && !error && !missing && !!f[def.active]);
       setButtons(card, !error && !missing);
       if (range && !error && !missing) {
         if (v <= range[0]) down.disabled = true;
@@ -150,7 +158,7 @@
       const v = f[def.field];
       const missing = isNone(v);
       setState(card, error, missing);
-      card.settle(v);
+      card.settle(missing ? null : (v * 100).toFixed(1));      // compare what is shown, not float noise
       drawSeg(svg, error || missing ? "-" : (v * 100).toFixed(1));
       bar.firstChild.style.width = error || missing ? "0" : `${Math.max(0, Math.min(100, v * 100))}%`;
       setButtons(card, !error && !missing);
@@ -174,6 +182,7 @@
       const values = def.fields.map((field) => f[field]);
       const missing = values.every(isNone);
       setState(card, error, missing);
+      if (!error) card.settle(values);
       values.forEach((v, i) => drawSeg(svgs[i], error || isNone(v) ? "-" : String(v)));
     };
     return card;
@@ -203,7 +212,67 @@
     return card;
   }
 
-  const TYPES = { stepper, bias, pair, toggle };
+  function fuel(def) {
+    const card = baseCard(def, "fuel");
+    card.querySelector(".rng").textContent = "LITRES";
+    const body = el("div", "fuel-body");
+    const svg = segSvg("fuel-num");
+    const tank = el("div", "tank", "<b></b>");
+    const sub = el("div", "sub");
+    body.append(svg, tank, sub);
+    card.insertBefore(body, card.querySelector(".hint"));
+    card.update = (f, error) => {
+      const litres = f[def.field], max = def.max ? f[def.max] : null, perLap = def.per_lap ? f[def.per_lap] : null;
+      const missing = isNone(litres);
+      setState(card, error, missing);
+      const ok = !error && !missing;
+      drawSeg(svg, ok ? litres.toFixed(1) : "-");
+      const share = ok && max ? Math.max(0, Math.min(1, litres / max)) : 0;
+      tank.firstChild.style.width = `${share * 100}%`;
+      tank.classList.toggle("low", ok && !!max && share < 0.15);
+      tank.classList.toggle("empty", ok && !!max && share < 0.07);
+      const text = !ok ? "" : perLap > 0 ? `\u2248 ${(litres / perLap).toFixed(1)} LAPS` : max ? `OF ${Math.round(max)} L` : "";
+      if (sub.textContent !== text) sub.textContent = text;
+    };
+    return card;
+  }
+
+  /* warning lamp icons (inline SVG, 24 x 24, drawn in currentColor) */
+  const ICONS = {
+    brake: '<circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/>' +
+      '<path d="M12 8.4v4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15.6" r="1.2" fill="currentColor"/>' +
+      '<path d="M5.2 6.6a8.6 8.6 0 0 0 0 10.8M18.8 6.6a8.6 8.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    engine: '<path d="M3 11v5M3 13.5h2.2M5.2 10.2h2.3V8.4h3V6.8h4.6v1.6h2.1l2 2.3h1.6v6.8h-1.6l-2 2.1H9.3l-1.8-2.1H5.2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>',
+    oil: '<path d="M2.8 10.2l3 1.2 1.6-1.8h6.3l5.5-2.2 1 .9-6.2 6.9H7.4l-1.6-1.9H2.8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+      '<path d="M10 9.6V8.1M8.6 8.1h2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+      '<path d="M20.4 14.6c.7 1 1.1 1.7 1.1 2.2a1.1 1.1 0 0 1-2.2 0c0-.5.4-1.2 1.1-2.2z" fill="currentColor"/>',
+    coolant: '<path d="M12 3.2v9.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14.6" r="2.4" fill="currentColor"/>' +
+      '<path d="M13.6 5.2h2.2M13.6 7.8h2.2M13.6 10.4h2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<path d="M3.5 19.4c1.4-1 2.8-1 4.2 0s2.8 1 4.3 0 2.8-1 4.2 0 2.8 1 4.3 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  };
+
+  function lamps(def) {
+    const card = baseCard(def, "lamps");
+    const body = el("div", "lamp-grid");
+    const cells = def.fields.map((field, i) => {
+      const cell = el("div", "warn s-none", `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[def.icons[i]] || ""}</svg><small></small>`);
+      cell.querySelector("small").textContent = (def.labels || [])[i] || "";
+      body.appendChild(cell);
+      return cell;
+    });
+    card.insertBefore(body, card.querySelector(".hint"));
+    card.update = (f, error) => {
+      def.fields.forEach((field, i) => {
+        const state = error ? "none" : f[field] || "none";
+        const cls = "warn s-" + state;
+        if (cells[i].className !== cls) cells[i].className = cls;
+      });
+      card.classList.toggle("off", !!error);
+    };
+    return card;
+  }
+
+  const TYPES = { stepper, bias, pair, toggle, fuel, lamps };
 
   RD.dashbox = function (grid) {
     RD.loadInfo().then((info) => {
