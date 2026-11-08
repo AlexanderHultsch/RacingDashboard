@@ -35,7 +35,7 @@ Do it in this order, one step at a time, and tell the owner what you see after e
 
 ### 1. Demo first (separates page problems from game problems)
 
-Settings (gear button) → GAME → DEMO. Open `http://localhost:8080/analysis` on the PC and `http://<PC address>:8080/analysis` on the iPad. After the first lap (about 1:30) the map, the section strip and the graphs fill; TO REVIEW counts the offers. If the demo works but a game does not, the problem is in that game's connector.
+Settings (gear button) → GAME → DEMO. Open `http://localhost:8080/analysis` on the PC and `http://<PC address>:8080/analysis` on the iPad. After the first lap (about 1:30) the map, the section strip and the graphs fill; the REVIEW tab counts the offers. If the demo works but a game does not, the problem is in that game's connector.
 
 ### 2. ACE: the raw values
 
@@ -65,7 +65,7 @@ Drive three laps, then look at the iPad:
 - **Car dot** follows the car; the red line grows behind it.
 - **Lap time:** after a lap, the strip and `data\runs\ace\...\lap-00N.jsonl` (last line, `summary`, `time`) against the game's lap time. Expect a difference of a few hundredths at most (the recorder interpolates at the line at 30 Hz).
 - **Sections:** tap a section on the map and in the strip; the graphs show green (best), blue (last), red (now). LIVE returns to following the car.
-- **Offers:** TO REVIEW → SAVE one, SKIP one, UNDO; files appear in `data\baselines\ace\<track>\<car>\` (`lap.jsonl`, `sections\section-NN.jsonl`, and `*.prev.jsonl` after a second save).
+- **Offers:** REVIEW tab (the start view on the right) → SAVE one, SKIP one, UNDO, SKIP ALL (tap twice); files appear in `data\baselines\ace\<track>\<car>\` (`lap.jsonl`, `sections\section-NN.jsonl`, and `*.prev.jsonl` after a second save).
 - **Pause** (Esc) during a lap: that lap must not count (no best lap offered for it).
 - **END RUN** (tap twice): the end-of-run menu with KEEP ALL LAPS / KEEP BASELINES ONLY.
 - **Practice repeat** (the owner asked for it): turn around, drive back into the previous section, then forward again: the strip shows ↻ on the repeated section, the lap no longer counts, a faster repeat is offered as a section best.
@@ -85,7 +85,7 @@ Enable UDP ([DR2/NOTES.md](DR2/NOTES.md)), GAME → DIRT RALLY 2.0, drive a stag
 ## Known limitations (tell the owner if they come up)
 
 - After the session, red is always the last lap and blue the one before; there is no lap picker yet.
-- UNDO restores the previous baseline but does not bring the offer back into TO REVIEW.
+- UNDO restores the previous baseline but does not bring the offer back into REVIEW.
 - KEEP BASELINES ONLY deletes the lap files; offers still open then live only in memory until the bridge restarts.
 - A lap started standing on a circuit (race start) counts as a normal lap.
 - Baselines are kept per game / track / car folder. If a game reports a slightly different track length in another session, the section count can change and old section baselines no longer line up (not seen yet).
@@ -108,6 +108,7 @@ Enable UDP ([DR2/NOTES.md](DR2/NOTES.md)), GAME → DIRT RALLY 2.0, drive a stag
 ## Working with the owner
 
 - The owner writes short messages (sometimes with typos); reply short and plain, in English.
+- Branches: `main`, plus one work-in-progress branch for a prototype the owner has not approved yet; no other branches.
 - For visual changes: **show PNG mockups first** (HTML rendered with a headless browser), ask for feedback, then build. For bigger features the owner likes a short interview first.
 - Keep README, SPEC, the game notes and tests in step with every change; no personal data in commits; no emoji in the UI.
 - Ideas not built yet: lap picker after the session, AI coach (maybe later), tyre / brake temperature / damage cards, two-page dash box, names for light / wiper stages, flags, more games ([ASSISTS.md](ASSISTS.md)).

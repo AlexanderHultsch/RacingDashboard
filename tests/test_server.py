@@ -177,6 +177,7 @@ class Analysis(unittest.TestCase):
         self.assertEqual(json.loads(body)["n"], 0)
         self.assertEqual(post("/api/analysis/offer", {"id": 999, "save": True})[0], 409)
         self.assertEqual(post("/api/analysis/undo", {})[0], 409)
+        self.assertEqual(post("/api/analysis/skip-all", {})[0], 200)
         self.assertEqual(post("/api/analysis/finish", {"keep": "nonsense"})[0], 409)
         self.assertEqual(post("/api/analysis/nothing", {})[0], 404)
         status, state = post("/api/analysis/end", {})

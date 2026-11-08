@@ -10,7 +10,7 @@ The analysis page as agreed with the owner (interview, November 2026). **Built**
 - **Always visible:** delta per section against best ever and against last lap, and delta per lap against best ever and against last lap.
 - **Section strip** under the map: the delta of every section against best and against last (two rows), horizontally scrollable with a slider for long tracks; in LIVE it scrolls along with the current section. Tapping a cell opens that section.
 - **LIVE** is the start view: the current section is selected and the graphs update while driving. Any section can be tapped and analysed **while driving** as well as after the session; the page stays there until LIVE is tapped, while recording, the top deltas and the strip keep updating.
-- A small list of **pending save offers** ("4 to review") and the **end-of-run menu** (below).
+- The right side has two tabs: **REVIEW** (start view) with the pending save offers (SAVE / SKIP, SAVE ALL, SKIP ALL, UNDO), because especially at the beginning many new bests come in; **GRAPHS** for the deep dive. Tapping an offer or a section opens GRAPHS. And the **end-of-run menu** (below).
 
 ## Sections
 
@@ -25,7 +25,7 @@ In practice you may turn around and drive a section again. The rule:
 - So a spin at a border does not overwrite anything: spinning at the N / N+1 border and rolling back into N leaves N untouched (it was not entered from N−1); entering N+1 again only restarts the N+1 attempt.
 - Driving backwards (lap position decreasing) is never recorded.
 - All attempts are kept in the run's files (numbered); the page shows the latest as the red line.
-- A faster repeat is offered in TO REVIEW like any best section; the lap it belongs to never counts as a lap.
+- A faster repeat is offered in REVIEW like any best section; the lap it belongs to never counts as a lap.
 
 ## Recording
 

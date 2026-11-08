@@ -4,7 +4,7 @@
  *   GET  /api/analysis              track outline, section borders, full-lap lines, offers, end of run
  *   GET  /api/analysis/live?since=  4 x per second: deltas, section strip, current section, red line
  *   GET  /api/analysis/section?n=   one section: best / last / now samples [d, t, v, thr, brk, str, g, x, y]
- *   POST /api/analysis/offer {id, save}, /save-all, /undo, /end, /finish {keep: "all" | "baselines"}
+ *   POST /api/analysis/offer {id, save}, /save-all, /skip-all, /undo, /end, /finish {keep: "all" | "baselines"}
  * The car dot on the map comes from the normal telemetry stream (pos_x, pos_y).
  */
 (function () {
@@ -615,6 +615,7 @@
     if (!offers.length) box.innerHTML = "<div class='none'>Nothing to review.<br>New best laps and sections appear here as you drive.</div>";
     offers.forEach((o) => box.appendChild(offerRow(o)));
     $("save-all").disabled = !offers.length;
+    $("skip-all").disabled = !offers.length;
     $("undo").hidden = !(st && st.undo);
     $("undo-label").textContent = (st && st.undo) || "";
   }
@@ -679,6 +680,24 @@
     document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
     $("m-save-all").addEventListener("click", () => post("/api/analysis/save-all").then((s) => { if (!s.error) applyState(s); }));
     $("save-all").addEventListener("click", () => post("/api/analysis/save-all").then((s) => { if (!s.error) applyState(s); }));
+    // SKIP ALL cannot be undone: the first tap arms it for 3 s, the second skips
+    for (const id of ["skip-all", "m-skip-all"]) {
+      const btn = $(id);
+      let armed = 0;
+      btn.addEventListener("click", () => {
+        if (armed > performance.now()) {
+          armed = 0;
+          btn.classList.remove("armed");
+          btn.textContent = "SKIP ALL";
+          post("/api/analysis/skip-all").then((s) => { if (!s.error) applyState(s); });
+          return;
+        }
+        armed = performance.now() + 3000;
+        btn.classList.add("armed");
+        btn.textContent = "TAP AGAIN";
+        setTimeout(() => { if (armed && armed <= performance.now()) { armed = 0; btn.classList.remove("armed"); btn.textContent = "SKIP ALL"; } }, 3050);
+      });
+    }
     $("undo-btn").addEventListener("click", () => post("/api/analysis/undo").then((s) => { if (!s.error) applyState(s); }));
     $("end").addEventListener("click", () => {
       if (S.endArmed > performance.now()) {

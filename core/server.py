@@ -342,8 +342,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
         if path == "/api/analysis/offer":
             ok = isinstance(body.get("id"), int) and recorder.decide(body["id"], bool(body.get("save")))
-        elif path == "/api/analysis/save-all":
-            ok = recorder.save_all() >= 0
+        elif path in ("/api/analysis/save-all", "/api/analysis/skip-all"):
+            ok = recorder.decide_all(path.endswith("save-all")) >= 0
         elif path == "/api/analysis/undo":
             ok = recorder.undo()
         elif path == "/api/analysis/end":

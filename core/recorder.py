@@ -552,10 +552,14 @@ class Recorder:
             return True
 
     def save_all(self) -> int:
+        return self.decide_all(True)
+
+    def decide_all(self, save: bool) -> int:
+        """SAVE ALL or SKIP ALL open offers; returns how many."""
         with self.lock:
             ids = [o["id"] for o in self.offers]
             for offer_id in ids:
-                self.decide(offer_id, True)
+                self.decide(offer_id, save)
             return len(ids)
 
     def undo(self) -> bool:

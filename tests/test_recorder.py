@@ -109,6 +109,13 @@ class RecorderTest(unittest.TestCase):
         self.assertAlmostEqual(self.rec.base["lap"]["time"], faster["time"], delta=0.001)
         self.assertTrue(self.rec.undo())
         self.assertAlmostEqual(self.rec.base["lap"]["time"], lap_offer["time"], delta=0.001)
+        # SKIP ALL drops every open offer without saving
+        self.assertGreater(len(self.offers()), 1)
+        files = sorted((folder / "sections").glob("*.jsonl"))
+        self.rec.decide_all(False)
+        self.assertEqual(self.offers(), [])
+        self.assertEqual(sorted((folder / "sections").glob("*.jsonl")), files)
+        car.drive(1000, ms=70)
         # SKIP removes an offer without saving
         section = self.offers("section")[0]
         self.assertTrue(self.rec.decide(section["id"], False))
