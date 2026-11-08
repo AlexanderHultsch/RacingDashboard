@@ -1,6 +1,6 @@
 # Analysis page – agreed strategy
 
-The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Tested with the demo car and simulated laps; not yet with Assetto Corsa EVO or DiRT Rally 2.0. The page itself only shows data; tips come only from the **AI trainer**, on a tap ([TRAINER.md](TRAINER.md), agreed November 2026, not built yet). This replaces the earlier rule "no coaching, no tips".
+The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Verified with Assetto Corsa EVO at Brands Hatch (lap and section times against the game's own, map, deltas, REVIEW / SAVE, graphs); DiRT Rally 2.0 not yet. The page itself only shows data; tips come only from the **AI trainer**, on a tap ([TRAINER.md](TRAINER.md)). This replaces the earlier rule "no coaching, no tips".
 
 ## The page (one page; iPad landscape; right side: REVIEW and GRAPHS tabs)
 

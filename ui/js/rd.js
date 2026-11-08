@@ -10,7 +10,7 @@
  * - RD.settings        the settings overlay (game, update rate, units, screen, AI trainer, info)
  * - RD.command()       sends a button to the game
  *
- * A page needs: <body data-page="gear" data-styles="classic,bar"> and
+ * A page needs: <body data-page="gear" data-styles="segment"> (one or more styles, comma-separated) and
  * <link id="rd-style" rel="stylesheet">. Everything else is optional.
  * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-pit, rd-tc, rd-abs.
  *
@@ -57,7 +57,6 @@
       const text = RD.formats.gear(v, f);
       return /^\d+$/.test(text) && Number(text) > 9 ? "E" : text;
     },
-    int: (v) => (v === null || v === undefined ? "-" : String(Math.round(v))),
     rpm: (v) => (v ? String(Math.round(v)) : "0"),
     speed: (v) => String(Math.round((v || 0) * (RD.units() === "mph" ? 0.621371 : 1))),
     speedunit: () => (RD.units() === "mph" ? "MPH" : "KM/H"),
@@ -65,7 +64,6 @@
     bias: (v) => (v === null || v === undefined ? "-" : (v * 100).toFixed(1)),
     fuel: (v) => (v === null || v === undefined ? "-" : v.toFixed(1)),
     onoff: (v) => (v ? "ON" : "OFF"),
-    pct: (v) => (v === null || v === undefined ? "-" : Math.round(v * 100) + "%"),
     lap: (ms) => {
       if (!ms && ms !== 0) return "-:--.---";
       const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
@@ -368,7 +366,6 @@
   RD.icons = {
     gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>',
     style: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18V3z"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>',
   };
 
   /* ------------------------------------------------------------ toolbar and settings */

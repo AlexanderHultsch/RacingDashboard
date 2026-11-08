@@ -183,7 +183,7 @@
     const card = baseCard(def, "pair");
     const body = el("div", "two");
     const smalls = [];
-    const svgs = def.fields.map((field, i) => {
+    const svgs = def.fields.map(() => {
       const cell = el("div", "cell");
       const svg = segSvg();
       cell.appendChild(svg);

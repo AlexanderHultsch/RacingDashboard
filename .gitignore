@@ -24,5 +24,8 @@ tools/package-lock.json
 .DS_Store
 Thumbs.db
 
-# Recorded laps and baselines (analysis page)
+# Recorded laps, baselines and the AI trainer history (analysis page)
 data/
+
+# Local page mockups (PNG renders shown to the owner before a visual change)
+mockups/

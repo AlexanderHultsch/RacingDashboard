@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from recorder import interp
+
 PROVIDERS = ("off", "claude", "chatgpt", "gemini", "ollama")
 NAMES = {"off": "OFF", "claude": "CLAUDE", "chatgpt": "CHATGPT", "gemini": "GEMINI", "ollama": "LOCAL (OLLAMA)"}
 LEVELS = ("fast", "best")
@@ -115,16 +117,6 @@ class TrainerError(Exception):
 # ------------------------------------------------------------------ facts
 
 
-def _interp(xs, ys, x):
-    if not xs or x < xs[0] or x > xs[-1]:
-        return None
-    for i in range(1, len(xs)):
-        if xs[i] >= x:
-            a, b = xs[i - 1], xs[i]
-            return ys[i] if b == a else ys[i - 1] + (ys[i] - ys[i - 1]) * (x - a) / (b - a)
-    return ys[-1]
-
-
 def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250.0) -> dict | None:
     """Facts of one line in one section. rows: [d, t, v, thr, brk, str, g, ...] (recorder.section),
     d metres and t seconds from the section start. best_rows: the best line, for delta_by_50m."""
@@ -189,7 +181,7 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
         marks.append(round(length))                   # always the section end
         for mark in marks:
             at = min(mark, d[-1], bd[-1]) if mark - min(d[-1], bd[-1]) <= 5 else mark   # the last sample may be a little short
-            tm, tb = _interp(d, t, at), _interp(bd, bt, at)
+            tm, tb = interp(d, t, at), interp(bd, bt, at)
             if tm is not None and tb is not None:
                 deltas[str(mark)] = round(tm - tb, 3)
         out["delta_by_50m"] = deltas
@@ -526,7 +518,7 @@ class Trainer:
         self.cfg = cfg.get("trainer", {})
         self.settings_file = Path(settings_file)
         self.history_file = Path(data_dir) / "trainer.jsonl"
-        self.log = log or (lambda *args: None)
+        self.log = log or (lambda *_: None)
         self.lock = threading.RLock()
         self.busy = False
         self.settings = self._load_settings()
@@ -603,7 +595,7 @@ class Trainer:
         except TrainerError as error:
             status["state"] = "off" if error.code == "OFF" else "error"
             status["error"], status["detail"] = error.code, error.detail
-            if status["model"] is None and self.settings["provider"] not in ("off",):
+            if status["model"] is None and self.settings["provider"] != "off":
                 status["model"] = self.model_for(self.settings["provider"], self.settings["level"]).get("model") or None
         status["checked"] = time.strftime("%H:%M")
         status["ms"] = round((time.monotonic() - started) * 1000)
@@ -628,9 +620,7 @@ class Trainer:
             if mode not in ("track", "section"):
                 raise TrainerError("NO DATA", "mode")
             task, data, view = build_request(rec, mode, None if section is None else int(section), game_name)
-            provider = self.provider()
-            if not provider.model and isinstance(provider, Ollama):
-                provider.check()
+            provider = self.provider()                     # Ollama without a model picks one in ask()
             user = task + "\nDATA:\n" + json.dumps(data, separators=(",", ":"))
             started = time.monotonic()
             try:
@@ -701,6 +691,6 @@ class Trainer:
                 "keys": {p: hint(self.settings["keys"].get(p, "")) for p in CLASSES if p != "ollama"},
                 "ok": self.status.get("state") == "ok", "state": self.status.get("state"),
                 "error": self.status.get("error"), "detail": self.status.get("detail", ""),
-                "checked": self.status.get("checked"), "ms": self.status.get("ms"), "busy": self.busy,
+                "checked": self.status.get("checked"), "ms": self.status.get("ms"),
                 "history": [self._public_entry(e) for e in reversed(self.history)],
             }

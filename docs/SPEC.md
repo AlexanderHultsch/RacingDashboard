@@ -1,4 +1,4 @@
-# Racing-Dashboard – Spec
+# Racing Dashboard – Spec
 
 The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md). DiRT Rally 2.0: [DR2/NOTES.md](DR2/NOTES.md). Driving assists of all planned games: [ASSISTS.md](ASSISTS.md).
 
@@ -20,12 +20,12 @@ Principles:
 | --- | --- |
 | First game | Assetto Corsa EVO on PC (shared memory) |
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
-| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH (tablet); every device can open every page |
+| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH, ANALYSIS and BUTTONS (tablet); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
 | Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
 | Units | km/h by default, mph per device |
-| Code | Public GitHub repo `Racing-Dashboard`, main branch |
+| Code | Public GitHub repo `AlexanderHultsch/RacingDashboard`, main branch |
 
 ## 2. Architecture
 
@@ -58,7 +58,7 @@ Phone / tablet pages (ui/)
 | `connected`, `status` | fresh data from the game; `off` / `live` / `pause` / `replay` |
 | `car`, `track` | names as the game reports them |
 | `gear`, `max_gears` | −1 = R, 0 = N, 1.. forward; number of forward gears |
-| `gear_mode` | selector of an automatic gearbox or an electric car: `None` (manual or unknown), `P` park, `D` drive, `S` sport, `B` regen, `L` low, `M` manual mode |
+| `gear_mode` | selector of an automatic gearbox or an electric car: `None` (manual or unknown), `P` park, `D` drive, `S` sport, `B` regen, `L` low, `M` manual mode. The pages show the gear number whatever the mode and P only for park |
 | `rpm`, `rpm_max`, `rpm_pct` | engine speed, redline, rpm as a share of the redline (0..1) |
 | `shift_up`, `shift_down`, `limiter` | the game's shift signals and the rev limiter |
 | `speed_kmh`, `gas`, `brake`, `clutch` | km/h; pedals 0..1 |
@@ -67,7 +67,6 @@ Phone / tablet pages (ui/)
 | `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
 | `latched` | set by the bridge: latch actions whose key is held down right now, e.g. `["wipers"]` |
 | `fixed` | stepped settings the car has but the driver cannot change, e.g. `["abs_level"]`: the card shows the value with FIXED and no − / + |
-| `launch`, `auto_clutch` | launch control active, auto clutch assist on (`None` = not available) |
 | `esc_active` | stability control working right now |
 | `warn_brake`, `warn_engine`, `warn_oil`, `warn_coolant` | warning lamps as a state, no value: `None` (not reported), `off`, `cold`, `warn` (yellow), `alert` (red) |
 | `tc_active`, `abs_active` | the aid is working right now |
@@ -82,7 +81,6 @@ Phone / tablet pages (ui/)
 | `session_id` | changes when a new game session starts (a new analysis run) |
 | `air_c`, `road_c`, `tyre_compound`, `time_of_day` | ambient values, written once per lap |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
-| `flag` | `none`, `blue`, `yellow`, ... (not filled for ACE yet) |
 | `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
 
 Each frame also carries `game` (the active game id).
@@ -131,9 +129,9 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 | `POST /api/command` | `{"action": "tc_up"}` (tap) or `{"action": "horn", "state": "down" / "up"}` → `{"ok": true}` or HTTP 409 `{"error": ...}` |
 | `POST /api/settings` | `{"game": "demo"}` → the new `/api/info`; HTTP 400 for an unknown game |
 | `GET /api/analysis` | the analysis state: `version`, `active`, game / car / track, `track_length_m`, `section_m`, `sections`, `outline` ([x, y, p] every 5 m), `borders` ([x, y, nx, ny] per section start), `lines` (`best`, `last` as [x, y]), `red_lap`, `blue_lap`, `base_lap`, `offers`, `undo`, `ended` |
-| `GET /api/analysis/live?since=k` | `version`, `recording`, `sec` (current section), `deltas` (`lap_best`, `lap_last`, `sec_best`, `sec_last`, `lap_time`), `strip` (per section `best`, `last`, `times`, `attempts`, `base`), the red line from point k (`now_from`, `now_line`), `offers` (count) |
+| `GET /api/analysis/live?since=k` | `version`, `recording`, `sec` (current section), `deltas` (`lap_best`, `lap_last`, `sec_best`, `sec_last`, `lap_time`), `strip` (per section `best`, `last`, `attempts`, `old`), `why` (why nothing is recorded), `last_lap`, the red line from point k (`now_from`, `now_line`), `offers` (count) |
 | `GET /api/analysis/section?n=` | one section (0-based): `best`, `last`, `now` as rows [d, t, v, thr, brk, str, g, x, y] (d metres and t seconds from the section start), their times, `now_attempt` |
-| `GET /api/trainer` | AI trainer status: `provider`, `level`, `model`, `models`, `keys` (hints only, never a key), `ok`, `state`, `error`, `detail`, `checked`, `busy`, `history` (the last 5 answers) |
+| `GET /api/trainer` | AI trainer status: `provider`, `level`, `model`, `models`, `keys` (hints only, never a key), `ok`, `state`, `error`, `detail`, `checked`, `ms`, `history` (the last 5 answers) |
 | `POST /api/trainer/ask` | `{"mode": "track" / "section", "section": 4}` → `{"entry", "trainer"}` after the AI answered; HTTP 409 `{"error", "detail"}` when it failed; `/settings` `{"provider", "level", "key", "key_for"}` and `/test` → the status ([TRAINER.md](TRAINER.md)) |
 | `POST /api/analysis/offer` | `{"id": 3, "save": true}` SAVE or SKIP one offer → the analysis state; `/save-all`, `/skip-all`, `/undo`, `/end` (END RUN), `/finish` `{"keep": "all" / "baselines"}` (end-of-run menu); HTTP 409 when not possible, 404 with `[analysis] enabled = false` |
 
@@ -143,10 +141,10 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 `ui/` holds the pages and their building blocks. Every page loads `css/base.css` and `js/rd.js` and calls `RD.start()`.
 
-- **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `rpm`, `speed`, `speedunit`, `level`, `bias`, `fuel`, `onoff`, `lap`, `delta`, `position`, `fuellaps`, `pct`, `int`, `text`; more in `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
+- **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `gearseg`, `rpm`, `speed`, `speedunit`, `level`, `bias`, `fuel`, `onoff`, `lap`, `delta`, `position`, `fuellaps`, `text`; `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
 - **Body classes** for styles: `rd-stale` (no data for 2.5 s or not connected; a "NO DATA" chip shows), `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`.
-- **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. They light over the last `range` (0.25) of the rpm share below the shift point, in pairs from the outside in (or from the left); unlit fields stay dim. At the game's `shift_up` all fields flash, on the `limiter` faster. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `E` = a f e d g1 g2; gearbox letters `P` = a b f e g1 g2, `D` = a b c d i l, `S` = a f g1 g2 c d (the standard S, like a 5), `B` = a b c d g2 i l, `L` = f e d, `M` = f e b c h j. Format `gear`: E on errors; P when `gear_mode` is P; the letter when `gear_mode` is D, S, B or L and the car is in a forward gear (unless the device setting AUTOMATIC GEARBOX is SHOW GEAR NUMBER); else R, N or the number. Format `gearseg` also shows E for a number above 9. Widgets register in `RD.widgetInits`. `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
-- **Styles.** `<body data-page="gear" data-styles="classic,bar">` and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
+- **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. They light over the last `range` (0.25) of the rpm share below the shift point, in pairs from the outside in (or from the left); unlit fields stay dim. At the game's `shift_up` all fields flash, on the `limiter` faster. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `E` = a f e d g1 g2; gearbox letters `P` = a b f e g1 g2, `D` = a b c d i l, `S` = a f g1 g2 c d (the standard S, like a 5), `B` = a b c d g2 i l, `L` = f e d, `M` = f e b c h j. Format `gear`: E on errors; P when `gear_mode` is P; else R, N or the number (always the number with an automatic gearbox or electric drive, the owner's decision; the other letters stay in the glyph table). Format `gearseg` also shows E for a number above 9. Widgets register in `RD.widgetInits`. `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
+- **Styles.** `<body data-page="gear" data-styles="segment">` (one or more styles, comma-separated) and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
 - **Toolbar and settings.** Top right, the same size and place on every page (`base.css`: 6 px + the top gap from the top, 10 px from the right; DASH and ANALYSIS keep that corner of their header free, the GEAR + REV rev lights leave 54 px at both ends): the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). `--top-gap` (`base.css`) is 26 px in landscape on a tablet (height 600 px or more: the iPad screen fades at its top edge) and 0 otherwise; pages and the settings overlay start that much lower. The settings overlay has 16 px padding on every side plus the top gap. The settings are listed in the [README](../README.md#settings).
 - **Buttons** (`js/buttons.js`, DASH): built from `/api/info`, one tab per group, the chosen tab is stored on the device; pointer events, so a hold works with the finger resting on it.
 - **Design rules.** Dark background, white bold labels, touch targets at least 56 px, no emoji code points (icons are inline SVG), page locked for home-screen use (no zoom, no selection, no scroll bounce). GEAR + REV works in portrait and landscape on phones; DASH is designed for 1180 × 820 landscape and fits 1024 × 768 and portrait.
@@ -213,7 +211,7 @@ Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*`, A
 
 ## 10. Tests
 
-`python -m unittest discover tests`: the ACE struct layout and translation against synthetic shared memory, and a bridge smoke test with the demo game (pages, path safety, state, info, commands, stream rate), the DiRT Rally 2.0 packet translation, and the recorder with a simulated car (sections, lap and section times, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data). On Windows with ACE running, `python tools/ace_probe.py` prints the live values.
+`python -m unittest discover tests` (61 tests): the data checks of the core; the ACE struct layout and translation against synthetic shared memory; the DiRT Rally 2.0 packet translation and a UDP round trip; a bridge smoke test with the demo game (pages, the home link, path safety, state, info, commands, latch buttons, stream rate, the analysis and trainer API, the API key never in a reply); the recorder with a simulated car (sections, lap and section times, the game's lap time, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data, driving aids); the AI trainer with simulated providers (facts, the request, answer checks, settings, keys, the rolling history). On Windows with ACE running, `python tools/ace_probe.py` prints the live values and `python tools/analysis_check.py` checks the recorded laps.
 
 ## 11. Future development and out of scope
 

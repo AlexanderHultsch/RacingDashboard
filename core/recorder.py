@@ -127,7 +127,7 @@ class Recorder:
     def __init__(self, data_dir, hz: int = 30, section_m: float = 250.0, log=None):
         self.dir = Path(data_dir)
         self.hz, self.period, self.section_m = hz, 1.0 / hz, float(section_m)
-        self.log = log or (lambda *args: None)
+        self.log = log or (lambda *_: None)
         self.lock = threading.RLock()
         self.offers, self.next_offer, self.undo_stack = [], 1, []
         self.ended = None                      # the run that ended last, for the end-of-run menu
@@ -417,10 +417,10 @@ class Recorder:
         line = {"type": "s", "t": round(row[NOW] - t0, 3), "p": round(row[P], 6), "x": row[X], "y": row[Y],
                 "v": round(row[V], 1), "thr": round(row[THR], 3), "brk": round(row[BRK], 3), "str": round(row[STR], 3),
                 "g": row[G], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
-        aids = row[TC_ON:ESC_ON + 1] if len(row) > LV else []
+        aids = row[TC_ON:ESC_ON + 1]
         if any(a is not None for a in aids):
             line["a"] = list(aids)                         # TC, ABS, stability working: 1 / 0
-        if len(row) > LV and any(v is not None for v in row[LV]):
+        if any(v is not None for v in row[LV]):
             line["lv"] = list(row[LV])                     # set levels: TC, TC cut, ABS, stability, engine map
         return line
 
@@ -597,9 +597,6 @@ class Recorder:
             self.version += 1
             return True
 
-    def save_all(self) -> int:
-        return self.decide_all(True)
-
     def decide_all(self, save: bool) -> int:
         """SAVE ALL or SKIP ALL open offers; returns how many."""
         with self.lock:
@@ -709,7 +706,7 @@ class Recorder:
         """Per section: delta of the red lap against the best section and the blue lap. Sections the lap in
         progress has not reached yet show the last lap's values instead (old = True, drawn dimmer)."""
         red, blue = self._shown()
-        best, last, times, attempts, old = [], [], [], [], []
+        best, last, attempts, old = [], [], [], []
         for n in range(self.sections):
             lap, other, prev = red, blue, False
             if self._section_time(red, n) is None and red is self.lap and blue is not None:
@@ -717,14 +714,11 @@ class Recorder:
             t = self._section_time(lap, n)
             base = self.base["sections"].get(n)
             tb = self._section_time(other, n)
-            times.append(r3(t))
             best.append(None if t is None or base is None else r3(t - base["time"]))
             last.append(None if t is None or tb is None else r3(t - tb))
             attempts.append(len(lap.attempts.get(n, [])) if lap is not None else 0)
             old.append(prev and t is not None)
-        return {"best": best, "last": last, "times": times, "attempts": attempts, "old": old,
-                "base": [r3(self.base["sections"][n]["time"]) if n in self.base["sections"] else None
-                         for n in range(self.sections)]}
+        return {"best": best, "last": last, "attempts": attempts, "old": old}
 
     def _deltas(self) -> dict:
         red, blue = self._shown()
@@ -776,13 +770,12 @@ class Recorder:
                 "version": self.version, "active": self.key is not None,
                 **({k: self.meta[k] for k in ("game", "car", "track", "track_length_m", "section_m", "sections")}
                    if self.key else {}),
-                "lap": self.lap.no if self.lap else None, "laps": self.laps_written,
                 "outline": outline, "borders": self._borders(outline) if self.key else [],
                 "lines": {"best": [[s["x"], s["y"]] for s in base["samples"][::LINE_STEP] if s.get("x") is not None]
                           if base else [],
                           "last": self._xy(blue.line()) if blue else []},
                 "red_lap": red.no if red else None, "blue_lap": blue.no if blue else None,
-                "base_lap": base["time"] if base else None, "run_best": r3(self.run_best),
+                "base_lap": base["time"] if base else None,
                 "offers": self._offers(), "undo": self.undo_stack[-1]["label"] if self.undo_stack else None,
                 "ended": self.ended,
             }

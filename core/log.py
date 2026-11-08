@@ -8,7 +8,10 @@ file_handler = None
 
 
 def setup(log_cfg: dict) -> None:
+    """Console and (if enabled) a rolling file. Safe to call once per process; a second call is ignored."""
     global file_handler
+    if logger.handlers:
+        return
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(logging.Formatter("%(asctime)s | %(message)s", "%H:%M:%S"))
     logger.addHandler(console)

@@ -1,4 +1,4 @@
-# Racing-Dashboard – notes for Claude
+# Racing Dashboard – notes for Claude
 
 Start with [docs/HANDOVER.md](docs/HANDOVER.md): current state, what was verified in the game and what is still open, what a cloud session can and cannot do, and the owner's design decisions. Then [README.md](README.md) and [docs/SPEC.md](docs/SPEC.md).
 

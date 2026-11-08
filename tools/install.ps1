@@ -13,7 +13,7 @@
     Your own settings (config\config.toml) are kept on an update.
 
     Install or update from the internet, in PowerShell:
-        irm https://raw.githubusercontent.com/AlexanderHultsch/Racing-Dashboard/main/tools/install.ps1 | iex
+        irm https://raw.githubusercontent.com/AlexanderHultsch/RacingDashboard/main/tools/install.ps1 | iex
 
     From a downloaded copy: double-click install.bat.
     Remove: Start menu > Racing Dashboard > Uninstall Racing Dashboard.
@@ -45,7 +45,7 @@ param(
 # Note: this script must stay plain ASCII and Windows PowerShell 5.1 compatible, and must never
 # call "exit": run through "irm | iex" that would close the user's PowerShell window.
 
-$RD_Repo = "AlexanderHultsch/Racing-Dashboard"
+$RD_Repo = "AlexanderHultsch/RacingDashboard"
 $RD_Name = "Racing Dashboard"
 $RD_MinPython = 312
 $RD_Marker = ".installed-by-script"
@@ -381,7 +381,7 @@ function Install-RacingDashboard {
     Write-Host "  Then open on your phone or tablet (same Wi-Fi):" -ForegroundColor White
     Write-Host ""
     Write-Host "      $address" -ForegroundColor Green
-    Write-Host "      Gear + Rev:  $address/gear      Dash:  $address/dash" -ForegroundColor Green
+    Write-Host "      Gear + Rev:  $address/gear    Dash:  $address/dash    Analysis:  $address/analysis" -ForegroundColor Green
     Write-Host ""
     Write-Info "Tip: on the iPhone / iPad use Share > Add to Home Screen for full screen."
     Write-Info "No game at hand? Settings (gear button) > GAME > DEMO shows a simulated car."

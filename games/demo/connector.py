@@ -14,9 +14,6 @@ import telemetry
 RPM_MAX = 8200
 RPM_IDLE = 1100
 SHIFT_PCT = 0.94                         # the "game's" shift point
-# gearbox modes, cycled with the AUTO SHIFT button: (name, the demo driver shifts, gear_mode, upshift share)
-GEARBOXES = [("sequential", True, None, SHIFT_PCT), ("automatic D", True, "D", 0.80),
-             ("automatic S", True, "S", 0.97), ("manual", False, None, SHIFT_PCT)]
 RATIOS = [0, 3.3, 2.3, 1.75, 1.4, 1.15, 0.97]   # km/h -> rpm factor per gear, scaled below
 SPEED_RPM = 30.0                         # rpm per km/h at ratio 1.0
 FUEL_MAX = 60.0
@@ -115,7 +112,6 @@ class Connector(telemetry.Connector):
         self.coolant = 35.0                      # starts cold: blue lamp until about 50 C
         self.state = {"tc_level": 3, "tc_cut_level": 2, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
                       "lights": 0, "wipers": 0, "ignition": True, "engine_running": True, "auto_shifter": True}
-        self.gearbox = 0
 
     def handle(self, action: str, state: str) -> bool:
         s = self.state
@@ -130,8 +126,7 @@ class Connector(telemetry.Connector):
             name, step, low, high = steps[action]
             s[name] = round(min(high, max(low, s[name] + step)), 3)
         elif action == "auto_shifter":
-            self.gearbox = (self.gearbox + 1) % len(GEARBOXES)
-            s["auto_shifter"] = GEARBOXES[self.gearbox][1]
+            s["auto_shifter"] = not s["auto_shifter"]      # off: SHIFT + / - shift the demo car
         elif action in ("pit_limiter", "ignition"):
             s[action] = not s[action]
             if action == "ignition" and not s["ignition"]:
@@ -200,7 +195,7 @@ class Connector(telemetry.Connector):
         else:
             rpm = 0
         if s["auto_shifter"] and running and now >= self.shift_until:
-            if self.gear < GEARS and rpm >= RPM_MAX * GEARBOXES[self.gearbox][3] and gas > 0:
+            if self.gear < GEARS and rpm >= RPM_MAX * SHIFT_PCT and gas > 0:
                 self.shift(self.gear + 1)
             elif self.gear > 1 and self.rpm_for(self.gear - 1) < RPM_MAX * 0.7 and brake > 0:
                 self.shift(self.gear - 1)
@@ -236,9 +231,6 @@ class Connector(telemetry.Connector):
             "brake_bias": s["brake_bias"], "engine_map": s["engine_map"], "pit_limiter": s["pit_limiter"],
             "esc_level": None,                                   # the demo car has no stability control
             "diff_power": 5, "diff_coast": 3,
-            "launch": running and self.gear == 1 and self.speed < 8 and gas > 0.5,
-            "auto_clutch": s["auto_shifter"],
-            "gear_mode": GEARBOXES[self.gearbox][2],
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],

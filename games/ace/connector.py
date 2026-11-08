@@ -216,16 +216,17 @@ def lap_time(ms: int):
 
 
 def setting(gr, field: str):
-    """(value, adjustable) of a stepped electronics setting; value None when the car does not have it.
-    A setting the driver cannot change still counts when the game gives it a range above 0 and the
-    value lies in it: the BMW M4 CSL reports ABS 1 with min 1, max 1 and is_modifiable 0."""
+    """(value, adjustable, range) of a stepped electronics setting; value None when the car does not have
+    it, range [low, high] only when the driver can change it. A setting the driver cannot change still
+    counts when the game gives it a range above 0 and the value lies in it: the BMW M4 CSL reports ABS 1
+    with min 1, max 1 and is_modifiable 0."""
     current = int(getattr(gr.electronics, field))
     low, high = int(getattr(gr.electronics_min_limit, field)), int(getattr(gr.electronics_max_limit, field))
     if getattr(gr.electronics_is_modifiable, field):
-        return current, high > low
+        return current, high > low, [low, high] if high > low else None
     if high > 0 and low <= current <= high:
-        return current, False
-    return None, False
+        return current, False, None
+    return None, False, None
 
 
 # universal name -> ACE electronics field (current value, range and "car has it")
@@ -257,17 +258,6 @@ def warnings(ph, gr) -> dict:
         "warn_oil": oil,
         "warn_coolant": coolant,
     }
-
-
-def limits(gr) -> dict:
-    """The range of each stepped setting the car has, from the min / max limit blocks."""
-    out = {}
-    for name, field in STEPPED.items():
-        if getattr(gr.electronics_is_modifiable, field):
-            low, high = int(getattr(gr.electronics_min_limit, field)), int(getattr(gr.electronics_max_limit, field))
-            if high > low:
-                out[name] = [low, high]
-    return out
 
 
 def player_xy(gr) -> tuple[float | None, float | None]:
@@ -326,14 +316,12 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "diff_coast": steps["diff_coast"][0],
         "diff_power_pct": share(gr.diff_power_raw_value),
         "diff_coast_pct": share(gr.diff_coast_raw_value),
-        "launch": bool(gr.launch_active),
-        "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
         # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
         "gear_mode": None,
         **warnings(ph, gr),
-        "limits": limits(gr),
-        "fixed": [name for name, (value, adjustable) in steps.items() if value is not None and not adjustable],
+        "limits": {name: limit for name, (_, _, limit) in steps.items() if limit},
+        "fixed": [name for name, (value, adjustable, _) in steps.items() if value is not None and not adjustable],
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
         "ignition": bool(gr.is_ignition_on),
         "engine_running": bool(gr.is_engine_running),

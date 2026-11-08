@@ -27,14 +27,12 @@ SHIFT_PCT = 0.94               # DiRT Rally 2.0 sends no shift signal: shift lig
 LIMITER_PCT = 0.99
 CONFIG = Path("My Games") / "DiRT Rally 2.0" / "hardware_settings" / "hardware_settings_config.xml"
 
-# byte offsets
+# byte offsets of the fields the dashboard reads (the whole layout: docs/DR2/NOTES.md)
 LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
-STEER = 120
-THROTTLE, BRAKE, CLUTCH, GEAR = 116, 124, 128, 132
+THROTTLE, STEER, BRAKE, CLUTCH, GEAR = 116, 120, 124, 128, 132
 LAP, RPM, POSITION = 144, 148, 156
-BRAKE_TEMP = (212, 216, 204, 208)        # FL, FR, RL, RR (the packet orders RL, RR, FL, FR)
-TOTAL_LAPS, TRACK_LENGTH, LAST_LAP = 240, 244, 248
-MAX_RPM, IDLE_RPM, MAX_GEARS = 252, 256, 260
+TRACK_LENGTH, LAST_LAP = 244, 248
+MAX_RPM, MAX_GEARS = 252, 260
 
 
 def f32(data: bytes, offset: int) -> float | None:

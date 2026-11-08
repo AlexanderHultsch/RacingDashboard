@@ -13,7 +13,7 @@
   "use strict";
 
   const COL = {
-    best: "#22d36b", last: "#3f8cff", now: "#ff4545", sel: "#ffe93b", cur: "#ffe93b",
+    best: "#22d36b", last: "#3f8cff", now: "#ff4545", sel: "#ffe93b",       // sel: the selected section and the cursor
     grid: "#20272f", label: "#5f6974", title: "#7d8794", track: "#1b2128", edge: "#39424d", border: "#55606c",
   };
   const POLL_MS = 250;
@@ -82,7 +82,7 @@
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
-    return { ctx, w: r.width, h: r.height, dpr };
+    return { ctx, w: r.width, h: r.height };
   }
 
   function sections() { return (S.state && S.state.sections) || 0; }
@@ -439,9 +439,9 @@
     if (mapView && at) {                               // where the cursor line in the graphs is
       const x = mapView.X(at[0]), y = mapView.Y(at[1]);
       ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2);
-      ctx.lineWidth = 3; ctx.strokeStyle = COL.cur; ctx.stroke();
+      ctx.lineWidth = 3; ctx.strokeStyle = COL.sel; ctx.stroke();
       ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fillStyle = COL.cur; ctx.fill();
+      ctx.fillStyle = COL.sel; ctx.fill();
     }
     const tag = $("map-tag");
     const n = sections() ? S.sel + 1 : "-";
@@ -770,12 +770,12 @@
       }
       if (cx !== null) {                               // the cursor: where the finger is on the map
         ctx.beginPath(); ctx.moveTo(cx, p * viewH + 15); ctx.lineTo(cx, base - axisH + 2);
-        stroke(ctx, COL.cur, 1.6, 0.95);
+        stroke(ctx, COL.sel, 1.6, 0.95);
         const label = Math.round(S.cursor) + " m";
         ctx.font = "800 11px " + font;
         const tw = ctx.measureText(label).width + 10;
         const lx = Math.max(pl, Math.min(w - pr - tw, cx - tw / 2));
-        ctx.fillStyle = COL.cur;
+        ctx.fillStyle = COL.sel;
         ctx.beginPath(); ctx.roundRect(lx, base - axisH + 3, tw, axisH - 2, 4); ctx.fill();
         ctx.fillStyle = "#1a1600";
         ctx.textAlign = "left";

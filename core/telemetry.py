@@ -16,7 +16,8 @@ FIELDS = {
     "gear": 0,               # -1 = R, 0 = N, 1.. = forward gears
     "max_gears": 0,          # number of forward gears, 0 = unknown
     "gear_mode": None,       # automatic gearbox / electric selector: None (manual or unknown), "P" park,
-                             # "D" drive, "S" sport, "B" regen, "L" low, "M" manual mode (shows the number)
+                             # "D" drive, "S" sport, "B" regen, "L" low, "M" manual mode. The pages show the
+                             # gear number whatever the mode (owner's decision) and P only for park
     "rpm": 0,                # engine speed, 1/min
     "rpm_max": 0,            # redline / limiter, 1/min, 0 = unknown
     "rpm_pct": 0.0,          # rpm as share of rpm_max, 0..1
@@ -42,8 +43,6 @@ FIELDS = {
     "diff_coast": None,      # differential coast (off throttle) setting
     "diff_power_pct": None,  # differential locking on throttle as a share 0..1 (the value, not a setting step)
     "diff_coast_pct": None,  # differential locking off throttle, 0..1
-    "launch": None,          # launch control active right now (True / False), None = not available
-    "auto_clutch": None,     # auto clutch assist on (True / False), None = not available
     # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
     "warn_brake": None,      # brake warning (!): handbrake on, brake system
     "warn_engine": None,     # check engine: ignition on with the engine off, engine trouble
@@ -83,7 +82,6 @@ FIELDS = {
     "road_c": None,
     "tyre_compound": None,
     "time_of_day": None,     # "hh:mm" in the game
-    "flag": "none",          # "none", "blue", "yellow", "black", "white", "checkered", "green", ...
     # set by the core, not by a connector (see check() below)
     "error": None,           # None, or a code from ERRORS
     "error_text": "",        # short text for the pages, e.g. "UNEXPECTED DATA: RPM -5"
@@ -106,7 +104,9 @@ RANGES = {
     "rpm": (0, 25000), "rpm_max": (0, 25000), "rpm_pct": (0.0, 1.5),
     "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05), "clutch": (-0.05, 1.05),
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
-    "lap_progress": (0.0, 1.05), "lap_pos": (0.0, 1.0001), "steer": (-1.5, 1.5), "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0), "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
+    "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0),
+    "lap_progress": (0.0, 1.05), "lap_pos": (0.0, 1.0001), "steer": (-1.5, 1.5),
+    "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
 }
 REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
 GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")

@@ -10,7 +10,7 @@ python -m unittest discover tests
 python core/server.py --check
 ```
 
-61 tests must pass and `--check` must print `Result OK`. In the cloud the bridge runs with the **demo game** only (`python core/server.py`, settings → GAME → DEMO, or `config/settings.json` `{"game": "demo"}`); ACE needs Windows shared memory, keypresses need Windows. The owner's recorded laps (`data/`), the AI settings with the API key (`config/trainer.json`) and the local mockups (`mockups/`) are **not in git** and not in the cloud.
+All tests must pass (61 in November 2026) and `--check` must print `Result OK`. In the cloud the bridge runs with the **demo game** only (`python core/server.py`, settings → GAME → DEMO, or `config/settings.json` `{"game": "demo"}`); ACE needs Windows shared memory, keypresses need Windows. The owner's recorded laps (`data/`), the AI settings with the API key (`config/trainer.json`) and the local mockups (`mockups/`) are **not in git** and not in the cloud.
 
 ## What the cloud session can and cannot do
 
@@ -30,6 +30,10 @@ python core/server.py --check
 | **AI trainer** | `core/trainer.py`, [TRAINER.md](TRAINER.md) | works with Claude on the owner's PC (two real answers, Claude FAST); prompt and facts fixed after reading them, FAST now at effort medium; **not checked after those fixes**. ChatGPT, Gemini and Ollama never called for real |
 | Tools | `tools/ace_probe.py [--analysis]`, `tools/analysis_check.py [--last N] [--game ID]` | for the owner on the PC |
 | Installer | `install.bat`, `tools/install.ps1` | ask the owner whether it was ever run |
+
+## Code review for the public release (cloud session, November 2026)
+
+After the local session the owner asked for a full review and clean-up before making the repository public. Done: dead code removed (telemetry fields nothing read: `launch`, `auto_clutch`, `flag`; the demo's D / S gearbox modes; DiRT Rally 2.0 packet offsets the connector never read; `Recorder.save_all`; API payload fields no page used: `lap` / `laps` / `run_best` in `/api/analysis`, `times` / `base` in the strip, `busy` in `/api/trainer`; `RD.icons.home`, the `int` / `pct` formats; CSS of the removed TO REVIEW pop-up); the ACE connector derives `limits` and `fixed` from one pass over the settings; the trainer uses the recorder's interpolation; `log.setup` ignores a second call; the repository name (`AlexanderHultsch/RacingDashboard`) in the installer and the docs; README status and SPEC brought up to date. The owner's one open decision for the release: a **LICENSE** file (none yet).
 
 ## What the local session did (newest first)
 

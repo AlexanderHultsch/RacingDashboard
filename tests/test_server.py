@@ -179,9 +179,6 @@ class Latch(unittest.TestCase):
             server.latched.clear()
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class Analysis(unittest.TestCase):
     def test_analysis_api(self):
@@ -205,3 +202,6 @@ class Analysis(unittest.TestCase):
         self.assertEqual(post("/api/analysis/nothing", {})[0], 404)
         status, state = post("/api/analysis/end", {})
         self.assertEqual(status, 200)
+
+if __name__ == "__main__":
+    unittest.main()

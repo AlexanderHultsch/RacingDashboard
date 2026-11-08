@@ -29,7 +29,6 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `diff_power_pct`, `diff_coast_pct` | graphics `diff_power_raw_value`, `diff_coast_raw_value` | locking share 0..1 (BMW M4 CSL: 0.25 / 0.55); the DIFF card shows it in % when the car has no diff steps |
 | `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per adjustable setting |
 | `fixed` | the same blocks | settings the car has but cannot change (see above) |
-| `launch`, `auto_clutch` | graphics `launch_active`, `assists_state.auto_clutch` | |
 | `esc_active` | graphics `esc_active` | |
 | `warn_brake` | graphics `handbrake_percent` | red while the handbrake is pulled (> 5 %) |
 | `warn_engine` | graphics `is_ignition_on`, `is_engine_running` | yellow with ignition on and engine off; red when the coolant is overheating |

@@ -86,7 +86,7 @@ class Requests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.rec = recorder.Recorder(self.tmp.name, hz=30, section_m=250)
         t = drive_lap(self.rec, 100.0, brake_at=120)        # lap 1 from the line
-        self.rec.save_all()
+        self.rec.decide_all(True)
         t = drive_lap(self.rec, t, brake_at=120)            # lap 2
         self.t = drive_lap(self.rec, t, brake_at=100)       # lap 3: brakes earlier
         self.rec.feed(frame(0.05, 180.0), "demo", self.t)   # lap 4 started
@@ -107,7 +107,7 @@ class Requests(unittest.TestCase):
         # between laps: the last complete lap is NOW
         rec = recorder.Recorder(self.tmp.name + "/b", hz=30, section_m=250)
         t = drive_lap(rec, 100.0, brake_at=120)
-        rec.save_all()
+        rec.decide_all(True)
         t = drive_lap(rec, t, brake_at=100, brake_m=60)  # brakes earlier and longer: slower
         rec.feed(frame(0.01, 180.0), "demo", t)            # lap 3 has just started
         task, data, view = trainer.build_request(rec, "track", None)
@@ -193,7 +193,7 @@ class TrainerTest(unittest.TestCase):
                                   self.dir / "trainer.json", self.dir / "data")
         self.rec = recorder.Recorder(self.dir / "rec", hz=30, section_m=250)
         t = drive_lap(self.rec, 100.0)
-        self.rec.save_all()
+        self.rec.decide_all(True)
         drive_lap(self.rec, t, brake_at=90)
 
     def tearDown(self):

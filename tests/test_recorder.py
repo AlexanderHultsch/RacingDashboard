@@ -62,8 +62,7 @@ class RecorderTest(unittest.TestCase):
     def test_laps_sections_and_files(self):
         car = Car(self.rec, p=0.5)                     # out lap from half way
         car.drive(500 + 1000 + 1000 + 20)              # to the line, then two full laps
-        state = self.rec.state()
-        self.assertEqual(state["laps"], 3)
+        self.assertEqual(self.rec.laps_written, 3)
         lap = self.rec.last_lap
         self.assertTrue(lap.counts)
         self.assertAlmostEqual(lap.time, 20.0, delta=0.05)
@@ -106,7 +105,7 @@ class RecorderTest(unittest.TestCase):
         car = Car(self.rec, p=0.0)
         car.drive(1020)
         lap_offer = self.offers("lap")[0]
-        self.rec.save_all()
+        self.rec.decide_all(True)
         folder = self.dir / "baselines" / "demo" / "test-ring" / "test-car"
         self.assertTrue((folder / "lap.jsonl").exists())
         self.assertEqual(len(list((folder / "sections").glob("section-0?.jsonl"))), 4)
@@ -254,7 +253,7 @@ class RecorderTest(unittest.TestCase):
     def test_section_api(self):
         car = Car(self.rec, p=0.0)
         car.drive(1020)
-        self.rec.save_all()
+        self.rec.decide_all(True)
         car.drive(1000, ms=48)
         car.drive(300, ms=48)                          # into section 2 of the next lap
         data = self.rec.section(1)
@@ -275,7 +274,7 @@ class RecorderTest(unittest.TestCase):
         car.drive(300, **aids)
         car.drive(100, **dict(aids, tc_active=True, tc_level=4))     # TC works, level changed to 4
         car.drive(620, **aids)
-        self.rec.save_all()
+        self.rec.decide_all(True)
         lines = [json.loads(l) for l in (self.rec.run_dir / "lap-001.jsonl").read_text().splitlines()]
         samples = [l for l in lines if l["type"] == "s"]
         self.assertEqual(samples[0]["a"], [0, 0, 0])
@@ -287,7 +286,7 @@ class RecorderTest(unittest.TestCase):
     def test_strip_shows_the_last_lap_until_the_new_one_gets_there(self):
         car = Car(self.rec, p=0.0)
         car.drive(1020)
-        self.rec.save_all()
+        self.rec.decide_all(True)
         car.drive(1000, ms=48)                         # lap 2 done (slower than the baseline)
         car.drive(300, ms=48)                          # lap 3: only section 1 done
         strip = self.rec.live()["strip"]

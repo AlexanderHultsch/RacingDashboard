@@ -1,4 +1,4 @@
-# Racing-Dashboard
+# Racing Dashboard
 
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
@@ -12,7 +12,7 @@ Every device can open every page. The live data streams at up to 60 updates per 
 
 **Games:** Assetto Corsa EVO (PC), DiRT Rally 2.0 (PC) and a **Demo** game, a simulated car for trying the pages without a game. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
 
-**Status:** the bridge, the pages and the demo game are built and tested. The ACE connector is built from Kunos' shared memory documentation and tested against a simulated shared memory, not yet in the game. The ACE keyboard defaults could not be confirmed, so check the keys once in the game, see [ACE keys](#ace-keys).
+**Status:** in daily use with Assetto Corsa EVO (0.9.1) on an iPad and an iPhone: bridge, all pages, the dash box, the analysis page and the AI trainer. ACE has no keyboard defaults for the car controls, so bind the keys once in the game, see [ACE keys](#ace-keys). DiRT Rally 2.0 is built from the game's UDP telemetry documentation and tested with simulated packets only.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ Choose one of the two ways. Both are run on the gaming PC and are safe to run ag
 **A: one line (downloads the latest version).** Press Start, type `PowerShell`, open it and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/AlexanderHultsch/Racing-Dashboard/main/tools/install.ps1 | iex
+irm https://raw.githubusercontent.com/AlexanderHultsch/RacingDashboard/main/tools/install.ps1 | iex
 ```
 
 **B: from the ZIP.** On GitHub click **Code → Download ZIP**, unzip it where you want to keep it, and double-click **`install.bat`**. If Windows warns about a file from the internet, choose **More info → Run anyway**.
@@ -49,7 +49,7 @@ Unattended options for `tools\install.ps1`: `-Yes` (accept all defaults), `-Inst
 
 1. **Start** Racing Dashboard from the Start menu or the desktop (or double-click `start_dashboard.bat`). The window shows the address, for example `http://192.168.1.20:8080/Racing_Dashboard`. Keep the window open while you drive.
 2. **Phone / tablet** (same Wi-Fi as the PC): open the address in the browser and choose a page, or open `/gear` or `/dash` directly. Save **`/Racing_Dashboard`** (the home page) on the tablet: Share → **Add to Home Screen** runs it full screen under the name Racing_Dashboard. The name keeps it apart from other dashboards (e.g. flight simulator ones) on the same address and port; `/` opens the same home page.
-3. **Game.** Start Assetto Corsa EVO and drive; the pages follow as soon as the car is on track. ACE needs no set-up: it publishes its shared memory by itself.
+3. **Game.** Start the game and drive; the pages follow as soon as the car is on track. Assetto Corsa EVO needs no set-up: it publishes its shared memory by itself. DiRT Rally 2.0 needs its UDP telemetry switched on once, see [docs/DR2/NOTES.md](docs/DR2/NOTES.md).
 
 No game at hand? Open the settings (gear button, top right) and choose **DEMO** under GAME.
 
@@ -64,7 +64,7 @@ The gear button at the top right of every page (same size and place on every pag
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
 | PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS or BUTTONS |
-| GAME | all devices | the connector: Assetto Corsa EVO or Demo; remembered on the PC |
+| GAME | all devices | the connector: Assetto Corsa EVO, DiRT Rally 2.0 or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
 | STYLE OF THIS PAGE | this device | shown when a page has more than one style (the half-moon button cycles them) |
@@ -98,6 +98,7 @@ core/                     the bridge, the same for every game
   keys.py                 keypresses (SendInput, scan codes), brings the game window to the front
   winmem.py               Windows shared memory reader for shared-memory games
   recorder.py             lap recording for the analysis page: sections, attempts, files, baselines, offers
+  trainer.py              the AI trainer: facts, prompt, providers (Claude, ChatGPT, Gemini, Ollama), answer checks
   config.py, log.py       configuration and rolling log
 games/                    one folder per game
   ace/                    Assetto Corsa EVO: connector.py (shared memory), game.toml (window, keys), dash.toml (dash box)
@@ -109,12 +110,12 @@ ui/                       the web pages
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   js/dashbox.js                       the dash box cards, built from the game's dash map
-  js/analysis.js                      the analysis page: map, section strip, graphs, offers
+  js/analysis.js                      the analysis page: map, section strip, graphs, offers, AI trainer tab
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
-config/                   config.example.toml (config.toml and settings.json are local and ignored)
+config/                   config.example.toml (config.toml, settings.json and trainer.json are local and ignored)
 data/                     recorded laps and baselines (JSON Lines; local, ignored by git)
-docs/                     SPEC.md (the engine), ANALYSIS.md (the analysis page), ACE/ and DR2/ NOTES.md
+docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS.md, HANDOVER.md, ACE/ and DR2/ notes
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields
