@@ -31,6 +31,7 @@
     endArmed: 0,
     endDismissed: null,
     offline: false,
+    tab: "review",        // right side: REVIEW (start) or GRAPHS
   };
 
   /* ------------------------------------------------------------ helpers */
@@ -131,6 +132,7 @@
   }
 
   function select(n, zoom) {
+    setTab("graphs");
     S.liveMode = false;
     S.sel = Math.max(0, Math.min(sections() - 1, n));
     S.zoom = zoom;
@@ -168,8 +170,9 @@
     live.classList.toggle("on", S.liveMode);
     live.classList.toggle("idle", !recording());
     const n = S.live ? S.live.offers : 0;
-    $("review").hidden = !n;
-    $("review-n").textContent = n;
+    const badge = $("tab-n");
+    badge.textContent = n;
+    badge.classList.toggle("zero", !n);
     const end = $("end");
     end.textContent = S.endArmed > performance.now() ? "TAP AGAIN TO END" : "END RUN";
   }
@@ -582,6 +585,9 @@
     el.innerHTML = "<div class='w'>" + esc(o.label) + " <em>" + esc(em) + "</em>" + (o.invalid ? "<span class='inv'>INVALID LAP</span>" : "")
       + "<small>" + esc(small) + (o.invalid ? " · the lap time does not count" : "") + "</small></div>"
       + "<button class='sbtn save'>SAVE</button><button class='sbtn'>SKIP</button>";
+    if (o.kind === "section" && current) {             // look at the section before deciding
+      el.querySelector(".w").addEventListener("click", () => select(o.sec, true));
+    }
     const [save, skip] = el.querySelectorAll("button");
     save.addEventListener("click", () => decide(o.id, true));
     skip.addEventListener("click", () => decide(o.id, false));
@@ -606,16 +612,19 @@
     const offers = (st && st.offers) || [];
     const box = $("offers");
     box.innerHTML = "";
-    if (!offers.length) box.innerHTML = "<div class='none'>Nothing to review.</div>";
+    if (!offers.length) box.innerHTML = "<div class='none'>Nothing to review.<br>New best laps and sections appear here as you drive.</div>";
     offers.forEach((o) => box.appendChild(offerRow(o)));
     $("save-all").disabled = !offers.length;
     $("undo").hidden = !(st && st.undo);
     $("undo-label").textContent = (st && st.undo) || "";
   }
 
-  function openPop(open) {
-    $("pop").hidden = !open;
-    $("overlay").hidden = !open && $("modal").hidden;
+  function setTab(tab) {
+    S.tab = tab;
+    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+    $("pane-review").hidden = tab !== "review";
+    $("pane-graphs").hidden = tab !== "graphs";
+    if (tab === "graphs") renderGraphs();
   }
 
   function renderModal() {
@@ -623,7 +632,7 @@
     const ended = st && st.ended;
     const show = !!ended && S.endDismissed !== ended.run;
     $("modal").hidden = !show;
-    $("overlay").hidden = !show && $("pop").hidden;
+    $("overlay").hidden = !show;
     if (!show) return;
     const offers = st.offers || [];
     const game = RD.info && RD.info.games ? (RD.info.games.find((g) => g.id === ended.game) || {}).name || ended.game : ended.game;
@@ -655,7 +664,7 @@
     renderDeltas();
     renderStrip();
     drawMap();
-    renderGraphs();
+    if (S.tab === "graphs") renderGraphs();
   }
 
   RD.analysis = function () {
@@ -667,9 +676,7 @@
       mapDirty = true;
       loadSection().then(renderAll);
     });
-    $("review").addEventListener("click", () => openPop($("pop").hidden));
-    $("pop-close").addEventListener("click", () => openPop(false));
-    $("overlay").addEventListener("click", () => { if ($("modal").hidden) openPop(false); });
+    document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
     $("m-save-all").addEventListener("click", () => post("/api/analysis/save-all").then((s) => { if (!s.error) applyState(s); }));
     $("save-all").addEventListener("click", () => post("/api/analysis/save-all").then((s) => { if (!s.error) applyState(s); }));
     $("undo-btn").addEventListener("click", () => post("/api/analysis/undo").then((s) => { if (!s.error) applyState(s); }));
