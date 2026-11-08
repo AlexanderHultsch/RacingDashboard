@@ -27,6 +27,7 @@ def setUpModule():
     server.games = config.load_games(server.cfg)
     for game in server.games.values():
         server.check_keys(game)
+        server.check_dash(game)
     server.activate("demo")
     threading.Thread(target=server.reader, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -56,7 +57,7 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/apple-touch-icon.png"):
+        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/buttons", "/js/dashbox.js", "/styles/dash/cards.css", "/apple-touch-icon.png"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)
@@ -75,6 +76,9 @@ class Bridge(unittest.TestCase):
         info = json.loads(get("/api/info")[2])
         self.assertEqual([g["name"] for g in info["groups"]], ["AIDS", "CAR", "VIEW", "PIT"])
         self.assertIn("ace", [g["id"] for g in info["games"]])
+        self.assertEqual([c["label"] for c in info["dash"]],
+                         ["TC", "ABS", "STABILITY", "BRAKE BIAS", "DIFF", "PIT LIMITER", "LAUNCH", "AUTO CLUTCH"])
+        self.assertTrue(info["dash"][0]["enabled"]["tc_up"])
 
     def test_commands(self):
         before = json.loads(get("/state")[2])["tc_level"]

@@ -49,6 +49,12 @@ def load_games(cfg: dict) -> dict:
         game["game"].setdefault("name", game_id)
         game.setdefault("keys", {})
         game.setdefault("window", {})
+        dash = toml.parent / "dash.toml"
+        if dash.exists():
+            with open(dash, "rb") as f:
+                game["dash"] = tomllib.load(f).get("control", [])
+        else:
+            game["dash"] = []
         game["id"] = game_id
         game["dir"] = toml.parent
         games[game_id] = game

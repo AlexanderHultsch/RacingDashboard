@@ -60,7 +60,9 @@ Phone / tablet pages (ui/)
 | `rpm`, `rpm_max`, `rpm_pct` | engine speed, redline, rpm as a share of the redline (0..1) |
 | `shift_up`, `shift_down`, `limiter` | the game's shift signals and the rev limiter |
 | `speed_kmh`, `gas`, `brake`, `clutch` | km/h; pedals 0..1 |
-| `tc_level`, `abs_level`, `engine_map` | driver settings, `None` if the car has none |
+| `tc_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | driver settings, `None` if the car has none |
+| `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
+| `launch`, `auto_clutch` | launch control active, auto clutch assist on (`None` = not available) |
 | `tc_active`, `abs_active` | the aid is working right now |
 | `brake_bias` | front share 0..1 |
 | `pit_limiter`, `ignition`, `engine_running`, `lights`, `wipers` | car systems (lights / wipers are stages, 0 = off) |
@@ -133,13 +135,26 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 One style, **SEGMENT** (`styles/gear/segment.css`): 8 rev lights on top (blue, green, yellow, red, red, yellow, green, blue; filling from the outside in, flashing at the shift point); below, a light grey frame that runs close to the screen edges with GEAR (in segments) set into its top line, and the gear as a yellow 14-segment display at 92 % of the frame height (landscape) or width (portrait). No rpm or speed numbers. On an error the gear shows E and the chip sits in the bottom frame line ([Errors](#errors)). The settings button sits faintly inside the bottom right corner of the frame.
 
-### DASH
+### DASH (dash box)
 
-LED strip; a telemetry strip with the gear, rpm, speed, RPM bar and pedal bars, the TC / ABS / BB / MAP cells (TC and ABS light amber while working), PIT / fuel / laps of fuel / position, and the lap times with the delta (green faster, red slower); the four button tabs below.
+The tablet page (`dash.html`, `js/dashbox.js`, style **CARDS** `styles/dash/cards.css`): one card per setting, built from the active game's **dash map** `games/<id>/dash.toml`. The page looks the same for every car of a game and can differ between games. Header: game, car, the gear in segments, LIVE (or a red E), the settings button. Cards fill a 4 × 2 grid in landscape and 2 × 4 in portrait.
+
+| Card type | Shows | Buttons | Map keys |
+| --- | --- | --- | --- |
+| `stepper` | big value (segments), range from the game (`limits`), level dots | − / + (disabled at the ends of the range) | `field`, `down`, `up` |
+| `bias` | brake bias % front (segments) and a front / rear bar | ◀ FRONT / REAR ▶, holding repeats (after 0.4 s, every 0.16 s) | `field`, `front`, `rear` |
+| `toggle` | a lamp with the state text (`on` / `off`), `style` `amber` (lights up) or `green` | the whole lamp, if the card has an `action`; else display only | `field`, `action`?, `on`, `off`, `style` |
+| `pair` | two values side by side (e.g. differential power / coast) | none | `fields`, `labels` |
+
+Every card has `label` and an optional `hint` (small text at the bottom, e.g. "Set in the game's assist menu"). Every value is read back from the game, so the card shows what the game applied; after a press the card is outlined ("pending") until the value changes or 1.2 s pass. A card whose value is `None` (the car does not have it) is greyed out with "NOT ON THIS CAR" and takes no presses; a button whose action has no key for the game is disabled. While there is an error ([Errors](#errors)) all cards show "-" and take no presses, and the chip sits in a strip above the cards. The bridge checks the map at start (`check_dash`: known type, action and field names; a bad card is logged and left out) and serves it in `/api/info` as `dash`, with `enabled` per action.
+
+Assetto Corsa EVO: TC, ABS, STABILITY (steppers), BRAKE BIAS, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LAUNCH (shown only: activated in the car by holding brake and throttle), AUTO CLUTCH (shown only: set in the game's assist menu). The demo game has the same map; its car has no stability control.
+
+The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 
 ## 7. Adding a game
 
-1. Make a folder `games/<id>/` with `game.toml` (`[game] name`, `[window] process` / `title`, `[keys]`) and `connector.py` with `class Connector(telemetry.Connector)`.
+1. Make a folder `games/<id>/` with `game.toml` (`[game] name`, `[window] process` / `title`, `[keys]`), `connector.py` with `class Connector(telemetry.Connector)` and, for the tablet, `dash.toml` (the dash box cards, see [DASH](#dash-dash-box)).
 2. `read()` returns the universal fields the game provides (or `None` while the game is not running); `open()` / `close()` attach and detach; `handle()` optional.
 3. The bridge loads every folder with a `game.toml`; the game appears in the GAME setting.
 

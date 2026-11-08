@@ -5,7 +5,7 @@
  * diagonals h (upper left) j (upper right) k (lower left) m (lower right). Every diagonal
  * fills its quadrant from the outer corner to the centre, with the same gap as the others.
  *
- * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg>
+ * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A, "-", "." as decimal point)
  *
  * Widgets (registered with RD when rd.js is loaded first):
  *   <svg class="rd-seg" data-field="gear" data-fmt="gear"></svg>   a live field in segments
@@ -69,6 +69,12 @@
     const chars = [...String(text).toUpperCase()];
     let out = "", x = 0;
     for (const ch of chars) {
+      if (ch === ".") {          // decimal point: a small square on the baseline, narrow advance
+        const d = o.t * 1.15;
+        out += `<rect class="on" x="${x - o.gap * 0.5}" y="${o.H - d}" width="${d}" height="${d}"/>`;
+        x += d + o.gap * 0.2;
+        continue;
+      }
       const on = (GLYPHS[ch] || "").split(" ");
       out += `<g transform="translate(${x} 0)">`;
       for (const [name, pts] of Object.entries(segs)) {

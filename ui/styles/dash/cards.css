@@ -1,0 +1,176 @@
+/* Dash, style CARDS: one card per setting. Designed for an iPad in landscape (4 x 2 cards) and
+   portrait (2 x 4); other card counts fill the grid row by row. */
+
+:root {
+  --seg: #ffe93b;
+  --card-a: #151a20;
+  --card-b: #0f1317;
+  --btn: #1d232b;
+  --btn-line: #2f3843;
+  --bg: #07090b;
+}
+
+html, body { background: var(--bg); }
+
+.dashbox {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+}
+
+/* ------------------------------------------------------------ header */
+
+.bar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 10px 0 22px;
+  border-bottom: 1px solid var(--line);
+}
+.bar .game { font-size: 14px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); white-space: nowrap; }
+.bar .car { font-size: 17px; font-weight: 700; letter-spacing: 0.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .status { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.bar .mini-gear { height: 34px; width: auto; }
+.bar .mini-gear .on { fill: var(--seg); }
+.bar .live { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--green); }
+.bar .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+.rd-error .bar .live { color: var(--red); }
+.rd-error .bar .live i { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.rd-error .bar .live b { font-size: 0; }
+.rd-error .bar .live b::after { content: "E"; font-size: 13px; }
+.bar .settings { opacity: 0.6; }
+
+/* ------------------------------------------------------------ grid */
+
+.cards {
+  min-height: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 14px;
+}
+.cards .empty { grid-column: 1 / -1; align-self: center; text-align: center; color: var(--dim); }
+
+/* ------------------------------------------------------------ card */
+
+.card {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--card-a), var(--card-b));
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card .lab { font-size: 20px; font-weight: 800; letter-spacing: 0.14em; white-space: nowrap; }
+.card .rng { font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: 0.08em; white-space: nowrap; }
+.card .hint { font-size: 13px; font-weight: 600; color: var(--dim); text-align: center; letter-spacing: 0.03em; }
+
+/* after a press, until the game reports the new value */
+.card.pending { border-color: var(--seg); box-shadow: 0 0 0 1px var(--seg), 0 0 22px rgba(255, 233, 59, 0.18); }
+
+/* the car does not have it */
+.card.na { opacity: 0.42; }
+.card.na::after {
+  content: "NOT ON THIS CAR";
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #262c33;
+  color: #d4dae0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+/* error: no trustworthy data */
+.card.off { opacity: 0.55; }
+
+/* segment values */
+.seg { display: block; overflow: visible; filter: drop-shadow(0 0 6px rgba(255, 233, 59, 0.3)); }
+.seg .on { fill: var(--seg); }
+.card.na .seg, .card.off .seg { filter: none; }
+.card.na .seg .on, .card.off .seg .on { fill: #4a4c3c; }
+
+.val { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.val .seg { height: 100%; max-height: 120px; max-width: 100%; }
+
+.pips { display: flex; gap: 4px; height: 10px; flex: none; }
+.pips i { flex: 1; border-radius: 3px; background: #232a32; }
+.pips i.on { background: var(--seg); box-shadow: 0 0 6px rgba(255, 233, 59, 0.5); }
+
+/* buttons */
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: none; }
+.btn {
+  height: clamp(64px, 11vh, 96px);
+  border-radius: 16px;
+  border: 1px solid var(--btn-line);
+  background: var(--btn);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  font-size: 52px;
+  font-weight: 300;
+  line-height: 1;
+}
+.btn small { font-size: 16px; font-weight: 800; letter-spacing: 0.12em; }
+.btn.pressed { background: #2c343e; transform: translateY(1px); }
+.btn:disabled { color: #4c545e; background: #161b21; }
+
+/* brake bias */
+.bias-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.bias-num { height: 64px; max-width: 100%; margin: 0 auto; }
+.split { height: 14px; border-radius: 7px; background: #2a323c; overflow: hidden; }
+.split b { display: block; height: 100%; background: linear-gradient(90deg, var(--seg), #e0b400); transition: width 0.15s; }
+.ends { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--dim); letter-spacing: 0.12em; }
+
+/* pair (differential) */
+.two { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; text-align: center; }
+.two .seg { height: 70px; max-width: 100%; margin: 0 auto; }
+.two small { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--dim); letter-spacing: 0.12em; }
+
+/* toggle lamp */
+.lamp {
+  flex: 1;
+  min-height: 0;
+  border-radius: 18px;
+  border: 2px solid var(--btn-line);
+  background: #101418;
+  color: #4a535e;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  height: auto;
+}
+button.lamp { width: 100%; }
+.amber .lamp.on {
+  border-color: var(--amber);
+  color: #1a1200;
+  background: radial-gradient(circle at 50% 40%, #ffd166, var(--amber) 70%);
+  box-shadow: 0 0 28px rgba(255, 159, 26, 0.45), inset 0 0 18px rgba(255, 255, 255, 0.35);
+}
+.green .lamp.on { border-color: var(--green); color: var(--green); box-shadow: inset 0 0 0 1px rgba(34, 211, 107, 0.25); }
+.lamp:disabled { opacity: 1; }
+
+/* error / notice chip: in its own strip above the cards, never over a value */
+.rd-nodata { bottom: auto; top: calc(66px + var(--safe-t)); }
+.rd-notice .cards { padding-top: 54px; }
+
+@media (orientation: portrait) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .bar .game { display: none; }
+}

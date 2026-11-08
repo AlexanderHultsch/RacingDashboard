@@ -3,7 +3,8 @@
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
 - **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
-- **DASH** (`/dash`), for a tablet: gear, RPM, speed, TC, ABS, brake bias, engine map, fuel, position and lap times, plus four tabs of buttons that are sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
+- **DASH** (`/dash`), for a tablet: the dash box. One big card per setting (TC, ABS, stability, brake bias, differential, pit limiter, launch, auto clutch) that shows the value the game applied and changes it while driving with large − / + buttons. Settings a car does not have are greyed out. The cards come from a map per game (`games/<game>/dash.toml`), so the page looks the same for every car of a game.
+- **BUTTONS** (`/buttons`), for a tablet: a telemetry strip and four tabs of buttons sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
 
@@ -95,13 +96,14 @@ core/                     the bridge, the same for every game
   winmem.py               Windows shared memory reader for shared-memory games
   config.py, log.py       configuration and rolling log
 games/                    one folder per game
-  ace/                    Assetto Corsa EVO: connector.py (shared memory), game.toml (window, keys)
+  ace/                    Assetto Corsa EVO: connector.py (shared memory), game.toml (window, keys), dash.toml (dash box)
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
-  index.html, gear.html, dash.html    the pages
+  index.html, gear.html, dash.html, buttons.html    the pages
   icon.ico, apple-touch-icon.png      icons for the Windows shortcut and the home screen
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
+  js/dashbox.js                       the dash box cards, built from the game's dash map
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml and settings.json are local and ignored)

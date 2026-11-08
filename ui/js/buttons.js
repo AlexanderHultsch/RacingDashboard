@@ -46,7 +46,7 @@
       if (b.disabled || down) return;
       down = true;
       b.classList.add("pressed");
-      if (b.setPointerCapture && e.pointerId !== undefined) b.setPointerCapture(e.pointerId);
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
       RD.command(def.action, def.type === "hold" ? "down" : "tap");
     };
     const release = () => {

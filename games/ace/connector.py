@@ -213,6 +213,22 @@ def level(current: int, modifiable: int):
     return int(current) if modifiable else None
 
 
+# universal name -> ACE electronics field (current value, range and "car has it")
+STEPPED = {"tc_level": "tc_level", "abs_level": "abs_level", "esc_level": "esc_level",
+           "engine_map": "engine_map_level", "diff_power": "diff_power_level", "diff_coast": "diff_coast_level"}
+
+
+def limits(gr) -> dict:
+    """The range of each stepped setting the car has, from the min / max limit blocks."""
+    out = {}
+    for name, field in STEPPED.items():
+        if getattr(gr.electronics_is_modifiable, field):
+            low, high = int(getattr(gr.electronics_min_limit, field)), int(getattr(gr.electronics_max_limit, field))
+            if high > low:
+                out[name] = [low, high]
+    return out
+
+
 def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     """Raw shared memory bytes -> universal telemetry (core/telemetry.py)."""
     ph = Physics.from_buffer_copy(physics[:sizeof(Physics)])
@@ -248,6 +264,12 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "abs_active": bool(gr.abs_active or ph.absInAction),
         "brake_bias": round(ph.brakeBias, 4) if ph.brakeBias > 0 else None,
         "engine_map": level(el.engine_map_level, can.engine_map_level),
+        "esc_level": level(el.esc_level, can.esc_level),
+        "diff_power": level(el.diff_power_level, can.diff_power_level),
+        "diff_coast": level(el.diff_coast_level, can.diff_coast_level),
+        "launch": bool(gr.launch_active),
+        "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
+        "limits": limits(gr),
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
         "ignition": bool(gr.is_ignition_on),
         "engine_running": bool(gr.is_engine_running),

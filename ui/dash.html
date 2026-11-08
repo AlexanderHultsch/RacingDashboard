@@ -7,66 +7,38 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dash">
-<meta name="theme-color" content="#0a0c0f">
+<meta name="theme-color" content="#07090b">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Dash</title>
 <link rel="stylesheet" href="css/base.css">
-<link id="rd-style" rel="stylesheet" href="styles/dash/standard.css">
+<link id="rd-style" rel="stylesheet" href="styles/dash/cards.css">
 </head>
-<!-- Dash: the page for a tablet. Telemetry strip on top, the button groups of core/actions.py below.
-     The buttons come from the bridge (/api/info), so they are the same for every game. -->
-<body data-page="dash" data-styles="standard">
-<main class="dash">
-  <div class="rd-leds" data-count="21" data-range="0.25"></div>
-  <section class="strip">
-    <div class="box gearbox"><div class="gear" data-rd="gear" data-fmt="gear">N</div></div>
-    <div class="box engine">
-      <div class="row">
-        <div class="big"><span data-rd="rpm" data-fmt="rpm">0</span><small>RPM</small></div>
-        <div class="big right"><span data-rd="speed_kmh" data-fmt="speed">0</span><small data-rd="speed_kmh" data-fmt="speedunit">KM/H</small></div>
-      </div>
-      <div class="rd-rpmbar"><i class="fill"></i><i class="mark"></i></div>
-      <div class="pedals">
-        <div class="pedal throttle"><i></i></div>
-        <div class="pedal brake"><i></i></div>
-      </div>
-    </div>
-    <div class="box cells aids">
-      <div class="cell" data-rd-on="tc_active"><small>TC</small><b data-rd="tc_level" data-fmt="level">-</b></div>
-      <div class="cell" data-rd-on="abs_active"><small>ABS</small><b data-rd="abs_level" data-fmt="level">-</b></div>
-      <div class="cell"><small>BB %</small><b data-rd="brake_bias" data-fmt="bias">-</b></div>
-      <div class="cell"><small>MAP</small><b data-rd="engine_map" data-fmt="level">-</b></div>
-    </div>
-    <div class="box cells fuel">
-      <div class="cell" data-rd-on="pit_limiter"><small>PIT</small><b data-rd="pit_limiter" data-fmt="onoff">OFF</b></div>
-      <div class="cell"><small>FUEL L</small><b data-rd="fuel_l" data-fmt="fuel">-</b></div>
-      <div class="cell"><small>LAPS</small><b data-rd="fuel_l" data-fmt="fuellaps">-</b></div>
-      <div class="cell"><small>POS</small><b data-rd="position" data-fmt="position">P-</b></div>
-    </div>
-    <div class="box timing">
-      <div class="t"><small>LAP</small><b data-rd="lap_ms" data-fmt="lap">-:--.---</b></div>
-      <div class="t"><small>LAST</small><b data-rd="last_ms" data-fmt="lap">-:--.---</b></div>
-      <div class="t"><small>BEST</small><b data-rd="best_ms" data-fmt="lap">-:--.---</b></div>
-      <div class="t delta"><small>DELTA</small><b data-rd="delta_ms" data-fmt="delta">-.---</b></div>
-    </div>
-  </section>
-  <nav class="tabs"></nav>
-  <section class="buttons"></section>
+<!-- Dash: the dash box for a tablet. The cards come from the active game's dash map
+     (games/<game>/dash.toml): the same page for every car of a game, greyed cards for what a car lacks. -->
+<body data-page="dash" data-styles="cards">
+<main class="dashbox">
+  <header class="bar">
+    <span class="game" id="game">-</span>
+    <span class="car" data-rd="car">-</span>
+    <span class="status">
+      <svg class="rd-seg mini-gear" data-field="gear" data-fmt="gearseg" aria-label="Gear"></svg>
+      <span class="live"><i></i><b>LIVE</b></span>
+      <button class="rd-tool settings" aria-label="Settings"></button>
+    </span>
+  </header>
+  <section class="cards"></section>
 </main>
 <div class="rd-nodata"></div>
 <script src="js/rd.js"></script>
-<script src="js/buttons.js"></script>
+<script src="js/seg14.js"></script>
+<script src="js/dashbox.js"></script>
 <script>
-  RD.start();
-  RD.listeners.push((f) => {
-    const dash = document.querySelector(".dash");
-    dash.style.setProperty("--gas", f.gas || 0);
-    dash.style.setProperty("--brake", f.brake || 0);
-    const delta = document.querySelector(".delta");
-    delta.classList.toggle("faster", f.delta_ms < 0);
-    delta.classList.toggle("slower", f.delta_ms > 0);
-  });
-  RD.buttons(document.querySelector(".tabs"), document.querySelector(".buttons"));
+  RD.start({ toolbar: false });
+  const settings = document.querySelector(".settings");
+  settings.innerHTML = RD.icons.gear;
+  settings.addEventListener("click", () => RD.settings.open());
+  RD.loadInfo().then((info) => { document.getElementById("game").textContent = info.game_name.toUpperCase(); });
+  RD.dashbox(document.querySelector(".cards"));
 </script>
 </body>
 </html>

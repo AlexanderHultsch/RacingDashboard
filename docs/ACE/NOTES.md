@@ -25,7 +25,9 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `rpm_pct` | graphics `rpm_percent` | 0..1; a value over 1.5 is taken as percent; 0 falls back to rpm / rpm_max |
 | `shift_up`, `shift_down`, `limiter` | graphics `is_change_up_rpm`, `is_change_down_rpm`, `is_rpm_limiter_on` | the game's own per-car shift point |
 | `speed_kmh`, `gas`, `brake`, `clutch` | physics | |
-| `tc_level`, `abs_level`, `engine_map` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
+| `tc_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
+| `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per setting the car has |
+| `launch`, `auto_clutch` | graphics `launch_active`, `assists_state.auto_clutch` | |
 | `tc_active`, `abs_active` | graphics `tc_active` / `abs_active` or physics `tcInAction` / `absInAction` | |
 | `brake_bias` | physics `brakeBias` | 0.56 = 56 % front |
 | `pit_limiter` | physics `pitLimiterOn` or `electronics.is_pitlimiter_on` | |
@@ -56,7 +58,7 @@ ACE has no input API; the buttons are keypresses (`core/keys.py`, scan codes) to
 ACE's keyboard defaults could not be confirmed from a public source (Nov 2026; the lists found online are for the original Assetto Corsa). So `game.toml` uses:
 
 - `AC` keys: defaults of the original AC that ACE probably kept: lights `L`, horn `H`, look left / right `Q` / `W`, shift `Z` / `X`, camera `F1`, leaderboard `F7`, mirror `F8`, auto shifter `LCtrl+L`, TC `LCtrl+T`, ABS `LCtrl+A` (in AC these two cycle / toggle).
-- `set` keys: `LCtrl+LShift+<letter>` proposals for actions without a known default (TC / ABS down, brake bias, engine map, pit limiter, flash, wipers, ignition, starter, indicators, hazards, HUD, look back, display page). Bind them in ACE under Options → Controls, or change them in `config/config.toml` to the keys you use.
+- `set` keys: `LCtrl+LShift+<letter>` proposals for actions without a known default (TC / ABS down, stability − / +, brake bias, engine map, pit limiter, flash, wipers, ignition, starter, indicators, hazards, HUD, look back, display page). Bind them in ACE under Options → Controls, or change them in `config/config.toml` to the keys you use.
 - `NEUTRAL` and `SAVE REPLAY` have no key yet (greyed out).
 
 If ACE ignores the keys: raise `[input] tap_ms` (e.g. 150), and check that ACE is the active window (windowed or borderless helps). A virtual joystick (vJoy) is the fallback if keypresses do not work for some actions.

@@ -55,10 +55,10 @@ class Connector(telemetry.Connector):
         if state == "up":
             return True
         steps = {"tc_up": ("tc_level", 1, 0, 11), "tc_down": ("tc_level", -1, 0, 11),
-                 "abs_up": ("abs_level", 1, 0, 11), "abs_down": ("abs_level", -1, 0, 11),
+                 "abs_up": ("abs_level", 1, 0, 12), "abs_down": ("abs_level", -1, 0, 12),
                  "map_up": ("engine_map", 1, 1, 5), "map_down": ("engine_map", -1, 1, 5),
                  "bias_front": ("brake_bias", 0.005, 0.45, 0.7), "bias_rear": ("brake_bias", -0.005, 0.45, 0.7)}
-        if action in steps:
+        if action in steps and s.get(steps[action][0]) is not None:
             name, step, low, high = steps[action]
             s[name] = round(min(high, max(low, s[name] + step)), 3)
         elif action in ("pit_limiter", "ignition", "auto_shifter"):
@@ -150,6 +150,11 @@ class Connector(telemetry.Connector):
             "tc_level": s["tc_level"], "tc_active": slip and random.random() < 0.5,
             "abs_level": s["abs_level"], "abs_active": brake > 0.9 and s["abs_level"] > 0 and random.random() < 0.4,
             "brake_bias": s["brake_bias"], "engine_map": s["engine_map"], "pit_limiter": s["pit_limiter"],
+            "esc_level": None,                                   # the demo car has no stability control
+            "diff_power": 5, "diff_coast": 3,
+            "launch": running and self.gear == 1 and self.speed < 8 and gas > 0.5,
+            "auto_clutch": s["auto_shifter"],
+            "limits": {"tc_level": [0, 11], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],
             "fuel_l": round(self.fuel, 2), "fuel_max_l": FUEL_MAX, "fuel_per_lap_l": 2.6,
             "lap": self.lap, "position": 3, "cars": 18,

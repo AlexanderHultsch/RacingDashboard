@@ -15,6 +15,8 @@ GROUPS = [
         {"action": "tc_up", "label": "TC +", "type": "tap", "field": "tc_level"},
         {"action": "abs_down", "label": "ABS -", "type": "tap", "field": "abs_level"},
         {"action": "abs_up", "label": "ABS +", "type": "tap", "field": "abs_level"},
+        {"action": "esc_down", "label": "ESC -", "type": "tap", "field": "esc_level"},
+        {"action": "esc_up", "label": "ESC +", "type": "tap", "field": "esc_level"},
         {"action": "bias_rear", "label": "BB REAR", "type": "tap", "field": "brake_bias"},
         {"action": "bias_front", "label": "BB FRONT", "type": "tap", "field": "brake_bias"},
         {"action": "map_down", "label": "MAP -", "type": "tap", "field": "engine_map"},

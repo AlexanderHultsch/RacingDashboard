@@ -68,6 +68,49 @@ def check_keys(game: dict) -> None:
             game["keys"][action] = ""
 
 
+# dash box card types: the keys each type needs, which of them are actions, which are telemetry fields
+DASH_TYPES = {
+    "stepper": {"need": ("field", "down", "up"), "actions": ("down", "up")},
+    "bias": {"need": ("field", "front", "rear"), "actions": ("front", "rear")},
+    "toggle": {"need": ("field",), "actions": ("action",)},
+    "pair": {"need": ("fields", "labels"), "actions": ()},
+}
+
+
+def check_dash(game: dict) -> None:
+    """Drop dash box cards with an unknown type, action or field (with a log line)."""
+    good = []
+    for number, control in enumerate(game["dash"], 1):
+        kind = DASH_TYPES.get(control.get("type"))
+        problem = None
+        if kind is None:
+            problem = f"unknown type '{control.get('type')}'"
+        elif missing := [key for key in kind["need"] if not control.get(key)]:
+            problem = f"missing {', '.join(missing)}"
+        else:
+            fields = control["fields"] if control["type"] == "pair" else [control["field"]]
+            unknown = [f for f in fields if f not in telemetry.FIELDS]
+            unknown += [control[key] for key in kind["actions"] if control.get(key) and control[key] not in actions.BY_NAME]
+            if unknown:
+                problem = f"unknown {', '.join(unknown)}"
+        if problem:
+            log.line("dash", game["id"], f"card {number} ({control.get('label', '?')}) ignored: {problem}")
+        else:
+            good.append(control)
+    game["dash"] = good
+
+
+def dash_layout(game: dict, handled: set) -> list[dict]:
+    """The dash box cards for the page, with "enabled" per action (a key is set or the game handles it)."""
+    out = []
+    for control in game["dash"]:
+        card = dict(control)
+        card["enabled"] = {control[key]: bool(game["keys"].get(control[key])) or control[key] in handled
+                           for key in DASH_TYPES[control["type"]]["actions"] if control.get(key)}
+        out.append(card)
+    return out
+
+
 def activate(game_id: str) -> None:
     global active, connector, data
     with game_lock:
@@ -197,6 +240,7 @@ def info() -> dict:
         "game_name": active["game"]["name"],
         "games": [{"id": g["id"], "name": g["game"]["name"]} for g in games.values()],
         "groups": actions.layout(active["keys"], handled),
+        "dash": dash_layout(active, handled),
         "address": address,
         "hz_choices": [hz for hz in HZ_CHOICES if hz <= cfg["telemetry"]["read_hz"]],
         "keys_available": keys.available,
@@ -313,6 +357,7 @@ def setup(file_log: bool = True) -> str:
         raise SystemExit("No game found in games/.")
     for game in games.values():
         check_keys(game)
+        check_dash(game)
     settings = config.load_settings()
     wanted = settings.get("game") or cfg["dashboard"]["game"]
     if wanted not in games:

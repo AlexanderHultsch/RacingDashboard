@@ -33,6 +33,13 @@ FIELDS = {
     "abs_active": False,
     "brake_bias": None,      # front share 0..1
     "engine_map": None,
+    "esc_level": None,       # stability control setting, None = not on this car
+    "diff_power": None,      # differential power (on throttle) setting, None = not adjustable
+    "diff_coast": None,      # differential coast (off throttle) setting
+    "launch": None,          # launch control active right now (True / False), None = not available
+    "auto_clutch": None,     # auto clutch assist on (True / False), None = not available
+    # range of the stepped settings for this car: {"tc_level": [0, 11], ...}; missing = unknown
+    "limits": {},
     "pit_limiter": False,
     "ignition": None,        # True / False, None = not available
     "engine_running": None,
