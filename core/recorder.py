@@ -801,7 +801,15 @@ class Recorder:
                     "deltas": self._deltas(), "strip": self._strip() if self.key else None,
                     "now_from": since, "now_line": line[since:], "offers": len(self.offers)}
 
-    def section(self, n: int) -> dict:
+    def complete_laps(self):
+        """(now, last) for the AI trainer's whole-track view: the lap in progress only once it is complete,
+        else the last complete lap and the one before."""
+        with self.lock:
+            if self.lap is not None and self.last_lap is not None:
+                return self.last_lap, self.prev_lap
+            return self._shown()
+
+    def section(self, n: int, laps=None) -> dict:
         """One section's three lines: best (baseline), last, now. Rows: [d, t, v, thr, brk, str, g, x, y,
         tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map], d = metres from the section
         start, t = seconds from the section start; the aids are None where they were not recorded."""
@@ -809,7 +817,7 @@ class Recorder:
             if not self.key or not 0 <= n < self.sections:
                 return {"n": n, "best": [], "last": [], "now": []}
             d0 = n * self.section_m
-            red, blue = self._shown()
+            red, blue = laps if laps else self._shown()
 
             def rows(attempt):
                 if attempt is None:

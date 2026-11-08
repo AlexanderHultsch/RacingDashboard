@@ -21,7 +21,8 @@ NAMES = {"off": "OFF", "claude": "CLAUDE", "chatgpt": "CHATGPT", "gemini": "GEMI
 LEVELS = ("fast", "best")
 HISTORY = 5                     # questions and answers kept in data/trainer.jsonl
 MAX_TIPS = 3
-WORDS = {"summary": 25, "title": 4, "text": 35, "note": 30}
+WORDS = {"title": 4, "text": 35, "note": 30}
+STOP = {"IN", "AT", "ON", "INTO", "OF", "THE", "AND", "TO", "FOR", "A", "SECTION"}   # not left dangling in a cut title
 ANTHROPIC_VERSION = "2026-10-21"
 # Claude models that get the server-side fallback on a refusal (docs/TRAINER.md)
 CLAUDE_FALLBACK = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1")
@@ -29,6 +30,14 @@ CLAUDE_FALLBACK = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1")
 SYSTEM_PROMPT = """You are a race driving coach for a sim racer. You get measured facts about one section or one lap of a
 circuit, for up to three laps: BEST (the driver's best), LAST (the previous lap) and NOW (the lap being
 analysed). Find where NOW loses time against BEST and tell the driver what to do differently next lap.
+
+How to read DATA:
+- Metres count from the section start and grow along the section: a larger value is later. To brake or
+  lift "later" means a larger metre value, "earlier" a smaller one.
+- coast_m is the total distance without throttle or brake in the section, not a position.
+- entry_kmh comes from the section before: a slower entry is lost in the section before, so say so and
+  point there instead of inventing a fix in this section.
+- gears is the sequence of gears used; gear_at_min is the gear at the slowest point.
 
 How to analyse:
 1. Use only the numbers in DATA. Never invent a number. A time you give must come from time_s or
@@ -48,23 +57,23 @@ How to analyse:
    and metres. Give the time at stake, rounded to 0.05 s.
 7. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
 8. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
-9. If NOW is not slower than BEST anywhere that matters, say so in the summary and give no tips.
+9. If NOW is not slower than BEST anywhere that matters, say so in "note" and give no tips.
 10. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
     say so in "note"; otherwise "note" is an empty string.
 
 Answer with JSON only, no markdown, exactly this shape:
-{"summary": string, "tips": [{"title": string, "section": integer, "from_m": integer, "to_m": integer,
-"text": string, "gain_s": number}], "note": string}
+{"tips": [{"title": string, "section": integer, "from_m": integer, "to_m": integer, "text": string,
+"gain_s": number}], "note": string}
 
-Limits: summary at most 25 words. title at most 4 words, an instruction in capitals ("BRAKE LATER").
+Limits: title at most 4 words, an instruction in capitals ("BRAKE LATER"), the action only, without the
+place (the place is shown next to it). The title must say the same as the text (later stays later).
 text at most 35 words. No more than 3 tips. Plain English, metres, km/h and seconds."""
 
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["summary", "tips", "note"],
+    "required": ["tips", "note"],
     "properties": {
-        "summary": {"type": "string"},
         "tips": {
             "type": "array",
             "items": {
@@ -84,7 +93,7 @@ SCHEMA = {
 
 # FAST / BEST = a fixed model + effort pair per provider; overridable in config.toml [trainer.models]
 MODELS = {
-    "claude": {"fast": {"model": "claude-haiku-5-5", "effort": "low"},
+    "claude": {"fast": {"model": "claude-haiku-5-5", "effort": "medium"},
                "best": {"model": "claude-opus-5-5", "effort": "high"}},
     "chatgpt": {"fast": {"model": "gpt-6-luna", "effort": "low"},
                 "best": {"model": "gpt-6-astra", "effort": "high"}},
@@ -145,9 +154,9 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
     out["coast_m"] = round(coast)
     low = min(range(len(v)), key=lambda i: v[i])
     out["min_kmh"], out["min_at_m"], out["gear_at_min"] = round(v[low]), round(d[low]), rows[low][6]
-    gears = []
+    gears = []                                    # neutral (0) during a shift is not a gear used
     for r in rows:
-        if not gears or gears[-1] != r[6]:
+        if r[6] != 0 and (not gears or gears[-1] != r[6]):
             gears.append(r[6])
     out["gears"] = "-".join(str(g) for g in gears)
     full = None                                   # back above 95 % after the slowest point, held 30 m
@@ -173,11 +182,16 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
         t = [r[1] for r in rows]
         deltas = {}
         mark = 50
-        while mark <= length + 0.1:
-            tm, tb = _interp(d, t, mark), _interp(bd, bt, mark)
+        marks = []
+        while mark < length - 5:
+            marks.append(mark)
+            mark += 50
+        marks.append(round(length))                   # always the section end
+        for mark in marks:
+            at = min(mark, d[-1], bd[-1]) if mark - min(d[-1], bd[-1]) <= 5 else mark   # the last sample may be a little short
+            tm, tb = _interp(d, t, at), _interp(bd, bt, at)
             if tm is not None and tb is not None:
                 deltas[str(mark)] = round(tm - tb, 3)
-            mark += 50
         out["delta_by_50m"] = deltas
     return out
 
@@ -252,10 +266,13 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
         view = {"mode": "section", "section": n + 1, "title": f"SECTION {n + 1}",
                 "times": " · ".join(f"{k}{v:.3f}" for k, v in times if v is not None)}
         return task, data, view
-    # whole track
+    # whole track: the lap in progress only once it is complete, else the last complete lap
+    now_lap, last_lap = rec.complete_laps()
+    laps = {"now": now_lap.no if now_lap else None, "last": last_lap.no if last_lap else None}
+    head = f"of {state['track']}, {state['car']}, {from_game}. NOW is lap {laps['now']}, LAST is lap {laps['last']}"
     rows, secs = [], {}
     for k in range(state["sections"]):
-        sec = rec.section(k)
+        sec = rec.section(k, (now_lap, last_lap))
         secs[k] = sec
         b, last, now = sec.get("best_time"), sec.get("last_time"), sec.get("now_time")
         rows.append({"section": k + 1, "best_s": b, "last_s": last, "now_s": now,
@@ -267,10 +284,9 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
                     key=lambda r: -r["now_vs_best"])[:3]
     focus = [{"section": r["section"], "lines": section_data(secs[r["section"] - 1])} for r in losing]
     driven = [r["section"] for r in rows if r["now_s"] is not None]
-    live = rec.live()
     lap_times = {"best_lap_s": state.get("base_lap"),
-                 "last_lap_s": (live.get("last_lap") or {}).get("time"),
-                 "now_lap_s": (live.get("deltas") or {}).get("lap_time")}
+                 "last_lap_s": None if not last_lap or last_lap.time is None else round(last_lap.time, 3),
+                 "now_lap_s": None if not now_lap or now_lap.time is None else round(now_lap.time, 3)}
     data = {"mode": "track", **meta, "sections_count": state["sections"],
             "laps": dict(laps, best="saved best lap and section bests"), "lap_times": lap_times,
             "now_sections_driven": driven, "sections": rows, "focus": focus}
@@ -292,6 +308,15 @@ def _cut(text, limit: int) -> str:
     return " ".join(words) if len(words) <= limit else " ".join(words[:limit]) + "…"
 
 
+def _title(text) -> str:
+    """A tip title in capitals, at most 4 words, without a dangling "IN SECTION" or trailing punctuation."""
+    words = str(text or "").upper().replace(",", " ").split()
+    words = words[:WORDS["title"]]
+    while len(words) > 1 and (words[-1] in STOP or words[-1].isdigit()):
+        words.pop()
+    return " ".join(words)
+
+
 def check_answer(text: str, data: dict) -> dict:
     """The AI's JSON answer, checked: at most 3 tips, places that exist in DATA, word limits."""
     raw = (text or "").strip()
@@ -306,7 +331,7 @@ def check_answer(text: str, data: dict) -> dict:
             answer = json.loads(raw[start:end + 1]) if start >= 0 < end else None
         except ValueError:
             answer = None
-    if not isinstance(answer, dict) or not isinstance(answer.get("summary"), str):
+    if not isinstance(answer, dict) or not isinstance(answer.get("tips", []), list) or not ("tips" in answer or "note" in answer):
         raise TrainerError("ANSWER NOT READABLE", raw[:120])
     if data["mode"] == "section":
         allowed = {data["section"]: data["section_length_m"]}
@@ -323,13 +348,12 @@ def check_answer(text: str, data: dict) -> dict:
             continue
         if sec not in allowed or a < 0 or b < a or a > allowed[sec] + 5:
             continue
-        tips.append({"title": _cut(str(tip.get("title", "")).upper(), WORDS["title"]), "section": sec,
+        tips.append({"title": _title(tip.get("title")), "section": sec,
                      "from_m": a, "to_m": min(b, round(allowed[sec])), "text": _cut(tip.get("text"), WORDS["text"]),
                      "gain_s": max(0.0, gain)})
         if len(tips) == MAX_TIPS:
             break
-    return {"summary": _cut(answer["summary"], WORDS["summary"]), "tips": tips,
-            "note": _cut(answer.get("note") or "", WORDS["note"])}
+    return {"tips": tips, "note": _cut(answer.get("note") or "", WORDS["note"])}
 
 
 # ------------------------------------------------------------------ providers

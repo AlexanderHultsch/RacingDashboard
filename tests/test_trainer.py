@@ -59,6 +59,10 @@ class Facts(unittest.TestCase):
         self.assertEqual(f["brake_peak_pct"], 90)
         self.assertGreater(f["delta_by_50m"]["250"], 0)            # now is slower than best at the end
         self.assertNotIn("delta_by_50m", trainer.facts(best, best[-1][1]))
+        shifting = [r[:6] + [0 if r[0] == 145 else r[6]] for r in now]   # neutral for a moment while shifting
+        self.assertEqual(trainer.facts(shifting, None)["gears"], "4-3-4")
+        short = now[:-1] + [[249.2] + now[-1][1:]]                       # the last sample a little short of 250 m
+        self.assertIn("250", trainer.facts(short, None, best)["delta_by_50m"])
         self.assertIsNone(trainer.facts([], None))
 
 
@@ -104,9 +108,12 @@ class Requests(unittest.TestCase):
         rec = recorder.Recorder(self.tmp.name + "/b", hz=30, section_m=250)
         t = drive_lap(rec, 100.0, brake_at=120)
         rec.save_all()
-        drive_lap(rec, t, brake_at=100, brake_m=60)      # brakes earlier and longer: slower
+        t = drive_lap(rec, t, brake_at=100, brake_m=60)  # brakes earlier and longer: slower
+        rec.feed(frame(0.01, 180.0), "demo", t)            # lap 3 has just started
         task, data, view = trainer.build_request(rec, "track", None)
         self.assertIn("WHOLE LAP", task)
+        self.assertEqual(data["laps"]["now"], 2)            # the last complete lap, not the 10 m of lap 3
+        self.assertEqual(data["laps"]["last"], 1)
         self.assertEqual(len(data["sections"]), 4)
         self.assertTrue(data["focus"])                       # the sections that lose time, with facts
         self.assertEqual(view["title"], "WHOLE TRACK")
@@ -121,7 +128,7 @@ class Answers(unittest.TestCase):
     data = {"mode": "section", "section": 5, "section_length_m": 250}
 
     def answer(self, **extra):
-        a = {"summary": "Now loses 0.4 s in the braking zone.", "note": "",
+        a = {"note": "",
              "tips": [{"title": "Brake later", "section": 5, "from_m": 95, "to_m": 115, "text": "Brake at 115 m.", "gain_s": 0.2}]}
         a.update(extra)
         return json.dumps(a)
@@ -134,11 +141,19 @@ class Answers(unittest.TestCase):
     def test_fenced_and_limits(self):
         long = " ".join(["word"] * 60)
         tips = [{"title": "A B C D E F", "section": 5, "from_m": 10, "to_m": 20, "text": long, "gain_s": 0.1}] * 5
-        a = trainer.check_answer("```json\n" + self.answer(tips=tips, summary=long) + "\n```", self.data)
+        a = trainer.check_answer("```json\n" + self.answer(tips=tips, note=long) + "\n```", self.data)
         self.assertEqual(len(a["tips"]), 3)
-        self.assertTrue(a["summary"].endswith("…"))
-        self.assertEqual(len(a["summary"].split()), 25)
-        self.assertEqual(a["tips"][0]["title"], "A B C D…")
+        self.assertTrue(a["note"].endswith("…"))
+        self.assertEqual(len(a["note"].split()), 30)
+        self.assertEqual(a["tips"][0]["title"], "A B C D")
+        self.assertTrue(a["tips"][0]["text"].endswith("…"))
+
+    def test_titles_are_cut_cleanly(self):
+        for title, expected in (("Brake later in section 2", "BRAKE LATER"),
+                                ("Lift earlier, brake softer", "LIFT EARLIER BRAKE SOFTER"),
+                                ("carry speed into the", "CARRY SPEED")):
+            tips = [{"title": title, "section": 5, "from_m": 10, "to_m": 20, "text": "t", "gain_s": 0.1}]
+            self.assertEqual(trainer.check_answer(self.answer(tips=tips), self.data)["tips"][0]["title"], expected)
 
     def test_wrong_places_dropped(self):
         tips = [{"title": "X", "section": 9, "from_m": 10, "to_m": 20, "text": "t", "gain_s": 0.1},

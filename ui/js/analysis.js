@@ -862,7 +862,7 @@
     const btn = $("ai"), what = $("ai-what");
     const t = S.trainer;
     const usable = !!(t && t.ok && S.state && S.state.active && !S.trAsking);
-    let text = aiView().title;
+    let text = "";
     if (S.trAsking) text = "ASKING…";
     else if (!t) text = "-";
     else if (t.provider === "off") text = "OFF";
@@ -922,14 +922,13 @@
     } else if (entry) {
       const a = entry.answer || {};
       const tips = (a.tips || []).map((tip, i) => "<div class='tip' data-sec='" + tip.section + "' data-m='" + tip.from_m + "'><i>" + (i + 1)
-        + "</i><div><h4>" + esc(tip.title) + "<span>SECTION " + tip.section + " · " + tip.from_m + "–" + tip.to_m + " M</span></h4><p>"
+        + "</i><div><h4>" + esc(tip.title) + "</h4><span class='where'>SECTION " + tip.section + " · " + tip.from_m + "–" + tip.to_m + " M</span><p>"
         + esc(tip.text) + "</p></div><em>≈ " + Number(tip.gain_s).toFixed(2) + " s</em></div>").join("");
       const at = (entry.at || "").slice(11, 16);
       const chips = history.filter((e) => e.at !== entry.at).map((e) => "<button data-at='" + esc(e.at) + "'>" + esc(e.title)
         + " " + esc((e.at || "").slice(11, 16)) + "</button>").join("");
       html = "<div class='tr-head'><div><b>" + esc(entry.title) + "</b><span>" + esc(entry.times || "") + "</span></div>"
         + "<button class='sbtn' id='tr-again'>ASK AGAIN</button></div>"
-        + "<div class='tr-sum'>" + esc(a.summary || "") + "</div>"
         + "<div class='tips'>" + (tips || "<div class='tr-none'>No tips: nothing worth changing here.</div>")
         + (a.note ? "<div class='tr-note'>" + esc(a.note) + "</div>" : "") + "</div>"
         + "<div class='tr-foot'><span>" + esc([(entry.provider || "").toUpperCase(), (entry.level || "").toUpperCase(), entry.model, at,

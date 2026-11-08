@@ -8,16 +8,16 @@ The analysis page gets an **AI TRAINER** button. A tap sends what the page shows
 
 | Mode | When | What is analysed |
 | --- | --- | --- |
-| **WHOLE TRACK** | the map shows the overview | the whole lap: every section's time for best, last and now, plus the full facts of the 3 sections where now loses the most against best |
+| **WHOLE TRACK** | the map shows the overview | the whole lap: every section's time for best, last and now, plus the full facts of the 3 sections where now loses the most against best. NOW is the lap in progress only once it is complete; while a lap is being driven, NOW is the last complete lap and LAST the one before (owner's feedback on the first real answers, November 2026) |
 | **SECTION n** | the map is zoomed into section n | that section only, with its full facts |
 
 Lines, as everywhere on the page: **best** = the saved best (baseline lap, or the section bests), **last** = the last lap, **now** = the lap in progress (only the sections it has reached) or, between laps and after the run, the last complete lap.
 
 ## The page
 
-- **Button:** bottom right of the map, `AI TRAINER` plus what it will analyse (`WHOLE TRACK` / `SECTION 5`). Greyed out when the AI connection does not work, when the trainer is OFF, or when there is nothing to compare (no best and no last line).
+- **Button:** bottom right of the map, `AI TRAINER` (the map decides what it analyses; no extra text). It shows `ASKING…` while waiting. Greyed out, with the reason next to it, when the AI connection does not work, when the trainer is OFF, or when there is nothing to compare (no best and no last line).
 - **Answer:** a third tab **TRAINER** next to REVIEW and GRAPHS. The tap asks the AI and opens the tab; while waiting it says `ASKING CLAUDE · FAST · <model>`. Tapping a tip opens its section in GRAPHS with the cursor at the tip's place.
-- **Tab content:** what was analysed and the times (`SECTION 5 · NOW LAP 3 8.059 · BEST 7.646 · LAST 7.819`), the summary line, the tips (number, title, place, text, time at stake), the provider / level / time / duration, `ASK AGAIN`, and the earlier answers as chips under `EARLIER` (tap one to show it).
+- **Tab content:** what was analysed and the times (`SECTION 5 · NOW LAP 3 8.059 · BEST 7.646 · LAST 7.819`), the tips (number, title on one line, the place below it, text, time at stake), the note, the provider / level / time / duration, `ASK AGAIN`, and the earlier answers as chips under `EARLIER` (tap one to show it).
 - **Only on a tap.** Never automatically, never while driving unless the driver taps.
 - **Language:** English.
 
@@ -38,7 +38,7 @@ FAST and BEST each stand for a fixed **model + effort** pair per provider. The t
 
 | Provider | FAST | BEST |
 | --- | --- | --- |
-| Claude | `claude-haiku-5-5`, effort `low` | `claude-opus-5-5`, effort `high` |
+| Claude | `claude-haiku-5-5`, effort `medium` (was `low` until the first real answers: it mixed up earlier / later) | `claude-opus-5-5`, effort `high` |
 | ChatGPT | `gpt-6-luna`, `reasoning_effort` `low` | `gpt-6-astra`, `reasoning_effort` `high` |
 | Gemini | `gemini-3.8-flash`, `thinkingLevel` `LOW` | `gemini-4-argon`, `thinkingLevel` `HIGH` |
 | Local (Ollama) | the smallest model pulled in Ollama | the largest model pulled in Ollama |
@@ -77,10 +77,10 @@ Per section and per line (`best`, `last`, `now`; a line that does not exist is `
 | `coast_m` | metres with neither throttle above 10 % nor brake above 10 % |
 | `min_kmh`, `min_at_m` | slowest point and where it is |
 | `gear_at_min` | gear at the slowest point |
-| `gears` | gear sequence through the section, e.g. `"4-3-4"` |
+| `gears` | gear sequence through the section, e.g. `"4-3-4"` (neutral while shifting left out) |
 | `full_throttle_m` | where the throttle is back above 95 % (held for 30 m) after the slowest point |
 | `steer_max` | largest steering, 0–1 of full lock |
-| `delta_by_50m` | time behind best (positive = slower) at every 50 m (`now` and `last` only) |
+| `delta_by_50m` | time behind best (positive = slower) at every 50 m and at the section end (`now` and `last` only) |
 | `aids` | driving aids, when recorded: `tc_working_m`, `tc_working_pct`, `tc_first_m` (and the same for `abs`, `esc`), `levels` at the section start (`tc`, `tc_cut`, `abs`, `esc`, `engine_map`), `level_changes` (`at_m`, `setting`, `to`) |
 
 Whole-track mode adds a `sections` table (per section: best / last / now time and the deltas) and the lap times; the full facts are sent for the 3 sections where now loses the most against best.
@@ -95,6 +95,14 @@ Always the same container: a fixed **system prompt** (identical for every reques
 You are a race driving coach for a sim racer. You get measured facts about one section or one lap of a
 circuit, for up to three laps: BEST (the driver's best), LAST (the previous lap) and NOW (the lap being
 analysed). Find where NOW loses time against BEST and tell the driver what to do differently next lap.
+
+How to read DATA:
+- Metres count from the section start and grow along the section: a larger value is later. To brake or
+  lift "later" means a larger metre value, "earlier" a smaller one.
+- coast_m is the total distance without throttle or brake in the section, not a position.
+- entry_kmh comes from the section before: a slower entry is lost in the section before, so say so and
+  point there instead of inventing a fix in this section.
+- gears is the sequence of gears used; gear_at_min is the gear at the slowest point.
 
 How to analyse:
 1. Use only the numbers in DATA. Never invent a number. A time you give must come from time_s or
@@ -114,15 +122,16 @@ How to analyse:
    and metres. Give the time at stake, rounded to 0.05 s.
 7. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
 8. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
-9. If NOW is not slower than BEST anywhere that matters, say so in the summary and give no tips.
+9. If NOW is not slower than BEST anywhere that matters, say so in "note" and give no tips.
 10. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
     say so in "note"; otherwise "note" is an empty string.
 
 Answer with JSON only, no markdown, exactly this shape:
-{"summary": string, "tips": [{"title": string, "section": integer, "from_m": integer, "to_m": integer,
-"text": string, "gain_s": number}], "note": string}
+{"tips": [{"title": string, "section": integer, "from_m": integer, "to_m": integer, "text": string,
+"gain_s": number}], "note": string}
 
-Limits: summary at most 25 words. title at most 4 words, an instruction in capitals ("BRAKE LATER").
+Limits: title at most 4 words, an instruction in capitals ("BRAKE LATER"), the action only, without the
+place (the place is shown next to it). The title must say the same as the text (later stays later).
 text at most 35 words. No more than 3 tips. Plain English, metres, km/h and seconds.
 ```
 
@@ -144,9 +153,8 @@ Whole-track mode: `TASK: Analyse the WHOLE LAP of …`, and DATA has `"mode": "t
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["summary", "tips", "note"],
+  "required": ["tips", "note"],
   "properties": {
-    "summary": {"type": "string"},
     "tips": {
       "type": "array",
       "items": {
@@ -164,9 +172,22 @@ Whole-track mode: `TASK: Analyse the WHOLE LAP of …`, and DATA has `"mode": "t
 }
 ```
 
+No summary: the owner removed it from the tab after the first real answers (it was cut at the word limit and repeated the tips).
+
 ### Checks by the bridge
 
-The schema has no `maxItems` and no nullable fields, so every provider's JSON-schema mode accepts it; the bridge enforces the limits itself. The answer must parse as JSON in this shape (a ```json fence is removed); tips beyond 3 are dropped; a tip whose section is not in the data, or whose place lies outside the section, is dropped; texts over the word limits are cut at the limit with `…`. If the answer cannot be used, the tab says why (`The AI answer could not be read: ask again.`) and ASK AGAIN asks once more. Other errors shown in the tab: NO KEY, KEY REJECTED, MODEL NOT FOUND, NO CONNECTION, OLLAMA NOT RUNNING, RATE LIMITED, NO ANSWER IN TIME, AI REFUSED, NO DATA (nothing to compare yet), BUSY (one question at a time).
+The schema has no `maxItems` and no nullable fields, so every provider's JSON-schema mode accepts it; the bridge enforces the limits itself. The answer must parse as JSON in this shape (a ```json fence is removed); tips beyond 3 are dropped; a tip whose section is not in the data, or whose place lies outside the section, is dropped; a title is cut to 4 words without a dangling `IN` / `SECTION` / number (the place is shown below it); texts over the word limits are cut at the limit with `…`. If the answer cannot be used, the tab says why (`The AI answer could not be read: ask again.`) and ASK AGAIN asks once more. Other errors shown in the tab: NO KEY, KEY REJECTED, MODEL NOT FOUND, NO CONNECTION, OLLAMA NOT RUNNING, RATE LIMITED, NO ANSWER IN TIME, AI REFUSED, NO DATA (nothing to compare yet), BUSY (one question at a time).
+
+## First real answers (November 2026)
+
+Two answers from Claude FAST (`claude-haiku-5-5`, effort low; Porsche 992 GT3 R, Brands Hatch), 8–9 s and about 2,500–4,200 tokens in, 1,500 out each. What they showed and what changed:
+
+- The tab layout: titles wrapped before their last word and the summary was cut at 25 words → titles on one line with the place below, no summary.
+- A title said LIFT EARLIER while the text (rightly) said to lift later: the prompt now says that metres grow along the section and that the title must say the same as the text.
+- `coast_m` (total metres coasting) was read as a position ("coasting from 34 m"): explained in the prompt.
+- A slower entry speed was blamed on this section: the prompt now says the entry comes from the section before.
+- Gear sequences contained the neutral of each shift (`2-0-3-0-4`) and the delta stopped at 200 m of 250 m: both fixed in the facts.
+- WHOLE TRACK on a lap with 2 of 16 sections driven compared only those 2: the whole track now uses the last complete lap while a lap is being driven.
 
 ## How it is built
 
