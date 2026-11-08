@@ -8,7 +8,8 @@
 # type = "bias"      brake bias in % front: field, front / rear (actions); hold a button to repeat
 # type = "toggle"    a switch: field (true / false), action (leave out: shows the state only),
 #                    on / off (texts), style = "amber" (lights up when on) or "green" (calm state)
-# type = "pair"      two values side by side, shown only: fields, labels
+# type = "pair"      two values side by side, shown only: fields, labels; optional alt / alt_labels:
+#                    fields shown in % when none of the main fields has a value
 # type = "fuel"      fuel in litres with a tank bar: field, max (full tank), per_lap (laps left)
 # type = "lamps"     warning lamps, state only (grey off, blue cold, yellow warning, red alert):
 #                    fields, icons (brake, engine, oil, coolant), labels
@@ -80,6 +81,8 @@ type = "pair"
 label = "DIFF"
 fields = ["diff_power", "diff_coast"]
 labels = ["POWER", "COAST"]
+alt = ["diff_power_pct", "diff_coast_pct"]
+alt_labels = ["POWER %", "COAST %"]
 hint = "Set in the car's display menu"
 
 [[control]]
@@ -106,7 +109,7 @@ type = "cycle"
 label = "WIPERS"
 field = "wipers"
 action = "wipers"
-hint = "Tap for the next speed"
+hint = "Tap: wipers on / off"
 
 [[control]]
 type = "ignition"

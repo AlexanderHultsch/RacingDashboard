@@ -129,11 +129,13 @@
       setState(card, error, missing);
       card.settle(v);
       drawSeg(svg, error || missing ? "-" : String(v));
-      const range = (f.limits || {})[def.field];
-      const key = range ? range.join("-") : "";
+      // fixed: the car has this setting but the driver cannot change it (value shown, buttons off)
+      const fixed = !missing && (f.fixed || []).includes(def.field);
+      const range = fixed ? null : (f.limits || {})[def.field];
+      const key = fixed ? "fixed" : range ? range.join("-") : "";
       if (key !== rangeKey) {
         rangeKey = key;
-        card.querySelector(".rng").textContent = range ? `${range[0]}–${range[1]}` : "";
+        card.querySelector(".rng").textContent = fixed ? "FIXED" : range ? `${range[0]}–${range[1]}` : "";
         pips.innerHTML = "";
         if (range && range[1] - range[0] <= 24) {
           const count = range[0] === 0 ? range[1] : range[1] - range[0] + 1;
@@ -143,7 +145,7 @@
       const lit = error || missing || !range ? 0 : range[0] === 0 ? v : v - range[0] + 1;
       [...pips.children].forEach((pip, i) => pip.classList.toggle("on", i < lit));
       card.classList.toggle("active", !!def.active && !error && !missing && !!f[def.active]);
-      setButtons(card, !error && !missing);
+      setButtons(card, !error && !missing && !fixed);
       if (range && !error && !missing) {
         if (v <= range[0]) down.disabled = true;
         if (v >= range[1]) up.disabled = true;
@@ -180,17 +182,29 @@
   function pair(def) {
     const card = baseCard(def, "pair");
     const body = el("div", "two");
+    const smalls = [];
     const svgs = def.fields.map((field, i) => {
       const cell = el("div", "cell");
       const svg = segSvg();
       cell.appendChild(svg);
-      cell.appendChild(el("small")).textContent = (def.labels || [])[i] || field;
+      smalls.push(cell.appendChild(el("small")));
       body.appendChild(cell);
       return svg;
     });
     card.insertBefore(body, card.querySelector(".hint"));
+    /* alt: fields shown as percent (0..1 -> 0..100) when none of the main fields has a value,
+       e.g. the diff locking of a car without diff setting steps; alt_labels name them */
     card.update = (f, error) => {
-      const values = def.fields.map((field) => f[field]);
+      let values = def.fields.map((field) => f[field]);
+      let labels = def.labels || [];
+      if (values.every(isNone) && def.alt && !def.alt.every((field) => isNone(f[field]))) {
+        values = def.alt.map((field) => (isNone(f[field]) ? null : Math.round(f[field] * 100)));
+        labels = def.alt_labels || labels;
+      }
+      smalls.forEach((s, i) => {
+        const text = labels[i] || def.fields[i];
+        if (s.textContent !== text) s.textContent = text;
+      });
       const missing = values.every(isNone);
       setState(card, error, missing);
       if (!error) card.settle(values);
@@ -294,17 +308,24 @@
       extra.classList.add("extra");
       card.insertBefore(extra, card.querySelector(".hint"));
     }
+    /* blind: the game does not report the stage but the button has a key, so the card stays usable
+       and shows "\u2013". latch: the bridge holds the key down between two taps; the lamp then shows ON / OFF
+       for the key (f.latched), not a value read from the game. */
+    const latch = (def.kinds || {})[def.action] === "latch";
     card.update = (f, error) => {
       const v = f[def.field];
       const missing = isNone(v);
-      setState(card, error, missing);
-      card.settle(v);
+      const blind = missing && !!def.enabled[def.action];
+      const held = latch && (f.latched || []).includes(def.action);
+      setState(card, error, missing && !blind);
+      card.settle(missing ? held : v);
       const ok = !error && !missing;
-      lamp.classList.toggle("on", ok && v > 0);
+      lamp.classList.toggle("on", (ok && v > 0) || (!error && held));
       const names = def.names || [];
-      const text = !ok ? "\u2013" : names[v] !== undefined ? names[v] : v === 0 ? "OFF" : String(v);
+      const text = ok ? (names[v] !== undefined ? names[v] : v === 0 ? "OFF" : String(v))
+        : !error && latch ? (held ? "ON" : "OFF") : "\u2013";
       if (lamp.textContent !== text) lamp.textContent = text;
-      setButtons(card, ok);
+      setButtons(card, ok || (!error && blind));
     };
     return card;
   }

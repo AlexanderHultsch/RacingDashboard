@@ -25,9 +25,11 @@ The names in the first column are written exactly as ACE shows them. All proposa
 | Pit Limiter Toggle | PIT LIMITER | `P` |
 | Light Cycle + | LIGHTS | `Num9` |
 | Flashing Lights | FLASH (held) | `PageUp` |
-| Wiper Cycle + | WIPERS | `U` |
+| Wiper Cycle + | WIPERS (on / off) | `U` |
 | Toggle Ignition | IGNITION | `I` |
 | Starter | START (held) | `PageDown` |
+
+ACE acts on Wiper Cycle + only while the key is held (a tap wipes once), so WIPERS is a latch: one tap holds `U` down until the next tap (`[kinds]` in `game.toml`). Toggle Ignition also works only while held: hold the IGNITION button a few seconds. If LIGHTS turns out to work the same way, try `lights = "latch"` under `[games.ace.kinds]` in `config/config.toml`.
 
 On the numpad each setting is a pair, − on the left and + on the right: TC on 7 / 8, TC CUT on 4 / 5, ABS on 1 / 2, STABILITY on 0 / decimal point, ENGINE MAP on − / +, BRAKE BIAS on / (rear) and * (front), LIGHTS on 9. Letters: P pit limiter, U wipers, I ignition. Num Lock should be on.
 

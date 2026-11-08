@@ -2,7 +2,8 @@
  *
  * RD.buttons(tabsElement, gridElement)
  *   - one tab per group (AIDS, CAR, VIEW, PIT); the chosen tab is remembered on this device
- *   - "tap" buttons send one keypress per touch, "hold" buttons hold the key while touched
+ *   - "tap" buttons send one keypress per touch, "hold" buttons hold the key while touched,
+ *     "latch" buttons (a per-game kind) press the key on one tap and let it go on the next
  *   - a button with a telemetry field shows its live value and lights up while it is on
  *   - a button without a key for the active game is greyed out
  */
@@ -31,13 +32,17 @@
     b.innerHTML = "<span class='label'></span><span class='val'></span>";
     b.querySelector(".label").textContent = def.label;
     const val = b.querySelector(".val");
-    if (def.field && FIELDS[def.field]) {
-      const [fmt, isOn] = FIELDS[def.field];
+    // a "latch" button is on while the bridge holds its key down (frame.latched)
+    const latch = def.type === "latch";
+    if ((def.field && FIELDS[def.field]) || latch) {
+      const [fmt, isOn] = FIELDS[def.field] || ["text", () => false];
       let last;
       RD.listeners.push((f) => {
-        const text = RD.formats[fmt](f[def.field], f);
+        const held = latch && (f.latched || []).includes(def.action);
+        const missing = f[def.field] === null || f[def.field] === undefined;
+        const text = latch && missing ? (held ? "ON" : "OFF") : def.field ? RD.formats[fmt](f[def.field], f) : "";
         if (text !== last) { val.textContent = text; last = text; }
-        b.classList.toggle("on", isOn(f[def.field]));
+        b.classList.toggle("on", held || (!!def.field && isOn(f[def.field])));
       });
     }
     let down = false;

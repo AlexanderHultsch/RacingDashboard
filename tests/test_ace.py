@@ -81,6 +81,38 @@ class Parse(unittest.TestCase):
         gr.is_ignition_on = False
         self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["warn_coolant"], "off")
 
+    def test_fixed_and_missing_settings(self):
+        # BMW M4 CSL as read in the game: ABS fixed at 1, TC 0..10 adjustable, TC cut / engine map absent
+        ph, gr, st = self.build()
+        gr.electronics.tc_level, gr.electronics_max_limit.tc_level, gr.electronics_is_modifiable.tc_level = 3, 10, 1
+        gr.electronics.abs_level, gr.electronics_min_limit.abs_level, gr.electronics_max_limit.abs_level = 1, 1, 1
+        gr.electronics_is_modifiable.abs_level = 0
+        gr.electronics.front_bump_damper_level = -108                 # garbage in an unused field stays unused
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["abs_level"], 1)
+        self.assertEqual(values["fixed"], ["abs_level"])
+        self.assertEqual(values["limits"], {"tc_level": [0, 10]})
+        self.assertIsNone(values["tc_cut_level"])
+        self.assertIsNone(values["engine_map"])
+        self.assertIsNone(values["diff_power"])
+        self.assertIsNone(values["diff_power_pct"])               # nothing sent
+        gr.diff_power_raw_value, gr.diff_coast_raw_value = 0.25, 0.55
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["diff_power_pct"], values["diff_coast_pct"]), (0.25, 0.55))
+        self.assertIsNone(telemetry.check(values))
+
+    def test_lights_and_wipers_unreported_until_seen(self):
+        reported = set()
+        values = {"lights": 0, "wipers": 0}
+        ace.unreported(values, reported)
+        self.assertEqual(values, {"lights": None, "wipers": None})       # ACE 0.9.1 always sends 0
+        values = {"lights": 2, "wipers": 0}
+        ace.unreported(values, reported)
+        self.assertEqual(values, {"lights": 2, "wipers": None})
+        values = {"lights": 0, "wipers": 0}
+        ace.unreported(values, reported)
+        self.assertEqual(values["lights"], 0)                            # seen once: 0 is a real OFF now
+
     def test_auto_gear_assist_keeps_the_gear_number(self):
         ph, gr, st = self.build()
         gr.assists_state.flags[0] = 1                   # auto_gear assist: a manual gearbox shifted for the driver

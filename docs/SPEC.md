@@ -22,7 +22,7 @@ Principles:
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
 | Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH (tablet); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
-| Buttons | Keypresses with scan codes (SendInput); tap or hold |
+| Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
 | Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
 | Units | km/h by default, mph per device |
 | Code | Public GitHub repo `Racing-Dashboard`, main branch |
@@ -62,7 +62,10 @@ Phone / tablet pages (ui/)
 | `shift_up`, `shift_down`, `limiter` | the game's shift signals and the rev limiter |
 | `speed_kmh`, `gas`, `brake`, `clutch` | km/h; pedals 0..1 |
 | `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | driver settings, `None` if the car has none |
+| `diff_power_pct`, `diff_coast_pct` | differential locking on / off throttle as a share 0..1 (the value, not a setting step), `None` = not reported |
 | `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
+| `latched` | set by the bridge: latch actions whose key is held down right now, e.g. `["wipers"]` |
+| `fixed` | stepped settings the car has but the driver cannot change, e.g. `["abs_level"]`: the card shows the value with FIXED and no − / + |
 | `launch`, `auto_clutch` | launch control active, auto clutch assist on (`None` = not available) |
 | `esc_active` | stability control working right now |
 | `warn_brake`, `warn_engine`, `warn_oil`, `warn_coolant` | warning lamps as a state, no value: `None` (not reported), `off`, `cold`, `warn` (yellow), `alert` (red) |
@@ -105,6 +108,7 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 
 - A **tap** button sends one keypress per touch (held `[input] tap_ms`, default 80 ms). A **hold** button presses the key on touch and releases it when the finger lifts; the watchdog releases it after `hold_max_s` (10 s) if the release never arrives.
 - A button with a telemetry `field` shows its live value (TC level, brake bias, ON / OFF) and lights up while the state is on.
+- A game can change how a button sends its key in `[kinds]` of its `game.toml` (`tap`, `hold`, or `latch`: one tap presses the key and keeps it down, the next tap lets it go, with no time limit; for games that act only while a key is held, e.g. ACE wipers). The bridge reports the latched actions in the frame (`latched`); the pages show such a button ON while its key is down. `[games.<id>.kinds]` in `config/config.toml` overrides single kinds; unknown actions or kinds are logged and ignored.
 - A game maps an action to a key in `[keys]` of its `game.toml`; `[games.<id>.keys]` in `config/config.toml` overrides single keys. An action without a key is greyed out ("NO KEY"). Invalid keys are logged at start and their button is greyed out.
 - A connector can carry out actions itself (`HANDLES` plus `handle()`); the demo game does this for all buttons.
 - Keys are sent with `SendInput` and `KEYEVENTF_SCANCODE`, because games read scan codes. Input goes to the foreground window: if the game window (`[window] process` or `title`) is not in front, the bridge taps LShift (Windows lets a program change the active window only right after input), brings it to the front and waits 0.3 s. If it is not found, the button is refused with "game window not found".
@@ -145,12 +149,12 @@ The tablet page (`dash.html`, `js/dashbox.js`, style **CARDS** `styles/dash/card
 
 | Card type | Shows | Buttons | Map keys |
 | --- | --- | --- | --- |
-| `stepper` | big value (segments), range from the game (`limits`), level dots | − / + (disabled at the ends of the range) | `field`, `down`, `up` |
+| `stepper` | big value (segments), range from the game (`limits`), level dots; FIXED instead of the range for a setting in `fixed` | − / + (disabled at the ends of the range, and for a fixed setting) | `field`, `down`, `up` |
 | `bias` | brake bias % front (segments) and a front / rear bar | ◀ FRONT / REAR ▶, holding repeats (after 0.4 s, every 0.16 s) | `field`, `front`, `rear` |
 | `toggle` | a lamp with the state text (`on` / `off`), `style` `amber` (lights up) or `green` | the whole lamp, if the card has an `action`; else display only | `field`, `action`?, `on`, `off`, `style` |
-| `pair` | two values side by side (e.g. differential power / coast) | none | `fields`, `labels` |
+| `pair` | two values side by side (e.g. differential power / coast); with `alt` the alt fields are shown in % (labels `alt_labels`) when none of the main fields has a value | none | `fields`, `labels`, `alt`, `alt_labels` |
 | `fuel` | litres (segments), a tank bar (yellow below 15 %, red below 7 %), laps left (or "OF n L") | none | `field`, `max`?, `per_lap`? |
-| `cycle` | a stage setting (lights, wipers): a lamp with the stage (`names`, else OFF / the number), lit amber above 0 | the lamp steps to the next stage; optional second button `extra` (e.g. FLASH) | `field`, `action`, `names`?, `extra`?, `extra_label`? |
+| `cycle` | a stage setting (lights, wipers): a lamp with the stage (`names`, else OFF / the number), lit amber above 0. When the game does not report the stage but the action has a key, the card stays usable and shows – (for a `latch` action ON / OFF for the held key instead) | the lamp steps to the next stage; optional second button `extra` (e.g. FLASH) | `field`, `action`, `names`?, `extra`?, `extra_label`? |
 | `ignition` | OFF / ON (amber) / RUNNING (green) | the lamp sends the ignition action as a hold (the key stays down while the finger is on it, so a short touch is a tap; ACE needs it held a few seconds); START is held like a starter (disabled while the engine runs) | `field`, `running`, `action`, `starter` |
 | `value` | a value in segments (`fmt` `lap` time, `pct`, `speed` with the device's unit, `int`), optional bar for a 0..1 share | none | `field`, `fmt`, `bar`? |
 | `push` | a big button without a state | the button; with `confirm_ms` it fires only after being held that long (a fill shows the progress) | `action`, `text`?, `confirm_ms`? |
@@ -160,7 +164,7 @@ Every card has `label` and an optional `hint` (small text at the bottom, e.g. "S
 
 Actions of type `hold` (`actions.py`, e.g. FLASH, START) are pressed while the finger is on the button (`/api/info` sends `kinds` per action). Landscape: 3 columns for up to 6 cards, 4 up to 8, 5 for more (15 cards: 5 × 3); portrait: 2 columns, 3 for more than 8 cards. Tappable lamps stay at least 56 px high.
 
-Assetto Corsa EVO: TC, TC CUT, ABS, STABILITY, ENGINE MAP (steppers; TC, TC CUT, ABS and STABILITY amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LIGHTS (cycle + FLASH), WIPERS (cycle), IGNITION (+ START), AUTO CLUTCH (shown only: set in the game's assist menu), WARNINGS (brake, engine, oil, coolant). DiRT Rally 2.0 has its own map ([DR2/NOTES.md](DR2/NOTES.md)): STAGE TIME, STAGE, SPEED, LIGHTS, WIPERS, RECOVER (held 1 s). The demo game has the same map as Assetto Corsa EVO; its car has no stability control, warms up from cold and overheats with engine map 5.
+Assetto Corsa EVO: TC, TC CUT, ABS, STABILITY, ENGINE MAP (steppers; TC, TC CUT, ABS and STABILITY amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: the setting steps, or the locking in % for a car without steps, e.g. the BMW M4 CSL: POWER 25, COAST 55), PIT LIMITER (toggle), LIGHTS (cycle + FLASH), WIPERS (cycle), IGNITION (+ START), AUTO CLUTCH (shown only: set in the game's assist menu), WARNINGS (brake, engine, oil, coolant). DiRT Rally 2.0 has its own map ([DR2/NOTES.md](DR2/NOTES.md)): STAGE TIME, STAGE, SPEED, LIGHTS, WIPERS, RECOVER (held 1 s). The demo game has the same map as Assetto Corsa EVO; its car has no stability control, warms up from cold and overheats with engine map 5.
 
 The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 

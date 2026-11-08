@@ -108,5 +108,45 @@ class Bridge(unittest.TestCase):
             self.assertLess(time.monotonic() - start, 2.0)
 
 
+class Latch(unittest.TestCase):
+    """A per-game "latch" kind: one tap presses the key and keeps it down, the next lets it go.
+    The keyboard and window are faked, so nothing is sent to the PC."""
+
+    def test_latch(self):
+        class Silent:                                   # a connector that handles no button itself
+            def handle(self, action, state):
+                return False
+        sent = []
+        saved = (server.active, server.connector, server.keys.available, server.keys.down, server.keys.up,
+                 server.keys.focus, server.keys.tap)
+        game = {"id": "fake", "game": {"name": "Fake"}, "window": {"process": "x.exe", "title": "X"},
+                "keys": {"wipers": "U", "horn": "H"}, "kinds": {"wipers": "latch", "horn": "nonsense"}, "dash": []}
+        try:
+            server.check_keys(game)
+            self.assertEqual(game["kinds"], {"wipers": "latch"})          # unknown kind dropped
+            server.active, server.connector = game, Silent()
+            server.keys.available = True
+            server.keys.down = lambda combo: sent.append(("down", combo))
+            server.keys.up = lambda combo: sent.append(("up", combo))
+            server.keys.tap = lambda combo, s: sent.append(("tap", combo))
+            server.keys.focus = lambda process, title: True
+            self.assertEqual(server.command({"action": "wipers", "state": "down"})[0], False)   # taps only
+            self.assertEqual(server.command({"action": "wipers"}), (True, ""))
+            self.assertEqual(server.latched, {"wipers"})
+            self.assertEqual(server.command({"action": "wipers"}), (True, ""))
+            self.assertEqual(server.latched, set())
+            server.command({"action": "wipers"})
+            server.release_all()                                           # game switch / shutdown
+            self.assertEqual(sent, [("down", "U"), ("up", "U"), ("down", "U"), ("up", "U")])
+            self.assertEqual(server.latched, set())
+            groups = server.actions.layout(game["keys"], set(), game["kinds"])
+            wipers = next(b for g in groups for b in g["buttons"] if b["action"] == "wipers")
+            self.assertEqual(wipers["type"], "latch")
+        finally:
+            (server.active, server.connector, server.keys.available, server.keys.down, server.keys.up,
+             server.keys.focus, server.keys.tap) = saved
+            server.latched.clear()
+
+
 if __name__ == "__main__":
     unittest.main()

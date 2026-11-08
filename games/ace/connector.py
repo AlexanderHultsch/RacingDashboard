@@ -205,12 +205,26 @@ def text(raw: bytes) -> str:
     return raw.decode("utf-8", "replace").strip()
 
 
+def share(value: float):
+    """A 0..1 share (diff locking), None when the game sends nothing or something outside 0..1."""
+    return round(value, 3) if 0 < value <= 1 else None
+
+
 def lap_time(ms: int):
     return ms if 0 < ms < 2_147_000_000 else None
 
 
-def level(current: int, modifiable: int):
-    return int(current) if modifiable else None
+def setting(gr, field: str):
+    """(value, adjustable) of a stepped electronics setting; value None when the car does not have it.
+    A setting the driver cannot change still counts when the game gives it a range above 0 and the
+    value lies in it: the BMW M4 CSL reports ABS 1 with min 1, max 1 and is_modifiable 0."""
+    current = int(getattr(gr.electronics, field))
+    low, high = int(getattr(gr.electronics_min_limit, field)), int(getattr(gr.electronics_max_limit, field))
+    if getattr(gr.electronics_is_modifiable, field):
+        return current, high > low
+    if high > 0 and low <= current <= high:
+        return current, False
+    return None, False
 
 
 # universal name -> ACE electronics field (current value, range and "car has it")
@@ -260,7 +274,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     ph = Physics.from_buffer_copy(physics[:sizeof(Physics)])
     gr = Graphics.from_buffer_copy(graphics[:sizeof(Graphics)])
     st = Static.from_buffer_copy(static[:sizeof(Static)])
-    el, can = gr.electronics, gr.electronics_is_modifiable
+    el = gr.electronics
+    steps = {name: setting(gr, field) for name, field in STEPPED.items()}
     rpm_max = max(0, ph.currentMaxRpm)
     rpm_pct = gr.rpm_percent
     if rpm_pct > 1.5:                       # guard in case a build sends percent instead of 0..1
@@ -284,17 +299,19 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "gas": round(ph.gas, 3),
         "brake": round(ph.brake, 3),
         "clutch": round(ph.clutch, 3),
-        "tc_level": level(el.tc_level, can.tc_level),
-        "tc_cut_level": level(el.tc_cut_level, can.tc_cut_level),
+        "tc_level": steps["tc_level"][0],
+        "tc_cut_level": steps["tc_cut_level"][0],
         "tc_active": bool(gr.tc_active or ph.tcInAction),
-        "abs_level": level(el.abs_level, can.abs_level),
+        "abs_level": steps["abs_level"][0],
         "abs_active": bool(gr.abs_active or ph.absInAction),
         "brake_bias": round(ph.brakeBias, 4) if ph.brakeBias > 0 else None,
-        "engine_map": level(el.engine_map_level, can.engine_map_level),
-        "esc_level": level(el.esc_level, can.esc_level),
+        "engine_map": steps["engine_map"][0],
+        "esc_level": steps["esc_level"][0],
         "esc_active": bool(gr.esc_active),
-        "diff_power": level(el.diff_power_level, can.diff_power_level),
-        "diff_coast": level(el.diff_coast_level, can.diff_coast_level),
+        "diff_power": steps["diff_power"][0],
+        "diff_coast": steps["diff_coast"][0],
+        "diff_power_pct": share(gr.diff_power_raw_value),
+        "diff_coast_pct": share(gr.diff_coast_raw_value),
         "launch": bool(gr.launch_active),
         "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
@@ -302,6 +319,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "gear_mode": None,
         **warnings(ph, gr),
         "limits": limits(gr),
+        "fixed": [name for name, (value, adjustable) in steps.items() if value is not None and not adjustable],
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
         "ignition": bool(gr.is_ignition_on),
         "engine_running": bool(gr.is_engine_running),
@@ -319,6 +337,16 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "delta_ms": gr.delta_time_ms if best else None,
         "lap_valid": bool(gr.is_valid_lap),
     }
+
+
+def unreported(values: dict, reported: set) -> None:
+    """ACE 0.9.1 leaves the live light / wiper stages at 0 even when they work in the car (docs/ACE/NOTES.md),
+    so 0 means "not reported" (None) until the game has sent a stage above 0 once in this session."""
+    for name in ("lights", "wipers"):
+        if values[name]:
+            reported.add(name)
+        elif name not in reported:
+            values[name] = None
 
 
 INSTRUMENTATION = ("main_light_stage", "special_light_stage", "cockpit_light_stage", "wiper_level", "rain_lights",
@@ -356,6 +384,7 @@ class Connector(telemetry.Connector):
         self.stale_s = cfg["telemetry"]["stale_s"]
         self.version = None
         self.watched = None
+        self.reported = set()     # lights / wipers once the game sent a stage above 0
 
     def attach(self) -> bool:
         now = time.monotonic()
@@ -385,6 +414,7 @@ class Connector(telemetry.Connector):
             return None
         physics, graphics, static = (block.read() for block in self.blocks)
         values = parse(physics, graphics, static)
+        unreported(values, self.reported)
         raw = watched(Graphics.from_buffer_copy(graphics[:sizeof(Graphics)]))
         if raw != self.watched:
             log.line("ace", "raw", changes(self.watched, raw))

@@ -25,8 +25,10 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `rpm_pct` | graphics `rpm_percent` | 0..1; a value over 1.5 is taken as percent; 0 falls back to rpm / rpm_max |
 | `shift_up`, `shift_down`, `limiter` | graphics `is_change_up_rpm`, `is_change_down_rpm`, `is_rpm_limiter_on` | the game's own per-car shift point |
 | `speed_kmh`, `gas`, `brake`, `clutch` | physics | |
-| `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
-| `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per setting the car has |
+| `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | adjustable when `electronics_is_modifiable` is set; a setting that is not modifiable but has a max limit above 0 with the value inside min..max is shown as fixed (`fixed`); otherwise `None` (not on this car). Seen in the BMW M4 CSL: ABS 1, min 1, max 1, not modifiable = fixed ABS; TC CUT, engine map and diff levels all 0 = not on this car. Unused fields (dampers) can hold garbage with limits 0 |
+| `diff_power_pct`, `diff_coast_pct` | graphics `diff_power_raw_value`, `diff_coast_raw_value` | locking share 0..1 (BMW M4 CSL: 0.25 / 0.55); the DIFF card shows it in % when the car has no diff steps |
+| `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per adjustable setting |
+| `fixed` | the same blocks | settings the car has but cannot change (see above) |
 | `launch`, `auto_clutch` | graphics `launch_active`, `assists_state.auto_clutch` | |
 | `esc_active` | graphics `esc_active` | |
 | `warn_brake` | graphics `handbrake_percent` | red while the handbrake is pulled (> 5 %) |
@@ -38,7 +40,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `brake_bias` | physics `brakeBias` | 0.56 = 56 % front |
 | `pit_limiter` | physics `pitLimiterOn` or `electronics.is_pitlimiter_on` | |
 | `ignition`, `engine_running` | graphics `is_ignition_on`, `is_engine_running` | |
-| `lights`, `wipers` | graphics `instrumentation.main_light_stage`, `wiper_level` | |
+| `lights`, `wipers` | graphics `instrumentation.main_light_stage`, `wiper_level` | ACE 0.9.1 leaves them at 0 even when lights / wipers work, so they are `None` (not reported: the cards show – and stay usable) until the game sends a stage above 0 once |
 | `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | graphics `fuel_liter_current_quantity`, `max_fuel`, `fuel_liter_per_lap` (or `fuel_per_lap`) | |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms` | graphics `current_lap_time_ms`, `last_laptime_ms`, `best_laptime_ms`, `delta_time_ms` | 0 or `INT_MAX` = no time |
 | `lap`, `position`, `cars`, `lap_valid` | graphics `total_lap_count`, `current_pos`, `total_drivers`, `is_valid_lap` | |
@@ -52,6 +54,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 - [ ] `status` numbers (pause and replay).
 - [ ] TC / ABS / MAP levels and brake bias follow the in-game changes.
 - [ ] Lights and wiper stages (ACE menu: up to 3 light stages, 5 wiper stages; the `ace | raw` log lines show the numbers).
+  BMW M4 CSL (ACE 0.9.1, Nov 2026): the limit blocks say lights 0..2, wipers 0..4, but the live `instrumentation` block stayed all 0 (also `are_headlights_visible`, `flashing_lights` and `session_state.lights_on`) while Light Cycle +, Wiper Cycle + and Flashing Lights were pressed. The wipers did move in the game while `wiper_level` stayed 0, and no other byte of the graphics block changed with them. So ACE 0.9.1 does not publish the light / wiper state in shared memory (the overlay live-telemetry-evo also treats `instrumentation` as opaque); only the limit blocks are filled. The dashboard cannot read lights or wipers back from ACE for now.
 - [ ] Keys: bind them as in [KEYS.md](KEYS.md) (ACE has no keyboard defaults for the car tab), then check each DASH card.
 - [ ] Lap times, delta, position.
 - [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), tyre data.

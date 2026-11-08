@@ -39,6 +39,7 @@ data_lock = threading.Lock()
 game_lock = threading.Lock()
 key_lock = threading.Lock()
 held: dict[str, float] = {}       # action -> time the key went down
+latched: set[str] = set()         # latch actions whose key is down until the next tap (no time limit)
 address = ""
 
 
@@ -52,8 +53,20 @@ def load_connector(game: dict):
     return module.Connector(game, cfg)
 
 
+KINDS = ("tap", "hold", "latch")
+
+
+def kind(game: dict, action: str) -> str:
+    """How a button sends its key in this game: [kinds] of game.toml, else the type in core/actions.py."""
+    return game.get("kinds", {}).get(action) or actions.BY_NAME[action]["type"]
+
+
 def check_keys(game: dict) -> None:
-    """Drop invalid or unknown keys with a log line, so the rest of the game still works."""
+    """Drop invalid or unknown keys and kinds with a log line, so the rest of the game still works."""
+    for action, value in list(game.setdefault("kinds", {}).items()):
+        if action not in actions.BY_NAME or value not in KINDS:
+            log.line("keys", game["id"], f"kind {action} = '{value}' ignored (actions in core/actions.py, kinds {', '.join(KINDS)})")
+            del game["kinds"][action]
     for action, combo in list(game["keys"].items()):
         if action not in actions.BY_NAME:
             log.line("keys", game["id"], f"unknown action '{action}' ignored")
@@ -96,7 +109,7 @@ def check_dash(game: dict) -> None:
         elif missing := [key for key in kind["need"] if not control.get(key)]:
             problem = f"missing {', '.join(missing)}"
         else:
-            fields = list(control.get("fields", [])) + [control[key] for key in DASH_FIELD_KEYS if control.get(key)]
+            fields = list(control.get("fields", [])) + list(control.get("alt", [])) + [control[key] for key in DASH_FIELD_KEYS if control.get(key)]
             unknown = [f for f in fields if f not in telemetry.FIELDS]
             unknown += [icon for icon in control.get("icons", []) if icon not in LAMP_ICONS]
             if control["type"] == "value" and control.get("fmt", "int") not in ("lap", "pct", "speed", "int"):
@@ -119,7 +132,7 @@ def dash_layout(game: dict, handled: set) -> list[dict]:
         card = dict(control)
         names = [control[key] for key in DASH_TYPES[control["type"]]["actions"] if control.get(key)]
         card["enabled"] = {name: bool(game["keys"].get(name)) or name in handled for name in names}
-        card["kinds"] = {name: actions.BY_NAME[name]["type"] for name in names}
+        card["kinds"] = {name: kind(game, name) for name in names}
         out.append(card)
     return out
 
@@ -169,6 +182,7 @@ def reader() -> None:
                     pass
                 opened_for = None
         fresh = telemetry.with_error(values, bool(failed))
+        fresh["latched"] = sorted(list(latched))
         with data_lock:
             if fresh["error_text"] != data.get("error_text"):
                 log.line("data", "error" if fresh["error"] else "ok", fresh["error_text"] or "data as expected")
@@ -186,11 +200,12 @@ def snapshot() -> tuple[int, dict]:
 # ---------------------------------------------------------------- commands
 
 def release_all() -> None:
-    for action in list(held):
+    for action in list(held) + list(latched):
         combo = active["keys"].get(action) if active else None
         if combo:
             keys.up(combo)
         held.pop(action, None)
+        latched.discard(action)
 
 
 def hold_watchdog() -> None:
@@ -209,11 +224,11 @@ def hold_watchdog() -> None:
 def command(body: dict) -> tuple[bool, str]:
     action = body.get("action")
     state = body.get("state", "tap")
-    button = actions.BY_NAME.get(action)
-    if button is None:
+    if action not in actions.BY_NAME:
         return False, "unknown action"
-    if state not in (("tap",) if button["type"] == "tap" else ("down", "up")):
-        return False, f"state '{state}' not valid for a {button['type']} button"
+    how = kind(active, action)
+    if state not in (("down", "up") if how == "hold" else ("tap",)):
+        return False, f"state '{state}' not valid for a {how} button"
     with game_lock:
         if connector.handle(action, state):
             log.line("command", action, f"{state} (handled by {active['id']})")
@@ -231,9 +246,19 @@ def command(body: dict) -> tuple[bool, str]:
                 held.pop(action, None)
             log.line("command", action, "up")
             return True, ""
+        if how == "latch" and action in latched:      # second tap: let the key go
+            keys.up(combo)
+            latched.discard(action)
+            log.line("command", action, f"latch off {combo}")
+            return True, ""
         if not keys.focus(window.get("process", ""), window.get("title", "")):
             log.line("refused", action, "game window not found")
             return False, "game window not found"
+        if how == "latch":                             # first tap: the key stays down
+            keys.down(combo)
+            latched.add(action)
+            log.line("command", action, f"latch on {combo}")
+            return True, ""
         if state == "down":
             if action not in held:
                 keys.down(combo)
@@ -252,7 +277,7 @@ def info() -> dict:
         "game": active["id"],
         "game_name": active["game"]["name"],
         "games": [{"id": g["id"], "name": g["game"]["name"]} for g in games.values()],
-        "groups": actions.layout(active["keys"], handled),
+        "groups": actions.layout(active["keys"], handled, active.get("kinds", {})),
         "dash": dash_layout(active, handled),
         "address": address,
         "hz_choices": [hz for hz in HZ_CHOICES if hz <= cfg["telemetry"]["read_hz"]],

@@ -6,6 +6,8 @@ without a key is shown greyed out for that game.
 
 type:  "tap"  = one short keypress per touch
        "hold" = the key is held as long as the finger is on the button
+       "latch" (only as a per-game kind, [kinds] in game.toml) = one tap presses the key and keeps it
+               down, the next tap lets it go; for games that act only while a key is held
 field: optional telemetry name shown on / lighting the button
 """
 
@@ -60,10 +62,13 @@ GROUPS = [
 BY_NAME = {button["action"]: button for group in GROUPS for button in group["buttons"]}
 
 
-def layout(keys: dict, handled: set) -> list[dict]:
-    """The button groups for the UI, with `enabled` set per button for the active game."""
+def layout(keys: dict, handled: set, kinds: dict | None = None) -> list[dict]:
+    """The button groups for the UI, with `enabled` set per button for the active game and the type
+    replaced by the game's own kind ([kinds] in game.toml) where it has one."""
+    kinds = kinds or {}
     out = []
     for group in GROUPS:
-        buttons = [dict(b, enabled=bool(keys.get(b["action"])) or b["action"] in handled) for b in group["buttons"]]
+        buttons = [dict(b, enabled=bool(keys.get(b["action"])) or b["action"] in handled,
+                        type=kinds.get(b["action"], b["type"])) for b in group["buttons"]]
         out.append({"name": group["name"], "buttons": buttons})
     return out

@@ -40,6 +40,8 @@ FIELDS = {
     "esc_active": False,     # stability control is working right now
     "diff_power": None,      # differential power (on throttle) setting, None = not adjustable
     "diff_coast": None,      # differential coast (off throttle) setting
+    "diff_power_pct": None,  # differential locking on throttle as a share 0..1 (the value, not a setting step)
+    "diff_coast_pct": None,  # differential locking off throttle, 0..1
     "launch": None,          # launch control active right now (True / False), None = not available
     "auto_clutch": None,     # auto clutch assist on (True / False), None = not available
     # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
@@ -49,6 +51,8 @@ FIELDS = {
     "warn_coolant": None,    # coolant temperature: cold (blue), hot (yellow), overheating (red)
     # range of the stepped settings for this car: {"tc_level": [0, 11], ...}; missing = unknown
     "limits": {},
+    # stepped settings this car has but the driver cannot change (e.g. ABS fixed at 1): ["abs_level"]
+    "fixed": [],
     "pit_limiter": False,
     "ignition": None,        # True / False, None = not available
     "engine_running": None,
@@ -72,6 +76,7 @@ FIELDS = {
     # set by the core, not by a connector (see check() below)
     "error": None,           # None, or a code from ERRORS
     "error_text": "",        # short text for the pages, e.g. "UNEXPECTED DATA: RPM -5"
+    "latched": [],           # latch buttons whose key the bridge holds down right now, e.g. ["wipers"]
 }
 
 # Error codes the core sets in "error". The pages then show E instead of the gear.
@@ -90,7 +95,7 @@ RANGES = {
     "rpm": (0, 25000), "rpm_max": (0, 25000), "rpm_pct": (0.0, 1.5),
     "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05), "clutch": (-0.05, 1.05),
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
-    "lap_progress": (0.0, 1.05), "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
+    "lap_progress": (0.0, 1.05), "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0), "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
 }
 REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
 GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")

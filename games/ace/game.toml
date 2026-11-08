@@ -56,3 +56,9 @@ shift_down = "Z"                  # AC
 shift_up = "X"                    # AC
 neutral = ""
 save_replay = ""
+
+# How a button sends its key, where ACE differs from the usual type in core/actions.py:
+# "tap" one keypress, "hold" held while the finger is on the button, "latch" one tap presses the key
+# and keeps it down, the next tap lets it go. ACE acts on some car controls only while the key is held.
+[kinds]
+wipers = "latch"                  # Wiper Cycle +: a tap wipes once, held = wipers run (first test, Nov 2026)
