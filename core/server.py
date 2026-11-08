@@ -23,6 +23,7 @@ import actions  # noqa: E402
 import config  # noqa: E402
 import keys  # noqa: E402
 import log  # noqa: E402
+import recorder as recording  # noqa: E402
 import telemetry  # noqa: E402
 
 HZ_CHOICES = (10, 20, 30, 60)
@@ -41,6 +42,7 @@ key_lock = threading.Lock()
 held: dict[str, float] = {}       # action -> time the key went down
 latched: set[str] = set()         # latch actions whose key is down until the next tap (no time limit)
 address = ""
+recorder: recording.Recorder | None = None    # the analysis page's lap recorder ([analysis] enabled)
 
 
 # ---------------------------------------------------------------- games and connectors
@@ -183,6 +185,11 @@ def reader() -> None:
                 opened_for = None
         fresh = telemetry.with_error(values, bool(failed))
         fresh["latched"] = sorted(list(latched))
+        if recorder is not None:
+            try:
+                recorder.feed(fresh, active["id"], time.monotonic())
+            except Exception as error:  # noqa: BLE001  recording must never stop the bridge
+                log.line("analysis", "error", repr(error))
         with data_lock:
             if fresh["error_text"] != data.get("error_text"):
                 log.line("data", "error" if fresh["error"] else "ok", fresh["error_text"] or "data as expected")
@@ -311,7 +318,42 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(200, snapshot()[1])
         if url.path == "/api/info":
             return self.reply_json(200, info())
+        if url.path.startswith("/api/analysis"):
+            return self.analysis_get(url.path, parse_qs(url.query))
         self.static(url.path)
+
+    def analysis_get(self, path: str, query: dict) -> None:
+        if recorder is None:
+            return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+        try:
+            number = int(query.get("n", query.get("since", ["0"]))[0])
+        except ValueError:
+            return self.reply_json(400, {"error": "bad request"})
+        if path == "/api/analysis":
+            return self.reply_json(200, recorder.state())
+        if path == "/api/analysis/live":
+            return self.reply_json(200, recorder.live(number))
+        if path == "/api/analysis/section":
+            return self.reply_json(200, recorder.section(number))
+        self.reply_json(404, {"error": "not found"})
+
+    def analysis_post(self, path: str, body: dict) -> None:
+        if recorder is None:
+            return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+        if path == "/api/analysis/offer":
+            ok = isinstance(body.get("id"), int) and recorder.decide(body["id"], bool(body.get("save")))
+        elif path == "/api/analysis/save-all":
+            ok = recorder.save_all() >= 0
+        elif path == "/api/analysis/undo":
+            ok = recorder.undo()
+        elif path == "/api/analysis/end":
+            recorder.end_run()
+            ok = True
+        elif path == "/api/analysis/finish":
+            ok = body.get("keep") in ("all", "baselines") and recorder.finish_run(body["keep"])
+        else:
+            return self.reply_json(404, {"error": "not found"})
+        self.reply_json(200 if ok else 409, recorder.state() if ok else {"error": "not possible now"})
 
     def do_POST(self) -> None:
         try:
@@ -334,6 +376,8 @@ class Handler(BaseHTTPRequestHandler):
                 settings["game"] = game_id
                 config.save_settings(settings)
             return self.reply_json(200, info())
+        if path.startswith("/api/analysis/"):
+            return self.analysis_post(path, body)
         self.reply_json(404, {"error": "not found"})
 
     def static(self, path: str) -> None:
@@ -386,7 +430,7 @@ def lan_ip() -> str:
 
 def setup(file_log: bool = True) -> str:
     """Load config and games; returns the start game."""
-    global cfg, games, settings
+    global cfg, games, settings, recorder
     cfg = config.load()
     cfg["log"]["enabled"] = cfg["log"]["enabled"] and file_log
     log.setup(cfg["log"])
@@ -397,6 +441,9 @@ def setup(file_log: bool = True) -> str:
         check_keys(game)
         check_dash(game)
     settings = config.load_settings()
+    if cfg["analysis"]["enabled"]:
+        recorder = recording.Recorder(cfg["analysis"]["data_dir"], int(cfg["analysis"]["hz"]),
+                                      float(cfg["analysis"]["section_m"]), log=log.line)
     wanted = settings.get("game") or cfg["dashboard"]["game"]
     if wanted not in games:
         log.line("game", "unknown", f"'{wanted}', using '{next(iter(games))}'")
@@ -425,7 +472,8 @@ def banner(port: int) -> None:
     print("  On your phone or tablet (same Wi-Fi), open in the browser:\n")
     print(f"      {address}\n")
     print(f"      Gear + Rev   {address}/gear")
-    print(f"      Dash         {address}/dash\n")
+    print(f"      Dash         {address}/dash")
+    print(f"      Analysis     {address}/analysis\n")
     print("  Tip: Share > Add to Home Screen runs it full screen.")
     print(f"  Close this window (or press Ctrl+C) to stop.\n{line}\n", flush=True)
 

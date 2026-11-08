@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Analysis">
+<meta name="theme-color" content="#07090b">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Analysis</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/analysis/standard.css">
+</head>
+<!-- Analysis: where the time goes, section by section (docs/ANALYSIS.md). The bridge records the laps
+     (core/recorder.py); this page shows the map with the sections on the left and the graphs of one
+     section on the right: green = best (baseline), blue = last lap, red = the lap now. -->
+<body data-page="analysis" data-styles="standard">
+<main class="an">
+  <header class="bar">
+    <span class="title">ANALYSIS</span>
+    <span class="what" id="what">WAITING FOR THE GAME</span>
+    <span class="right">
+      <button class="btn live on" id="live"><i></i>LIVE</button>
+      <button class="btn review" id="review" hidden>TO REVIEW <b id="review-n">0</b></button>
+      <button class="btn" id="end">END RUN</button>
+      <button class="rd-tool settings" aria-label="Settings"></button>
+    </span>
+  </header>
+  <section class="deltas">
+    <div class="dl"><span>LAP · VS BEST EVER</span><b id="d-lap-best">-</b></div>
+    <div class="dl"><span>LAP · VS LAST</span><b id="d-lap-last">-</b></div>
+    <div class="dl"><span id="d-sec-best-t">SECTION · VS BEST</span><b id="d-sec-best">-</b></div>
+    <div class="dl"><span id="d-sec-last-t">SECTION · VS LAST</span><b id="d-sec-last">-</b></div>
+  </section>
+  <section class="main">
+    <div class="card mapcard">
+      <div class="mapwrap"><canvas id="map"></canvas></div>
+      <span class="tag" id="map-tag">OVERVIEW</span>
+      <span class="legend"><span><i class="best"></i>BEST</span><span><i class="last"></i>LAST</span><span><i class="now"></i>NOW</span></span>
+      <div class="strip">
+        <div class="cells" id="cells"></div>
+        <input type="range" id="slider" min="0" max="100" value="0" aria-label="Scroll the sections">
+      </div>
+    </div>
+    <div class="card graphs">
+      <div class="gh"><b id="g-title">SECTION -</b><span id="g-sub">-</span></div>
+      <div class="gwrap"><canvas id="graphs"></canvas></div>
+    </div>
+  </section>
+</main>
+<div class="overlay" id="overlay" hidden></div>
+<div class="pop" id="pop" hidden>
+  <h3>TO REVIEW <span>NOTHING IS SAVED WITHOUT A TAP</span></h3>
+  <div id="offers"></div>
+  <div class="poprow">
+    <button class="sbtn save wide" id="save-all">SAVE ALL</button>
+    <button class="sbtn wide" id="pop-close">CLOSE</button>
+  </div>
+  <div class="undo" id="undo" hidden><span>Last saved: <b id="undo-label"></b> · previous baseline kept</span><button class="sbtn" id="undo-btn">UNDO</button></div>
+</div>
+<div class="modal" id="modal" hidden>
+  <h2>RUN ENDED</h2>
+  <div class="sub" id="m-sub"></div>
+  <div class="stats">
+    <div><span>LAPS</span><b id="m-laps">-</b></div>
+    <div><span>BEST LAP</span><b id="m-best">-</b></div>
+    <div><span>TO REVIEW</span><b id="m-open">-</b></div>
+    <div><span>LAP FILES</span><b id="m-mb">-</b></div>
+  </div>
+  <div class="m-open" id="m-open-h"><h4>STILL TO REVIEW</h4><button class="sbtn save" id="m-save-all">SAVE ALL</button></div>
+  <div class="m-offers" id="m-offers"></div>
+  <div class="choice">
+    <button class="big" id="keep-all">KEEP ALL LAPS<small id="keep-all-s"></small></button>
+    <button class="big warn" id="keep-base">KEEP BASELINES ONLY<small id="keep-base-s"></small></button>
+  </div>
+</div>
+<div class="rd-nodata"></div>
+<script src="js/rd.js"></script>
+<script src="js/analysis.js"></script>
+<script>
+  RD.start({ toolbar: false });
+  const settings = document.querySelector(".settings");
+  settings.innerHTML = RD.icons.gear;
+  settings.addEventListener("click", () => RD.settings.open());
+  RD.loadInfo();
+  RD.analysis();
+</script>
+</body>
+</html>

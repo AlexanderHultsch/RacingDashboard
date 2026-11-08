@@ -72,6 +72,17 @@ FIELDS = {
     "delta_ms": None,        # to best lap, negative = faster
     "lap_valid": True,
     "lap_progress": None,    # share of the lap / stage driven, 0..1
+    # analysis page (core/recorder.py)
+    "lap_pos": None,         # position on the lap along the track, 0..1 (the game's normalised position)
+    "track_length_m": None,  # length of the track / stage in metres
+    "pos_x": None,           # car position on the map, metres (game world, seen from above)
+    "pos_y": None,
+    "steer": None,           # steering, -1 (full left) .. 1 (full right)
+    "session_id": None,      # changes when a new game session starts (a new run)
+    "air_c": None,           # ambient, written once per lap
+    "road_c": None,
+    "tyre_compound": None,
+    "time_of_day": None,     # "hh:mm" in the game
     "flag": "none",          # "none", "blue", "yellow", "black", "white", "checkered", "green", ...
     # set by the core, not by a connector (see check() below)
     "error": None,           # None, or a code from ERRORS
@@ -95,7 +106,7 @@ RANGES = {
     "rpm": (0, 25000), "rpm_max": (0, 25000), "rpm_pct": (0.0, 1.5),
     "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05), "clutch": (-0.05, 1.05),
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
-    "lap_progress": (0.0, 1.05), "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0), "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
+    "lap_progress": (0.0, 1.05), "lap_pos": (0.0, 1.0001), "steer": (-1.5, 1.5), "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0), "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
 }
 REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
 GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")

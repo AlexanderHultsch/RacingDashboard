@@ -14,9 +14,10 @@ A universal racing dashboard: a Python bridge (standard library only) on the gam
 | Demo game (simulated car) | `games/demo/` | works; use it to separate page problems from game problems |
 | GEAR + REV page (phone): 14-segment gear, 8 rev lights, E on errors | `ui/gear.html`, `ui/styles/gear/segment.css`, `ui/js/seg14.js` | browser-tested (Chromium), not on a real iPhone |
 | DASH page (tablet): dash box cards built from a map per game | `ui/dash.html`, `ui/js/dashbox.js`, `ui/styles/dash/cards.css`, `games/*/dash.toml` | browser-tested, not on a real iPad |
+| ANALYSIS page (tablet): map with 250 m sections, graphs per section, deltas, best laps / sections to save | `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`, `ui/styles/analysis/standard.css` | tested with the demo car and simulated laps; ACE / DR2 analysis fields never seen in the game |
 | BUTTONS page (older tab page) | `ui/buttons.html` | works, secondary |
 | Installer | `install.bat`, `tools/install.ps1` | **never run** (no PowerShell in the sandbox); Windows PowerShell 5.1, ASCII only |
-| Tests | `tests/` | `python -m unittest discover tests` – 21 tests, all passing |
+| Tests | `tests/` | `python -m unittest discover tests` – all passing |
 
 ## First test plan (do it in this order, one thing at a time)
 
@@ -27,6 +28,7 @@ A universal racing dashboard: a Python bridge (standard library only) on the gam
 5. **Assetto Corsa EVO – reading:** GAME → ASSETTO CORSA EVO, drive, and run `py tools\ace_probe.py` in a second window. Compare every value with the game (list below).
 6. **Assetto Corsa EVO – buttons:** bind the keys from `games/ace/game.toml` in ACE (Options → Controls → Car), try TC + / − on the iPad, watch `logs\racing-dashboard.log` (`command | ...` / `refused | ...` lines).
 7. **DiRT Rally 2.0:** enable UDP (see [DR2/NOTES.md](DR2/NOTES.md)), GAME → DIRT RALLY 2.0, drive a stage.
+8. **Analysis:** open `/analysis` on the iPad, drive three laps in ACE (a stage in DR2). Check in `/state` that `lap_pos` runs 0..1, `track_length_m`, `pos_x` / `pos_y` and `steer` are filled; that the map is the track (not mirrored, not another car) and the car dot follows; that a lap ends at the line and its time matches the game; then SAVE / SKIP / UNDO. Files: `data\runs\...`, `data\baselines\...`; log lines `analysis | ...`.
 
 ## Debugging tools
 
@@ -62,5 +64,5 @@ DiRT Rally 2.0 (`games/dr2/connector.py`, `docs/DR2/NOTES.md`): rpm sent as tent
 - Plain English docs; update README / SPEC / game notes with every behaviour change; keep tests passing and add tests for new logic.
 - No personal data in code, docs, logs or commits; machine settings only in the ignored `config/config.toml`.
 - No emoji in the UI (icons are inline SVG).
-- Analysis page: agreed strategy in [ANALYSIS.md](ANALYSIS.md), not built yet.
+- Analysis page: agreed strategy in [ANALYSIS.md](ANALYSIS.md), built; the owner's rules there (sections by track position, repeat rule, ask before saving, one backup) are decisions to keep.
 - Ideas not built yet: tyres / brake temperature / damage cards, two-page dash box (DRIVE / CAR), names for light / wiper stages, flags (ACE enum unpublished), electric single-speed detection (ACE `engine_type` numbers unpublished), more games (see [ASSISTS.md](ASSISTS.md)).

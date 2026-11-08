@@ -46,6 +46,12 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `lap`, `position`, `cars`, `lap_valid` | graphics `total_lap_count`, `current_pos`, `total_drivers`, `is_valid_lap` | |
 | `car`, `track` | graphics `car_model`, static `track` | |
 | `status` | graphics `status` | assumed as in AC / ACC: 0 off, 1 replay, 2 live, 3 pause |
+| `lap_pos` | graphics `npos` | normalised position on the lap, 0..1 (analysis sections) |
+| `track_length_m` | static `track_length_m` | |
+| `pos_x`, `pos_y` | graphics `car_coordinates[i]` x and z | the player's slot: the entry of `car_ids` that matches `player_car_id`, else slot 0; seen from above (x right, z down on the map; the map may come out mirrored, check it) |
+| `steer` | physics `steerAngle` | assumed −1..1 (clamped) |
+| `session_id` | static `event_id`, `session_id`, `session`, `session_name` | a change starts a new analysis run |
+| `air_c`, `road_c`, `tyre_compound`, `time_of_day` | physics `airTemp`, `roadTemp`, graphics `tyre_lf.tyre_compound_front`, graphics time of day | ambient line once per lap |
 
 ### To check in the game
 
@@ -57,6 +63,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
   BMW M4 CSL (ACE 0.9.1, Nov 2026): the limit blocks say lights 0..2, wipers 0..4, but the live `instrumentation` block stayed all 0 (also `are_headlights_visible`, `flashing_lights` and `session_state.lights_on`) while Light Cycle +, Wiper Cycle + and Flashing Lights were pressed. The wipers did move in the game while `wiper_level` stayed 0, and no other byte of the graphics block changed with them. So ACE 0.9.1 does not publish the light / wiper state in shared memory (the overlay live-telemetry-evo also treats `instrumentation` as opaque); only the limit blocks are filled. The dashboard cannot read lights or wipers back from ACE for now.
 - [ ] Keys: bind them as in [KEYS.md](KEYS.md) (ACE has no keyboard defaults for the car tab), then check each DASH card.
 - [ ] Lap times, delta, position.
+- [ ] Analysis fields (not verified at all): `npos` runs 0..1 and wraps at the line; `track_length_m` is filled; the `car_ids` / `player_car_id` match finds the player (else the dot and lines show another car); `steerAngle` is −1..1; the map is not mirrored; `session_id` stays the same while driving and changes with a new session. `/state` shows `lap_pos`, `pos_x`, `pos_y`, `steer`, `session_id`.
 - [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), tyre data.
 
 `python tools/ace_probe.py` prints these values live.

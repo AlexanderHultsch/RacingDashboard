@@ -13,6 +13,8 @@ DEFAULTS = {
     "dashboard": {"host": "0.0.0.0", "port": 8080, "game": "ace"},
     "telemetry": {"read_hz": 60, "stale_s": 2.0},
     "input": {"tap_ms": 80, "hold_max_s": 10.0},
+    # Analysis page: lap recording (core/recorder.py); data_dir relative to the program folder
+    "analysis": {"enabled": True, "data_dir": "data", "hz": 30, "section_m": 250},
     "log": {"enabled": True, "file": "logs/racing-dashboard.log", "max_mb": 5, "backups": 2},
     # Per game overrides of games/<game>/game.toml, e.g. [games.ace.keys] tc_up = "LCtrl+T"
     "games": {},
@@ -34,6 +36,7 @@ def load(path: Path = CONFIG_FILE) -> dict:
         with open(path, "rb") as f:
             merge(cfg, tomllib.load(f))
     cfg["log"]["file"] = str(ROOT / cfg["log"]["file"])
+    cfg["analysis"]["data_dir"] = str(ROOT / cfg["analysis"]["data_dir"])
     return cfg
 
 

@@ -21,6 +21,14 @@ tap_ms = 80
 # A held button (HORN, LOOK LEFT ...) is released after this many seconds if the device never sends "up".
 hold_max_s = 10.0
 
+[analysis]
+# Lap recording for the analysis page. Laps and baselines are kept in data_dir (JSON Lines files).
+enabled = true
+data_dir = "data"
+# Samples per second while driving, and the length of a section along the track in metres.
+hz = 30
+section_m = 250
+
 [log]
 enabled = true
 file = "logs/racing-dashboard.log"

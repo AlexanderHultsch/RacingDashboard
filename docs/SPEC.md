@@ -39,6 +39,7 @@ Python bridge (core/server.py)
  ├─ State .................................. the latest frame, with a sequence number
  ├─ Web server ............................. the pages (ui/), /stream, /state, /api/*
  ├─ Buttons ................................ the connector, or a keypress to the game window
+ ├─ Recorder (core/recorder.py) ............ laps, sections and baselines for the analysis page (data/)
  └─ Rolling log ............................ logs/racing-dashboard.log
         ▲▼ HTTP: SSE /stream?hz=N, POST /api/command
 Phone / tablet pages (ui/)
@@ -75,6 +76,11 @@ Phone / tablet pages (ui/)
 | `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | litres |
 | `lap`, `position`, `cars` | completed laps, position, number of cars |
 | `lap_progress` | share of the lap / stage driven, 0..1 |
+| `lap_pos`, `track_length_m` | position on the lap along the track, 0..1 (the game's normalised position, not the driven distance), and the track / stage length in metres: the analysis sections |
+| `pos_x`, `pos_y` | car position on the map in metres (game world seen from above) |
+| `steer` | steering −1 (full left) .. 1 (full right) |
+| `session_id` | changes when a new game session starts (a new analysis run) |
+| `air_c`, `road_c`, `tyre_compound`, `time_of_day` | ambient values, written once per lap |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
 | `flag` | `none`, `blue`, `yellow`, ... (not filled for ACE yet) |
 | `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
@@ -118,12 +124,16 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 
 | Request | Reply |
 | --- | --- |
-| `GET /`, `/gear`, `/dash`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
+| `GET /`, `/gear`, `/dash`, `/analysis`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
 | `GET /stream?hz=N` | Server-Sent Events, one `data: {frame}` per tick at N Hz (capped at `read_hz`), `retry: 1000` |
 | `GET /state` | the latest frame as JSON (for polling clients, e.g. an ESP32 display) |
 | `GET /api/info` | `{"game", "game_name", "games": [{"id", "name"}], "groups": [...buttons with "enabled"], "address", "hz_choices", "keys_available"}` |
 | `POST /api/command` | `{"action": "tc_up"}` (tap) or `{"action": "horn", "state": "down" / "up"}` → `{"ok": true}` or HTTP 409 `{"error": ...}` |
 | `POST /api/settings` | `{"game": "demo"}` → the new `/api/info`; HTTP 400 for an unknown game |
+| `GET /api/analysis` | the analysis state: `version`, `active`, game / car / track, `track_length_m`, `section_m`, `sections`, `outline` ([x, y, p] every 5 m), `borders` ([x, y, nx, ny] per section start), `lines` (`best`, `last` as [x, y]), `red_lap`, `blue_lap`, `base_lap`, `offers`, `undo`, `ended` |
+| `GET /api/analysis/live?since=k` | `version`, `recording`, `sec` (current section), `deltas` (`lap_best`, `lap_last`, `sec_best`, `sec_last`, `lap_time`), `strip` (per section `best`, `last`, `times`, `attempts`, `base`), the red line from point k (`now_from`, `now_line`), `offers` (count) |
+| `GET /api/analysis/section?n=` | one section (0-based): `best`, `last`, `now` as rows [d, t, v, thr, brk, str, g, x, y] (d metres and t seconds from the section start), their times, `now_attempt` |
+| `POST /api/analysis/offer` | `{"id": 3, "save": true}` SAVE or SKIP one offer → the analysis state; `/save-all`, `/undo`, `/end` (END RUN), `/finish` `{"keep": "all" / "baselines"}` (end-of-run menu); HTTP 409 when not possible, 404 with `[analysis] enabled = false` |
 
 The command errors are `unknown action`, `state '...' not valid for a ... button`, `no key set for ...`, `keypresses work on Windows only` and `game window not found`; the page shows them briefly.
 
@@ -166,6 +176,17 @@ Actions of type `hold` (`actions.py`, e.g. FLASH, START) are pressed while the f
 
 Assetto Corsa EVO: TC, TC CUT, ABS, STABILITY, ENGINE MAP (steppers; TC, TC CUT, ABS and STABILITY amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: the setting steps, or the locking in % for a car without steps, e.g. the BMW M4 CSL: POWER 25, COAST 55), PIT LIMITER (toggle), LIGHTS (cycle + FLASH), WIPERS (cycle), IGNITION (+ START), WARNINGS (brake, engine, oil, coolant). DiRT Rally 2.0 has its own map ([DR2/NOTES.md](DR2/NOTES.md)): STAGE TIME, STAGE, SPEED, LIGHTS, WIPERS, RECOVER (held 1 s). The demo game has the same map as Assetto Corsa EVO; its car has no stability control, warms up from cold and overheats with engine map 5.
 
+### ANALYSIS
+
+The tablet page for learning (`analysis.html`, `js/analysis.js`, style **STANDARD** `styles/analysis/standard.css`), agreed in [ANALYSIS.md](ANALYSIS.md). Header: game, car, track, lap, LIVE, TO REVIEW (number of open offers), END RUN (tap twice), settings. Below it four deltas, always visible: lap vs best ever, lap vs last, section vs best, section vs last (red = slower, green = faster). Left: the map (canvas) with the track outline from the best lap (else the last lap), the section borders and numbers, the selected section highlighted, the full-lap lines (green best lap, blue last lap, red the lap now) and the car; tapping a section zooms into it with the three lines of that section, tapping again returns to the overview. Under the map the section strip (BEST and LAST row per section, horizontally scrollable with a slider; ↻ marks a repeated section); tapping a cell opens that section. Right: six graphs over the metres in the selected section (speed, throttle, brake, steering, gear, delta to the best section, or to the last lap when there is no best yet). LIVE (the start view) follows the current section; any section can be opened while driving and stays until LIVE is tapped. The page polls `/api/analysis/live` 4 times per second and the selected section twice per second; the car dot comes from the stream. TO REVIEW lists the offers with SAVE / SKIP, SAVE ALL and UNDO; when a run ends the end-of-run menu shows laps, best lap, open offers and KEEP ALL LAPS / KEEP BASELINES ONLY.
+
+**Recorder** (`core/recorder.py`, fed with every frame by the reader thread; an error in it is logged and never stops the bridge). It records while the frame is live, without error, with `lap_pos` and a track of at least 300 m, at `[analysis] hz` (30). Sections: `section_m` (250 m) along the track from `lap_pos × track_length_m`; the last piece joins the previous section if shorter than half a section. Section times are interpolated at the borders, lap times at the line. The repeat rule: an attempt of section N starts only when the car drives forward from N−1 into N and ends when it drives into N+1; moving back into a section never starts an attempt; samples are kept only while the position grows (driving backwards is not recorded); more than 100 m back from the furthest point, a pause, a jump or a backwards line crossing mark the lap as not counting, and a lap with a repeated section never counts. A lap that starts standing (a stage start) is timed from the moment the car moves; a stage ends when the car stays at its end (`lap_pos` ≥ 0.9995) for 1 s; a jump back to the start from further than 200 m is a restart. Offers: an attempt faster than the section baseline (or the first one), and a lap that counts and beats the lap baseline; one pending offer per section and lap (a faster one replaces it). SAVE moves the current baseline to `*.prev.jsonl` and writes the new one; UNDO puts the backup back (or removes a first baseline). Offers whose lap file exists survive a restart of the bridge (`data/pending.jsonl`). A run ends with a new session (game, track, car or `session_id` changes), when the game closes, or with END RUN.
+
+Files (JSON Lines, every file starts with a header line `{"type": "header", "format": ..., "version": 1, game, car, track, track_length_m, section_m, sections, hz}`):
+
+- `data/runs/<game>/<track>/<car>/<date_time>/lap-007.jsonl`: header (`racing-dashboard.lap`, run, lap, out_lap), sample lines `{"type": "s", "t", "p", "x", "y", "v", "thr", "brk", "str", "g", "sec", "att", "line"}` (t seconds from the lap start; `sec` 1-based; `att` the attempt the sample belongs to; `line` 1 = part of the lap's line), one `section` line per attempt (`sec`, `att`, `time`, `t_in`, `complete`, `broken`), one `ambient` line, one `summary` line (`time`, `complete`, `valid`, `counts`, `out_lap`, `repeated`, `broken`, `sections`). `run.jsonl` logs laps, offers, saves, skips, undos and the end.
+- `data/baselines/<game>/<track>/<car>/lap.jsonl` (`racing-dashboard.lap-baseline`) and `sections/section-07.jsonl` (`racing-dashboard.section-baseline`, with `section`, `from_m`, `to_m`; samples with `d` metres and `t` seconds from the section start), each with a `source` (run, lap, attempt), and the backups `lap.prev.jsonl`, `section-07.prev.jsonl`.
+
 The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 
 ## 7. Adding a game
@@ -184,11 +205,11 @@ Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*`, A
 
 ## 9. Configuration
 
-`config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[log]`; `[games.<id>.keys]` key overrides.
+`config/config.toml` is optional; sections are merged key by key over the defaults in `core/config.py`. See `config/config.example.toml` for every key: `[dashboard]` host, port, start game; `[telemetry]` read_hz, stale_s; `[input]` tap_ms, hold_max_s; `[analysis]` enabled, data_dir, hz, section_m; `[log]`; `[games.<id>.keys]` key overrides.
 
 ## 10. Tests
 
-`python -m unittest discover tests`: the ACE struct layout and translation against synthetic shared memory, and a bridge smoke test with the demo game (pages, path safety, state, info, commands, stream rate). On Windows with ACE running, `python tools/ace_probe.py` prints the live values.
+`python -m unittest discover tests`: the ACE struct layout and translation against synthetic shared memory, and a bridge smoke test with the demo game (pages, path safety, state, info, commands, stream rate), the DiRT Rally 2.0 packet translation, and the recorder with a simulated car (sections, lap and section times, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data). On Windows with ACE running, `python tools/ace_probe.py` prints the live values.
 
 ## 11. Future development and out of scope
 

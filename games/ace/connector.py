@@ -193,6 +193,7 @@ class Graphics(Structure):
         ("gap_behind", c_float), ("active_cars", c_uint8), ("fuel_per_lap", c_float),
         ("fuel_estimated_laps", c_float), ("assists_state", AssistsState), ("max_fuel", c_float),
         ("max_turbo_boost", c_float), ("use_single_compound", c_bool),
+        ("car_ids", (c_uint64 * 2) * 60),      # driver id per car_coordinates slot (lower, upper 64 bits)
     ]
 
 
@@ -269,6 +270,18 @@ def limits(gr) -> dict:
     return out
 
 
+def player_xy(gr) -> tuple[float | None, float | None]:
+    """The player's car position on the map (x, z of car_coordinates; y is the height). The slot whose
+    driver id matches player_car_id; slot 0 if none matches (single player). Not verified in the game."""
+    slot = 0
+    for i in range(60):
+        if gr.car_ids[i][0] == gr.player_car_id_a and gr.car_ids[i][1] == gr.player_car_id_b and (gr.player_car_id_a or gr.player_car_id_b):
+            slot = i
+            break
+    x, _, z = gr.car_coordinates[slot]
+    return (round(x, 2), round(z, 2)) if (x or z) else (None, None)
+
+
 def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     """Raw shared memory bytes -> universal telemetry (core/telemetry.py)."""
     ph = Physics.from_buffer_copy(physics[:sizeof(Physics)])
@@ -283,6 +296,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     if rpm_pct <= 0 and rpm_max:
         rpm_pct = ph.rpms / rpm_max
     best = lap_time(gr.best_laptime_ms)
+    xy = player_xy(gr)
     return {
         "status": STATUS.get(gr.status, "live"),
         "car": text(gr.car_model),
@@ -336,6 +350,17 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "best_ms": best,
         "delta_ms": gr.delta_time_ms if best else None,
         "lap_valid": bool(gr.is_valid_lap),
+        # analysis page
+        "lap_pos": round(min(max(gr.npos, 0.0), 1.0), 6),
+        "track_length_m": round(st.track_length_m, 1) if st.track_length_m > 0 else None,
+        "pos_x": xy[0],
+        "pos_y": xy[1],
+        "steer": round(max(-1.0, min(1.0, ph.steerAngle)), 3),
+        "session_id": f"{st.event_id}-{st.session_id}-{st.session}-{text(st.session_name)}",
+        "air_c": round(ph.airTemp, 1),
+        "road_c": round(ph.roadTemp, 1),
+        "tyre_compound": text(gr.tyre_lf.tyre_compound_front) or None,
+        "time_of_day": f"{gr.time_of_day_hours:02d}:{gr.time_of_day_minutes:02d}",
     }
 
 

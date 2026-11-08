@@ -27,6 +27,10 @@ The game sends a packet of little-endian 32-bit floats per frame while driving (
 | `lap_progress` | 8 / 244 | distance driven / stage length |
 | `lap`, `position` | 144, 156 | |
 | `max_gears` | 260 | |
+| `lap_pos`, `track_length_m` | 8 / 244, 244 | analysis: one stage = one lap; the stage starts standing and ends when the car stays at the end |
+| `pos_x`, `pos_y` | 16, 24 | world x and z, metres (the map may come out mirrored) |
+| `steer` | 120 | −1..1 |
+| `session_id` | – | `stage-<length>`: a new stage length starts a new analysis run |
 
 Not in the packet (or always 0 in DiRT Rally 2.0): car and track name, fuel, ABS / TC level, light and wiper state, warning lamps. After 2 s without packets the pages show "NO NEW DATA FROM THE GAME", after 10 s "GAME NOT RUNNING" (the game sends nothing in the menus either).
 
@@ -34,7 +38,8 @@ Not in the packet (or always 0 in DiRT Rally 2.0): car and track name, fuel, ABS
 
 - [ ] Gear values in reverse and neutral.
 - [ ] RPM: scaled by 10 or not (the log and `/state` show the values).
-- [ ] Stage progress reaches 100 % at the finish.
+- [ ] Stage progress reaches 100 % at the finish (the analysis needs ≥ 99.95 % to end the stage lap).
+- [ ] Analysis: position x / z gives the right map (not mirrored), steering sign, a restart jumps the distance back to 0.
 
 ## Controlling: keypresses
 

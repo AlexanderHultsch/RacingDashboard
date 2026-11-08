@@ -1,6 +1,6 @@
 # Analysis page – agreed strategy
 
-The analysis page as agreed with the owner (interview, November 2026). Not built yet; this is the plan the build follows. No coaching and no tips: the page only shows data (an AI coach may come later).
+The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Tested with the demo car and simulated laps; not yet with Assetto Corsa EVO or DiRT Rally 2.0. No coaching and no tips: the page only shows data (an AI coach may come later).
 
 ## The page (one page, no tabs; iPad landscape)
 
@@ -47,7 +47,7 @@ In practice you may turn around and drive a section again. The rule:
 - All laps of a run are kept. After the run, the end-of-run menu can delete the run's laps and keep only the baselines.
 - Strict log form: **JSON Lines** (one JSON object per line); every file starts with a header line (format name and version, game, car, track, track length, section length, sample rate, lap, valid) followed by sample lines, one ambient line and a summary line (lap time, section times, valid).
 - Planned layout (under a `data/` folder, ignored by git):
-  - `data/runs/<game>/<track>/<car>/<date-time>/lap-007.jsonl` and the run's pending offers
+  - `data/runs/<game>/<track>/<car>/<date-time>/lap-007.jsonl` and `run.jsonl` (laps, offers, saves); open offers in `data/pending.jsonl`
   - `data/baselines/<game>/<track>/<car>/lap.jsonl`, `lap.prev.jsonl`, `sections/section-07.jsonl`, `section-07.prev.jsonl`
 
 ## Data the connectors must add
@@ -61,5 +61,6 @@ The bridge records at 30 Hz from the frame it already reads and writes only at l
 ## Next steps
 
 1. PNG mockup of the page (map left, graphs right, deltas, offers, end-of-run menu) - done; feedback taken over above.
-2. Verify the new ACE / DR2 fields on the PC.
-3. Build: recorder and files in the bridge, API, page; tests with the demo car.
+2. Build: recorder and files in the bridge, API, page; tests with the demo car - done.
+3. Verify the new ACE / DR2 fields on the PC (lap position, position, steering, session id; whether the map is mirrored).
+4. Later, if wanted: choose any lap of the run as the red line after the session (now: the last lap, blue the one before); an AI coach.

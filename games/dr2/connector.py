@@ -28,7 +28,8 @@ LIMITER_PCT = 0.99
 CONFIG = Path("My Games") / "DiRT Rally 2.0" / "hardware_settings" / "hardware_settings_config.xml"
 
 # byte offsets
-LAP_TIME, LAP_DISTANCE, SPEED = 4, 8, 28
+LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
+STEER = 120
 THROTTLE, BRAKE, CLUTCH, GEAR = 116, 124, 128, 132
 LAP, RPM, POSITION = 144, 148, 156
 BRAKE_TEMP = (212, 216, 204, 208)        # FL, FR, RL, RR (the packet orders RL, RR, FL, FR)
@@ -79,6 +80,13 @@ def parse(data: bytes) -> dict:
         "lap_ms": int(lap_time * 1000) if lap_time and lap_time > 0 else None,
         "last_ms": int(last * 1000) if last and last > 0 else None,
         "lap_progress": round(min(1.0, max(0.0, distance / length)), 4) if length > 0 else None,
+        # analysis page: one stage = one lap; a new stage length = a new run
+        "lap_pos": round(min(1.0, max(0.0, distance / length)), 6) if length > 0 else None,
+        "track_length_m": round(length, 1) if length > 0 else None,
+        "pos_x": round(f32(data, POS_X) or 0.0, 2),
+        "pos_y": round(f32(data, POS_Z) or 0.0, 2),
+        "steer": round(max(-1.0, min(1.0, f32(data, STEER) or 0.0)), 3),
+        "session_id": f"stage-{round(length)}",
     }
 
 

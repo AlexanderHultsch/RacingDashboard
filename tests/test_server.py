@@ -4,6 +4,7 @@ Run: python -m unittest discover tests
 """
 import json
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -28,6 +29,9 @@ def setUpModule():
     for game in server.games.values():
         server.check_keys(game)
         server.check_dash(game)
+    global data_dir
+    data_dir = tempfile.TemporaryDirectory()
+    server.recorder = server.recording.Recorder(data_dir.name)
     server.activate("demo")
     threading.Thread(target=server.reader, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -39,6 +43,9 @@ def setUpModule():
 
 def tearDownModule():
     httpd.shutdown()
+    server.recorder = None
+    time.sleep(0.05)
+    data_dir.cleanup()
 
 
 def get(path):
@@ -57,7 +64,8 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/buttons", "/js/dashbox.js", "/styles/dash/cards.css", "/apple-touch-icon.png"):
+        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/buttons", "/js/dashbox.js", "/styles/dash/cards.css", "/apple-touch-icon.png",
+                     "/analysis", "/js/analysis.js", "/styles/analysis/standard.css"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)
@@ -150,3 +158,26 @@ class Latch(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Analysis(unittest.TestCase):
+    def test_analysis_api(self):
+        time.sleep(0.5)                                  # the demo car drives: a run starts
+        status, _, body = get("/api/analysis")
+        state = json.loads(body)
+        self.assertEqual(status, 200)
+        self.assertTrue(state["active"])
+        self.assertEqual(state["game"], "demo")
+        self.assertEqual(state["sections"], 20)
+        _, _, body = get("/api/analysis/live?since=0")
+        live = json.loads(body)
+        self.assertTrue(live["recording"])
+        self.assertEqual(len(live["strip"]["best"]), 20)
+        _, _, body = get("/api/analysis/section?n=0")
+        self.assertEqual(json.loads(body)["n"], 0)
+        self.assertEqual(post("/api/analysis/offer", {"id": 999, "save": True})[0], 409)
+        self.assertEqual(post("/api/analysis/undo", {})[0], 409)
+        self.assertEqual(post("/api/analysis/finish", {"keep": "nonsense"})[0], 409)
+        self.assertEqual(post("/api/analysis/nothing", {})[0], 404)
+        status, state = post("/api/analysis/end", {})
+        self.assertEqual(status, 200)
