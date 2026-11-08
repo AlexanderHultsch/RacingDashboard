@@ -81,7 +81,6 @@ type = "pair"
 label = "DIFF"
 fields = ["diff_power", "diff_coast"]
 labels = ["POWER", "COAST"]
-hint = "Set in the car's display menu"
 
 [[control]]
 type = "toggle"
@@ -91,7 +90,6 @@ action = "pit_limiter"
 on = "ON"
 off = "OFF"
 style = "amber"
-hint = "Tap to switch"
 
 [[control]]
 type = "cycle"
@@ -100,14 +98,12 @@ field = "lights"
 action = "lights"
 extra = "flash"
 extra_label = "FLASH"
-hint = "Tap to switch, hold FLASH"
 
 [[control]]
 type = "cycle"
 label = "WIPERS"
 field = "wipers"
 action = "wipers"
-hint = "Tap for the next speed"
 
 [[control]]
 type = "ignition"
@@ -116,7 +112,6 @@ field = "ignition"
 running = "engine_running"
 action = "ignition"
 starter = "starter"
-hint = "Tap to switch, hold START"
 
 [[control]]
 type = "lamps"

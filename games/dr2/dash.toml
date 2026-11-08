@@ -33,14 +33,12 @@ type = "push"
 label = "LIGHTS"
 action = "lights"
 text = "LIGHTS"
-hint = "On / off (the game does not report the state)"
 
 [[control]]
 type = "push"
 label = "WIPERS"
 action = "wipers"
 text = "WIPERS"
-hint = "On / off (the game does not report the state)"
 
 [[control]]
 type = "push"
@@ -48,4 +46,3 @@ label = "RECOVER"
 action = "recover"
 text = "HOLD TO RECOVER"
 confirm_ms = 1000
-hint = "Back on the road - costs time"

@@ -83,7 +83,6 @@ fields = ["diff_power", "diff_coast"]
 labels = ["POWER", "COAST"]
 alt = ["diff_power_pct", "diff_coast_pct"]
 alt_labels = ["POWER %", "COAST %"]
-hint = "Set in the car's display menu"
 
 [[control]]
 type = "toggle"
@@ -93,7 +92,6 @@ action = "pit_limiter"
 on = "ON"
 off = "OFF"
 style = "amber"
-hint = "Tap to switch"
 
 [[control]]
 type = "cycle"
@@ -102,14 +100,12 @@ field = "lights"
 action = "lights"
 extra = "flash"
 extra_label = "FLASH"
-hint = "Tap to switch, hold FLASH"
 
 [[control]]
 type = "cycle"
 label = "WIPERS"
 field = "wipers"
 action = "wipers"
-hint = "Tap: wipers on / off"
 
 [[control]]
 type = "ignition"
@@ -118,7 +114,6 @@ field = "ignition"
 running = "engine_running"
 action = "ignition"
 starter = "starter"
-hint = "Hold to switch (ACE needs a few s), hold START"
 
 [[control]]
 type = "lamps"
