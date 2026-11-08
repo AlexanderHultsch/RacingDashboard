@@ -39,6 +39,10 @@ How to analyse:
    (coast_m), minimum speed and where it is (min_kmh, min_at_m), throttle pickup (full_throttle_m),
    gear at the slowest point (gear_at_min, gears), exit speed (exit_kmh).
 4. Find the place from delta_by_50m: where the delta grows is where the time goes.
+   Driving aids ("aids"): where TC, ABS and stability worked (*_working_m, *_working_pct, *_first_m) and
+   the set levels (levels, level_changes). If NOW differs from BEST in an aid level or in how much an aid
+   worked, and that is where NOW loses or gains time, say whether a lower or higher setting may help.
+   Only when the data shows it; never as a general rule.
 5. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
 6. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
    and metres. Give the time at stake, rounded to 0.05 s.
@@ -161,6 +165,9 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
             break
     out["full_throttle_m"] = None if full is None else round(d[full])
     out["steer_max"] = round(max(abs(r[5]) for r in rows), 2)
+    aids = aid_facts(rows, d)
+    if aids:
+        out["aids"] = aids
     if best_rows and len(best_rows) > 1:
         bd, bt = [r[0] for r in best_rows], [r[1] for r in best_rows]
         t = [r[1] for r in rows]
@@ -173,6 +180,37 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
             mark += 50
         out["delta_by_50m"] = deltas
     return out
+
+
+AIDS = (("tc", 9), ("abs", 10), ("esc", 11))
+LEVEL_NAMES = ("tc", "tc_cut", "abs", "esc", "engine_map")      # rows[12:17]
+
+
+def aid_facts(rows: list, d: list) -> dict | None:
+    """Where TC / ABS / stability worked and the set levels (rows from recorder.section, columns 9-16)."""
+    if len(rows[0]) < 17:
+        return None
+    out = {}
+    total = (d[-1] - d[0]) or 1.0
+    for name, i in AIDS:
+        if all(r[i] is None for r in rows):
+            continue
+        on = sum(d[k + 1] - d[k] for k in range(len(rows) - 1) if rows[k][i])
+        first = next((r[0] for r in rows if r[i]), None)
+        out[f"{name}_working_m"] = round(on)
+        out[f"{name}_working_pct"] = round(on / total * 100)
+        out[f"{name}_first_m"] = None if first is None else round(first)
+    start = {n: rows[0][12 + k] for k, n in enumerate(LEVEL_NAMES) if rows[0][12 + k] is not None}
+    if start:
+        out["levels"] = start
+    changes = []
+    for k in range(1, len(rows)):
+        for j, n in enumerate(LEVEL_NAMES):
+            if rows[k][12 + j] != rows[k - 1][12 + j]:
+                changes.append({"at_m": round(rows[k][0]), "setting": n, "to": rows[k][12 + j]})
+    if changes:
+        out["level_changes"] = changes[:10]
+    return out or None
 
 
 def section_data(sec: dict) -> dict:

@@ -6,7 +6,8 @@ The analysis page as agreed with the owner (interview, November 2026). **Built**
 
 - **Left: the circuit map** with the track cut into sections. Overview of the whole track; tapping a section zooms into it, **BACK** (top left of the map) returns to the overview. **Dragging a finger along the track** (overview or section) moves a yellow ring on the map and a yellow cursor line through all graphs at the same place (no value readouts); the part of the lines after the cursor is faded. The best / last / now lines are slightly see-through (owner, November 2026).
 - **Race lines** drawn on the map in high quality: **green** = the best (baseline) section, **blue** = the last lap, **red** = the current lap (after the session: the lap being looked at). No braking markers.
-- **Right: graphs for the selected section**, each with the same three lines (green best, blue last, red current), over the position in the section: speed, throttle, brake, steering, gear (throttle / brake and steering / gear as separate small graphs, so the colours keep meaning best / last / current), and the time delta building up inside the section.
+- **Right: graphs for the selected section**, each with the same three lines (green best, blue last, red current), over the position in the section: speed, throttle, brake, steering, gear (throttle / brake and steering / gear as separate small graphs, so the colours keep meaning best / last / current), and the time delta building up inside the section. **4 graphs per page**, scrolled up / down (owner, November 2026): page 1 speed, throttle, brake, delta; page 2 steering, gear, TC, ABS; page 3 stability, engine map.
+- **Driving aids** (owner, November 2026): when TC, ABS and stability work, and at which level TC (with TC cut), ABS, stability and the engine map were set, per line, to see how much assistance is good and where it costs time. Levels rarely change, so these graphs sit on the later pages. The AI trainer gets the same facts.
 - **Always visible:** delta per section against best ever and against last lap, and delta per lap against best ever and against last lap.
 - **Section strip** under the map: the delta of every section against best and against last (two rows), horizontally scrollable with a slider for long tracks; in LIVE it scrolls along with the current section. Tapping a cell opens that section.
 - **LIVE** is the start view: the current section is selected and the graphs update while driving. Any section can be tapped and analysed **while driving** as well as after the session; the page stays there until LIVE is tapped, while recording, the top deltas and the strip keep updating.
@@ -29,7 +30,7 @@ In practice you may turn around and drive a section again. The rule:
 
 ## Recording
 
-- **By time, 30 samples per second** while driving (live session, fresh data). Each sample: time since lap start, lap position, x / y position on the map, speed, throttle, brake, steering, gear. The lap position is stored with every sample so laps line up section by section.
+- **By time, 30 samples per second** while driving (live session, fresh data). Each sample: time since lap start, lap position, x / y position on the map, speed, throttle, brake, steering, gear, and the driving aids (TC / ABS / stability working, the set levels of TC, TC cut, ABS, stability, engine map). The lap position is stored with every sample so laps line up section by section.
 - Samples are kept in memory and written when the lap ends (no disk writes while driving). About 165 KB per 1:30 lap.
 - **Ambient data once per lap**: air and track temperature, grip, weather, time of day, fuel, tyre compound (what the game reports).
 - **DiRT Rally 2.0**: one stage = one lap; sections along the stage.

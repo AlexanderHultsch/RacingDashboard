@@ -217,7 +217,16 @@ html, body { background: var(--bg); }
 .graphs .gh { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 4px 4px; gap: 10px; }
 .graphs .gh b { font-size: 14px; font-weight: 800; letter-spacing: 0.12em; white-space: nowrap; }
 .graphs .gh span { font-size: 12px; font-weight: 700; color: var(--dim); letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.graphs .gwrap { position: relative; min-height: 0; }
+/* graphs: pages of 4 panels, scrolled vertically with a snap per page; dots on the right */
+.graphs .gbox { position: relative; min-height: 0; }
+.graphs .gwrap { position: absolute; inset: 0 22px 0 0; overflow-y: auto; scroll-snap-type: y mandatory;
+  scrollbar-width: none; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.graphs .gwrap::-webkit-scrollbar { display: none; }
+.graphs .gwrap canvas { top: 0; bottom: auto; height: auto; pointer-events: none; }
+.graphs .gpages > div { scroll-snap-align: start; }
+.graphs .gdots { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
+.graphs .gdots button { width: 12px; height: 12px; border-radius: 50%; background: #2a313a; padding: 0; }
+.graphs .gdots button.on { background: var(--sel); }
 
 /* ------------------------------------------------------------ review offers and end of run */
 

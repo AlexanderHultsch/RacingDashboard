@@ -259,13 +259,30 @@ class RecorderTest(unittest.TestCase):
         car.drive(300, ms=48)                          # into section 2 of the next lap
         data = self.rec.section(1)
         self.assertTrue(data["best"] and data["last"] and data["now"])
-        self.assertEqual(len(data["best"][0]), 9)
+        self.assertEqual(len(data["best"][0]), 17)                # 9 values + 3 aids working + 5 levels
+        self.assertEqual(data["best"][0][9:], [None] * 8)          # this game reports no aids
         self.assertEqual(data["to_m"], 500.0)
         live = self.rec.live()
         self.assertEqual(live["strip"]["best"][0] > 0, True)   # slower than the baseline
         state = self.rec.state()
         self.assertEqual(len(state["borders"]), 4)
         self.assertTrue(state["outline"])
+
+    def test_driving_aids_are_recorded(self):
+        aids = {"tc_active": False, "abs_active": False, "esc_active": False, "tc_level": 3, "tc_cut_level": 2,
+                "abs_level": 2, "esc_level": None, "engine_map": 1}
+        car = Car(self.rec, p=0.0)
+        car.drive(300, **aids)
+        car.drive(100, **dict(aids, tc_active=True, tc_level=4))     # TC works, level changed to 4
+        car.drive(620, **aids)
+        self.rec.save_all()
+        lines = [json.loads(l) for l in (self.rec.run_dir / "lap-001.jsonl").read_text().splitlines()]
+        samples = [l for l in lines if l["type"] == "s"]
+        self.assertEqual(samples[0]["a"], [0, 0, 0])
+        self.assertEqual(samples[0]["lv"], [3, 2, 2, None, 1])
+        self.assertTrue(any(s["a"][0] == 1 and s["lv"][0] == 4 for s in samples))
+        row = next(r for r in self.rec.section(1)["best"] if r[9] == 1)     # from the saved section best
+        self.assertEqual(row[9:], [1, 0, 0, 4, 2, 2, None, 1])
 
     def test_strip_shows_the_last_lap_until_the_new_one_gets_there(self):
         car = Car(self.rec, p=0.0)

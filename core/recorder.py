@@ -4,7 +4,8 @@ The bridge feeds it every telemetry frame. While the game delivers live data wit
 samples at [analysis] hz (30), cuts the track into sections of [analysis] section_m (250 m) along the
 track (lap position x track length, not the driven distance) and keeps per lap:
 
-- the samples (time, lap position, x / y, speed, throttle, brake, steering, gear), forward only;
+- the samples (time, lap position, x / y, speed, throttle, brake, steering, gear, and the driving aids:
+  TC / ABS / stability working, and the set levels of TC, TC cut, ABS, stability and engine map), forward only;
 - per section the attempts. An attempt starts when the car drives into the section from the section
   before it and ends when it drives into the next one. Entering N-1 and then N again (practice: turned
   around) starts a new attempt for N; a spin that rolls back over a border replaces nothing.
@@ -37,8 +38,15 @@ OUTLINE_STEP_M = 5.0
 LINE_STEP = 2                # every 2nd sample for the full-lap race lines on the map
 AMBIENT = ("air_c", "road_c", "tyre_compound", "time_of_day", "fuel_l")
 
-# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line]  line = 1: part of the lap's line
-NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE = range(12)
+# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line, tc_on, abs_on, esc_on, levels]
+# line = 1: part of the lap's line; *_on: the aid works right now (None = the game does not say);
+# levels: [tc, tc_cut, abs, esc, engine_map] as set (None = not on this car / not reported)
+NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE, TC_ON, ABS_ON, ESC_ON, LV = range(16)
+LEVELS = ("tc_level", "tc_cut_level", "abs_level", "esc_level", "engine_map")
+
+
+def _flag(value):
+    return None if value is None else (1 if value else 0)
 
 
 def slug(text) -> str:
@@ -232,7 +240,9 @@ class Recorder:
         sec = self._section(p)
         row = [now, p, frame.get("pos_x"), frame.get("pos_y"), float(frame.get("speed_kmh") or 0.0),
                float(frame.get("gas") or 0.0), float(frame.get("brake") or 0.0), float(frame.get("steer") or 0.0),
-               int(frame.get("gear") or 0), sec, 0, 0]
+               int(frame.get("gear") or 0), sec, 0, 0,
+               _flag(frame.get("tc_active")), _flag(frame.get("abs_active")), _flag(frame.get("esc_active")),
+               [frame.get(name) for name in LEVELS]]
         last = self.last
         self.paused = False
         self.last = row
@@ -404,9 +414,15 @@ class Recorder:
 
     @staticmethod
     def _sample_line(row, t0: float) -> dict:
-        return {"type": "s", "t": round(row[NOW] - t0, 3), "p": round(row[P], 6), "x": row[X], "y": row[Y],
+        line = {"type": "s", "t": round(row[NOW] - t0, 3), "p": round(row[P], 6), "x": row[X], "y": row[Y],
                 "v": round(row[V], 1), "thr": round(row[THR], 3), "brk": round(row[BRK], 3), "str": round(row[STR], 3),
                 "g": row[G], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
+        aids = row[TC_ON:ESC_ON + 1] if len(row) > LV else []
+        if any(a is not None for a in aids):
+            line["a"] = list(aids)                         # TC, ABS, stability working: 1 / 0
+        if len(row) > LV and any(v is not None for v in row[LV]):
+            line["lv"] = list(row[LV])                     # set levels: TC, TC cut, ABS, stability, engine map
+        return line
 
     @staticmethod
     def _write_jsonl(path: Path, lines: list) -> None:
@@ -786,8 +802,9 @@ class Recorder:
                     "now_from": since, "now_line": line[since:], "offers": len(self.offers)}
 
     def section(self, n: int) -> dict:
-        """One section's three lines: best (baseline), last, now. Rows: [d, t, v, thr, brk, str, g, x, y],
-        d = metres from the section start, t = seconds from the section start."""
+        """One section's three lines: best (baseline), last, now. Rows: [d, t, v, thr, brk, str, g, x, y,
+        tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map], d = metres from the section
+        start, t = seconds from the section start; the aids are None where they were not recorded."""
         with self.lock:
             if not self.key or not 0 <= n < self.sections:
                 return {"n": n, "best": [], "last": [], "now": []}
@@ -798,11 +815,13 @@ class Recorder:
                 if attempt is None:
                     return []
                 return [[round(r[P] * self.length - d0, 2), round(r[NOW] - attempt.t_in, 3), round(r[V], 1),
-                         round(r[THR], 3), round(r[BRK], 3), round(r[STR], 3), r[G], r[X], r[Y]] for r in attempt.samples]
+                         round(r[THR], 3), round(r[BRK], 3), round(r[STR], 3), r[G], r[X], r[Y],
+                         r[TC_ON], r[ABS_ON], r[ESC_ON], *r[LV]] for r in attempt.samples]
 
             base = self.base["sections"].get(n)
             best = [[round(s["p"] * self.length - d0, 2), s["t"], s["v"], s["thr"], s["brk"], s["str"], s["g"],
-                     s["x"], s["y"]] for s in base["samples"]] if base else []
+                     s["x"], s["y"], *(s.get("a") or [None] * 3), *(s.get("lv") or [None] * 5)]
+                    for s in base["samples"]] if base else []
             now_attempt = red.latest(n) if red else None
             last_attempt = blue.done(n) if blue else None
             return {"n": n, "from_m": round(d0, 1), "to_m": round(min(self.length, d0 + self.section_m), 1),

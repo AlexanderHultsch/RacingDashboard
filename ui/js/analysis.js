@@ -3,7 +3,8 @@
  * Data from the bridge (core/recorder.py):
  *   GET  /api/analysis              track outline, section borders, full-lap lines, offers, end of run
  *   GET  /api/analysis/live?since=  4 x per second: deltas, section strip, current section, red line
- *   GET  /api/analysis/section?n=   one section: best / last / now samples [d, t, v, thr, brk, str, g, x, y]
+ *   GET  /api/analysis/section?n=   one section: best / last / now samples [d, t, v, thr, brk, str, g, x, y,
+ *                                   tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map]
  *   POST /api/analysis/offer {id, save}, /save-all, /skip-all, /undo, /end, /finish {keep: "all" | "baselines"}
  *   GET  /api/trainer, POST /api/trainer/ask {mode: "track" | "section", section}   AI trainer (docs/TRAINER.md)
  * The car dot on the map comes from the normal telemetry stream (pos_x, pos_y).
@@ -525,14 +526,21 @@
 
   /* ------------------------------------------------------------ graphs */
 
+  // Graphs: pages of 4 panels, scrolled vertically (snap per page). Page 1 speed, throttle, brake, delta;
+  // page 2 steering, gear, TC, ABS; page 3 stability, engine map. Rows: [d, t, v, thr, brk, str, g, x, y,
+  // tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map] (assists null when not recorded).
+  const PER_PAGE = 4;
+  const A = { TC: 9, ABS: 10, ESC: 11, TCL: 12, CUT: 13, ABSL: 14, ESCL: 15, MAP: 16 };
+
   function renderGraphs() {
-    const { ctx, w, h } = prep($("graphs"));
+    const wrap = $("gwrap"), canvas = $("graphs");
     const sec = S.sec;
     const st = S.state;
     const n = sections() ? S.sel + 1 : "-";
     $("g-title").textContent = "SECTION " + n;
     if (!sec || !st || !st.active) {
       $("g-sub").textContent = "-";
+      prep(canvas);
       return;
     }
     const len = Math.max(1, sec.to_m - sec.from_m);
@@ -551,9 +559,7 @@
       const t = interp(refD, refT, r[0]);
       return t === null ? null : [r[0], r[1] - t];
     }).filter(Boolean);
-    const lines = {
-      best: sec.best, last: sec.last, now: sec.now,
-    };
+    const lines = { best: sec.best, last: sec.last, now: sec.now };
     const all = [...sec.best, ...sec.last, ...sec.now];
     const range = (i, pad, minSpan) => {
       let lo = Infinity, hi = -Infinity;
@@ -574,29 +580,66 @@
     const ticks = (lo, hi) => { const s = step(lo, hi), out = []; for (let v = Math.ceil(lo / s) * s; v <= hi; v += s) out.push(+v.toFixed(6)); return out; };
 
     const panels = [
-      { title: mph ? "SPEED MPH" : "SPEED KM/H", weight: 1.5, lo: vLo, hi: vHi, val: (r) => r[2] * vScale, grid: ticks(vLo, vHi) },
-      { title: "THROTTLE %", weight: 1, lo: -5, hi: 110, val: (r) => r[3] * 100, grid: [0, 100] },
-      { title: "BRAKE %", weight: 1, lo: -5, hi: 110, val: (r) => r[4] * 100, grid: [0, 100] },
-      { title: "STEERING", weight: 1, lo: -sMax, hi: sMax, val: (r) => r[5], grid: [0], fmt: () => "0" },
-      { title: "GEAR", weight: 0.8, lo: 0.5, hi: gHi, val: (r) => r[6], grid: [2, 4, 6, 8].filter((g) => g < gHi) },
-      { title: "DELTA S · VS " + refName, weight: 1.1, lo: -dMax, hi: dMax, delta: true, grid: ticks(-dMax, dMax), axis: true,
+      { title: mph ? "SPEED MPH" : "SPEED KM/H", lo: vLo, hi: vHi, val: (r) => r[2] * vScale, grid: ticks(vLo, vHi) },
+      { title: "THROTTLE %", lo: -5, hi: 110, val: (r) => r[3] * 100, grid: [0, 50, 100] },
+      { title: "BRAKE %", lo: -5, hi: 110, val: (r) => r[4] * 100, grid: [0, 50, 100] },
+      { title: "DELTA S · VS " + refName, lo: -dMax, hi: dMax, delta: true, grid: ticks(-dMax, dMax),
         fmt: (g) => (g === 0 ? "0" : (g > 0 ? "+" : "−") + Math.abs(g).toFixed(Math.abs(g) < 0.1 ? 2 : 1)) },
+      { title: "STEERING", lo: -sMax, hi: sMax, val: (r) => r[5], grid: [0], fmt: () => "0" },
+      { title: "GEAR", lo: 0.5, hi: gHi, val: (r) => r[6], grid: [1, 2, 3, 4, 5, 6, 7, 8].filter((g) => g < gHi) },
+      { title: "TC", lanes: true, on: A.TC, level: A.TCL, level2: A.CUT },
+      { title: "ABS", lanes: true, on: A.ABS, level: A.ABSL },
+      { title: "STABILITY", lanes: true, on: A.ESC, level: A.ESCL },
+      { title: "ENGINE MAP", lanes: true, on: null, level: A.MAP },
     ];
-    const total = panels.reduce((a, p) => a + p.weight, 0);
-    const gap = 6, axisH = 16;
-    const usable = h - gap * (panels.length - 1) - axisH;
-    const pl = 42, pr = 8;
+    const pages = Math.ceil(panels.length / PER_PAGE);
+    const viewH = Math.max(200, wrap.clientHeight);
+    canvas.style.height = pages * viewH + "px";
+    const snaps = $("gpages");
+    if (snaps.childElementCount !== pages) snaps.innerHTML = "<div></div>".repeat(pages);
+    snaps.querySelectorAll("div").forEach((d) => { d.style.height = viewH + "px"; });
+    const dots = $("gdots");
+    if (dots.childElementCount !== pages) {
+      dots.innerHTML = "";
+      for (let p = 0; p < pages; p++) {
+        const b = document.createElement("button");
+        b.setAttribute("aria-label", "Graphs page " + (p + 1));
+        b.addEventListener("click", () => wrap.scrollTo({ top: p * viewH, behavior: "smooth" }));
+        dots.appendChild(b);
+      }
+    }
+    const page = Math.round(wrap.scrollTop / viewH);
+    dots.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === page));
+
+    const { ctx, w } = prep(canvas);
+    const gap = 8, axisH = 18;
+    const pl = 46, pr = 8;
     const W = w - pl - pr;
     const X = (d) => pl + (d / len) * W;
     const font = getComputedStyle(document.body).fontFamily;
-    let top = 0;
     const nowEnd = sec.now.length ? sec.now[sec.now.length - 1][0] : null;
     const cx = S.cursor === null ? null : X(Math.min(S.cursor, len));
-    for (const panel of panels) {
-      const ph = (usable * panel.weight) / total;
-      const band = 15;                                   // the title sits above the plot, never under a line
-      const Y = (v) => top + band + 3 + (1 - (v - panel.lo) / (panel.hi - panel.lo)) * (ph - band - 6);
-      ctx.font = "600 10px " + font;
+    const ph = (viewH - gap * (PER_PAGE - 1) - axisH - 4) / PER_PAGE;
+    const band = 17;                                     // the title sits above the plot, never under a line
+
+    // a line split at the cursor: full before it, faded after it
+    const split = (top, height, paint) => {
+      if (cx === null) { paint(LINE_ALPHA); return; }
+      ctx.save(); ctx.beginPath(); ctx.rect(0, top, cx, height); ctx.clip(); paint(LINE_ALPHA); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(cx, top, w - cx, height); ctx.clip(); paint(AHEAD_ALPHA); ctx.restore();
+    };
+
+    panels.forEach((panel, i) => {
+      const p = Math.floor(i / PER_PAGE);
+      const top = p * viewH + (i % PER_PAGE) * (ph + gap);
+      ctx.font = "800 11.5px " + font;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = COL.title;
+      ctx.fillText(panel.title, pl + 2, top + 2);
+      if (panel.lanes) return drawLanes(panel, top);
+      const Y = (v) => top + band + 4 + (1 - (v - panel.lo) / (panel.hi - panel.lo)) * (ph - band - 8);
+      ctx.font = "600 11px " + font;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       for (const g of panel.grid) {
@@ -604,33 +647,29 @@
         ctx.beginPath(); ctx.moveTo(pl, Y(g)); ctx.lineTo(w - pr, Y(g));
         ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.stroke();
         ctx.fillStyle = COL.label;
-        ctx.fillText(panel.fmt ? panel.fmt(g) : String(Math.round(g)), pl - 5, Y(g));
+        ctx.fillText(panel.fmt ? panel.fmt(g) : String(Math.round(g)), pl - 6, Y(g));
       }
       ctx.save();
       ctx.beginPath(); ctx.rect(pl, top + band, W, ph - band); ctx.clip();
       const draw = (rows, val, color, width) => {
         if (rows.length < 2) return;
-        const trace = () => {
+        split(top, ph, (alpha) => {
           ctx.beginPath();
-          rows.forEach((r, i) => { const x = X(r[0]), y = Y(val(r)); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
-        };
-        if (cx === null) { trace(); stroke(ctx, color, width, LINE_ALPHA); return; }
-        ctx.save(); ctx.beginPath(); ctx.rect(0, top, cx, ph); ctx.clip();
-        trace(); stroke(ctx, color, width, LINE_ALPHA); ctx.restore();
-        ctx.save(); ctx.beginPath(); ctx.rect(cx, top, w - cx, ph); ctx.clip();
-        trace(); stroke(ctx, color, width, AHEAD_ALPHA); ctx.restore();
+          rows.forEach((r, k) => { const x = X(r[0]), y = Y(val(r)); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+          stroke(ctx, color, width, alpha);
+        });
       };
       if (panel.delta) {
         if (sec.best.length > 1 || refName === "LAST") {
           ctx.beginPath(); ctx.moveTo(pl, Y(0)); ctx.lineTo(w - pr, Y(0));
           stroke(ctx, refName === "BEST" ? COL.best : COL.last, 2);
         }
-        if (refName === "BEST") draw(deltas.last, (r) => r[1], COL.last, 2);
-        draw(deltas.now, (r) => r[1], COL.now, 2.4);
+        if (refName === "BEST") draw(deltas.last, (r) => r[1], COL.last, 2.2);
+        draw(deltas.now, (r) => r[1], COL.now, 2.6);
       } else {
-        draw(lines.best, panel.val, COL.best, 2);
-        draw(lines.last, panel.val, COL.last, 2);
-        draw(lines.now, panel.val, COL.now, 2.4);
+        draw(lines.best, panel.val, COL.best, 2.2);
+        draw(lines.last, panel.val, COL.last, 2.2);
+        draw(lines.now, panel.val, COL.now, 2.6);
       }
       if (recording() && S.live && S.live.sec === S.sel && nowEnd !== null) {
         ctx.setLineDash([3, 3]);
@@ -639,35 +678,109 @@
         ctx.setLineDash([]);
       }
       ctx.restore();
-      ctx.font = "800 10.5px " + font;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = COL.title;
-      ctx.fillText(panel.title, pl + 2, top + 2);
-      top += ph + gap;
+    });
+
+    // assist panel: one lane per line (best / last / now); filled where the system works, the set level
+    // on the left (and where it changes), the share of the section it worked in the title band
+    function drawLanes(panel, top) {
+      const names = [["best", COL.best], ["last", COL.last], ["now", COL.now]];
+      const laneGap = 5;
+      const laneH = (ph - band - 6 - laneGap * 2) / 3;
+      const recorded = (rows) => rows.some((r) => r[panel.level] !== null && r[panel.level] !== undefined
+        || (panel.on !== null && r[panel.on] !== null && r[panel.on] !== undefined));
+      const shares = [];
+      names.forEach(([key, color], k) => {
+        const rows = lines[key];
+        const y = top + band + 4 + k * (laneH + laneGap);
+        ctx.fillStyle = "#1a2129";
+        ctx.beginPath(); ctx.roundRect(pl, y, W, laneH, 4); ctx.fill();
+        ctx.font = "700 11px " + font;
+        ctx.textBaseline = "middle";
+        if (rows.length < 2 || !recorded(rows)) {
+          ctx.textAlign = "right"; ctx.fillStyle = "#3a424c";
+          ctx.fillText("-", pl - 6, y + laneH / 2);
+          if (rows.length >= 2) { ctx.textAlign = "left"; ctx.fillText("NOT RECORDED", pl + 8, y + laneH / 2); }
+          shares.push(null);
+          return;
+        }
+        if (panel.on !== null) {                          // where it works
+          let on = 0, total = 0;
+          split(y, laneH, (alpha) => {
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = color;
+            for (let r = 0; r < rows.length - 1; r++) {
+              if (rows[r][panel.on]) ctx.fillRect(X(rows[r][0]), y + 2, Math.max(1.5, X(rows[r + 1][0]) - X(rows[r][0])), laneH - 4);
+            }
+            ctx.globalAlpha = 1;
+          });
+          for (let r = 0; r < rows.length - 1; r++) {
+            const dd = rows[r + 1][0] - rows[r][0];
+            total += dd;
+            if (rows[r][panel.on]) on += dd;
+          }
+          shares.push(total > 0 ? Math.round((on / total) * 100) : null);
+        } else {
+          shares.push(null);
+        }
+        const label = (r) => {
+          const a = r[panel.level], b = panel.level2 ? r[panel.level2] : null;
+          if (a === null || a === undefined) return "OFF";
+          return b !== null && b !== undefined ? a + "/" + b : String(a);
+        };
+        ctx.textAlign = "right";                          // the level at the section start
+        ctx.fillStyle = color;
+        ctx.fillText(label(rows[0]), pl - 6, y + laneH / 2);
+        ctx.textAlign = "left";
+        for (let r = 1; r < rows.length; r++) {           // and where it changes
+          const now = label(rows[r]);
+          if (now === label(rows[r - 1])) continue;
+          const x = X(rows[r][0]);
+          ctx.fillStyle = "#e8edf2";
+          ctx.fillRect(x - 1, y, 2, laneH);
+          ctx.font = "800 11px " + font;
+          ctx.fillText("→ " + now, x + 5, y + laneH / 2);
+        }
+        if (panel.on === null) {                          // engine map: the level written in the lane
+          ctx.fillStyle = "#6b7580";
+          ctx.font = "700 11px " + font;
+          ctx.fillText(key.toUpperCase() + " · MAP " + label(rows[0]), pl + 8, y + laneH / 2);
+        }
+      });
+      if (panel.on !== null) {
+        ctx.font = "700 11px " + font;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        const txt = shares.map((s, k) => (s === null ? "" : ["BEST ", "LAST ", "NOW "][k] + s + " %")).filter(Boolean).join(" · ");
+        ctx.fillStyle = COL.label;
+        ctx.fillText(txt ? "WORKING " + txt : "", w - pr, top + 3);
+      }
     }
-    // metres along the section
-    ctx.font = "600 10px " + font;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillStyle = COL.label;
-    const mStep = len > 400 ? 100 : 50;
-    for (let m = 0; m <= len + 0.1; m += mStep) {
-      if (cx !== null && Math.abs(X(m) - cx) < 26) continue;
-      ctx.fillText(m + " m", Math.min(w - pr - 14, X(m)), h - 1);
-    }
-    if (cx !== null) {                                 // the cursor: where the finger is on the map
-      ctx.beginPath(); ctx.moveTo(cx, 15); ctx.lineTo(cx, h - axisH);
-      stroke(ctx, COL.cur, 1.6, 0.95);
-      const label = Math.round(S.cursor) + " m";
-      ctx.font = "800 10.5px " + font;
-      const tw = ctx.measureText(label).width + 10;
-      const lx = Math.max(pl, Math.min(w - pr - tw, cx - tw / 2));
-      ctx.fillStyle = COL.cur;
-      ctx.beginPath(); ctx.roundRect(lx, h - axisH + 1, tw, axisH - 2, 4); ctx.fill();
-      ctx.fillStyle = "#1a1600";
-      ctx.textAlign = "left";
-      ctx.fillText(label, lx + 5, h - 2);
+
+    // per page: metres along the section and the cursor
+    for (let p = 0; p < pages; p++) {
+      const base = p * viewH + viewH - 2;
+      ctx.font = "600 11px " + font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = COL.label;
+      const mStep = len > 400 ? 100 : 50;
+      for (let m = 0; m <= len + 0.1; m += mStep) {
+        if (cx !== null && Math.abs(X(m) - cx) < 28) continue;
+        ctx.fillText(m + " m", Math.min(w - pr - 14, Math.max(pl + 8, X(m))), base);
+      }
+      if (cx !== null) {                               // the cursor: where the finger is on the map
+        ctx.beginPath(); ctx.moveTo(cx, p * viewH + 15); ctx.lineTo(cx, base - axisH + 2);
+        stroke(ctx, COL.cur, 1.6, 0.95);
+        const label = Math.round(S.cursor) + " m";
+        ctx.font = "800 11px " + font;
+        const tw = ctx.measureText(label).width + 10;
+        const lx = Math.max(pl, Math.min(w - pr - tw, cx - tw / 2));
+        ctx.fillStyle = COL.cur;
+        ctx.beginPath(); ctx.roundRect(lx, base - axisH + 3, tw, axisH - 2, 4); ctx.fill();
+        ctx.fillStyle = "#1a1600";
+        ctx.textAlign = "left";
+        ctx.fillText(label, lx + 5, base);
+      }
     }
   }
 
@@ -948,7 +1061,8 @@
     });
     const ro = new ResizeObserver(() => { mapDirty = true; renderAll(); });
     ro.observe($("map"));
-    ro.observe($("graphs"));
+    ro.observe($("gwrap"));
+    $("gwrap").addEventListener("scroll", () => { if (S.tab === "graphs") renderGraphs(); }, { passive: true });
     let dotPending = false;
     RD.listeners.push(() => {                            // the car dot follows the stream
       if (dotPending) return;

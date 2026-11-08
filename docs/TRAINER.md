@@ -81,6 +81,7 @@ Per section and per line (`best`, `last`, `now`; a line that does not exist is `
 | `full_throttle_m` | where the throttle is back above 95 % (held for 30 m) after the slowest point |
 | `steer_max` | largest steering, 0–1 of full lock |
 | `delta_by_50m` | time behind best (positive = slower) at every 50 m (`now` and `last` only) |
+| `aids` | driving aids, when recorded: `tc_working_m`, `tc_working_pct`, `tc_first_m` (and the same for `abs`, `esc`), `levels` at the section start (`tc`, `tc_cut`, `abs`, `esc`, `engine_map`), `level_changes` (`at_m`, `setting`, `to`) |
 
 Whole-track mode adds a `sections` table (per section: best / last / now time and the deltas) and the lap times; the full facts are sent for the 3 sections where now loses the most against best.
 
@@ -104,6 +105,10 @@ How to analyse:
    (coast_m), minimum speed and where it is (min_kmh, min_at_m), throttle pickup (full_throttle_m),
    gear at the slowest point (gear_at_min, gears), exit speed (exit_kmh).
 4. Find the place from delta_by_50m: where the delta grows is where the time goes.
+   Driving aids ("aids"): where TC, ABS and stability worked (*_working_m, *_working_pct, *_first_m) and
+   the set levels (levels, level_changes). If NOW differs from BEST in an aid level or in how much an aid
+   worked, and that is where NOW loses or gains time, say whether a lower or higher setting may help.
+   Only when the data shows it; never as a general rule.
 5. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
 6. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
    and metres. Give the time at stake, rounded to 0.05 s.

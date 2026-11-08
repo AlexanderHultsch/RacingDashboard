@@ -62,6 +62,21 @@ class Facts(unittest.TestCase):
         self.assertIsNone(trainer.facts([], None))
 
 
+class Aids(unittest.TestCase):
+    def test_aid_facts(self):
+        base = rows(110, 140, 70.0)
+        now = [r + [0.0, 0.0] + [1 if 150 <= r[0] < 180 else 0, 1 if 110 <= r[0] < 120 else 0, 0,
+                    3 if r[0] < 200 else 4, 2, 2, None, 1] for r in base]
+        f = trainer.facts(now, now[-1][1])
+        self.assertEqual((f["aids"]["tc_working_m"], f["aids"]["tc_first_m"]), (30, 150))
+        self.assertEqual(f["aids"]["abs_working_pct"], 4)
+        self.assertEqual(f["aids"]["levels"], {"tc": 3, "tc_cut": 2, "abs": 2, "engine_map": 1})
+        self.assertEqual(f["aids"]["level_changes"], [{"at_m": 200, "setting": "tc", "to": 4}])
+        old = [r + [0.0, 0.0] + [None] * 8 for r in base]                          # laps from before the aids were recorded
+        self.assertNotIn("aids", trainer.facts(old, old[-1][1]))
+        self.assertIn("Driving aids", trainer.SYSTEM_PROMPT)
+
+
 class Requests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
