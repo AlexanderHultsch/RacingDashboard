@@ -1,7 +1,7 @@
 """Checks the laps the analysis recorder wrote (data/runs) and the saved baselines (data/baselines).
 
-Per run: the session it belongs to, the number of laps, the log of offers / saves. Per lap: lap time,
-whether it counts (and why not), samples and sample rate, gaps in the recording, the lap position
+Per run: the session it belongs to, the number of laps, the log of offers / saves. Per lap: lap time
+against the game's own lap time, whether it counts (and why not), samples and sample rate, gaps in the recording, the lap position
 range and order, the sum of the section times against the lap time, steering and position ranges.
 Problems are marked with "!!". Use it after driving to see whether the game's data is what the
 recorder expects (docs/HANDOVER.md).
@@ -51,13 +51,23 @@ def check_lap(path: Path, hz: int) -> list[str]:
         warn.append("no header line")
     flags = [name for name in ("out_lap", "broken", "repeated") if summary.get(name)]
     if summary.get("valid") is False:
-        flags.append("invalid")
+        at = summary.get("invalid_at")
+        flags.append("invalid" if at is None else f"invalid from lap position {at:.3f} "
+                     f"({at * head.get('track_length_m', 0):.0f} m)")
     if not summary.get("complete", True):
         flags.append("incomplete")
     line = [s for s in samples if s.get("line")]
+    game_time = summary.get("game_time")
     out.append(f"  {path.name}: {fmt(summary.get('time'))}  "
                f"{'counts' if summary.get('counts') else 'does not count: ' + (', '.join(flags) or '?')}  "
                f"{len(samples)} samples")
+    if game_time is not None and summary.get("time") is not None:
+        diff = summary["time"] - game_time
+        out.append(f"      game's lap time {fmt(game_time)} ({diff:+.3f} s)")
+        if abs(diff) > 0.05 and summary.get("counts"):
+            warn.append(f"lap time {diff:+.3f} s off the game's lap time")
+    elif summary.get("counts"):
+        out.append("      game's lap time not recorded")
     if len(line) > 2:
         span = line[-1]["t"] - line[0]["t"]
         rate = (len(line) - 1) / span if span > 0 else 0

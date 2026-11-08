@@ -85,6 +85,23 @@ class RecorderTest(unittest.TestCase):
         self.assertEqual(len(self.offers("lap")), 1)
         self.assertEqual(sorted(o["sec"] for o in self.offers("section")), [0, 1, 2, 3])
 
+    def test_the_games_lap_time_is_stored(self):
+        def summary(no):
+            path = self.rec.run_dir / f"lap-{no:03d}.jsonl"
+            return json.loads(path.read_text().splitlines()[-1])
+        car = Car(self.rec, p=0.0)
+        car.drive(1020, last_ms=None)                  # over the line; the game's time comes a little later
+        self.assertIsNone(summary(1)["game_time"])
+        car.drive(30, last_ms=20010)
+        self.assertEqual(summary(1)["game_time"], 20.01)
+        self.assertAlmostEqual(summary(1)["time"], 20.0, delta=0.05)
+        car.drive(970, last_ms=20010)                  # lap 2: the value at the line is still lap 1's
+        car.drive(30, last_ms=19990)
+        self.assertEqual(summary(2)["game_time"], 19.99)
+        car.drive(1000 + 300, last_ms=19990)           # lap 3: no new time from the game within 5 s
+        self.assertIsNone(summary(3)["game_time"])
+        self.assertIsNone(self.rec.waiting)
+
     def test_save_skip_undo(self):
         car = Car(self.rec, p=0.0)
         car.drive(1020)
@@ -169,16 +186,29 @@ class RecorderTest(unittest.TestCase):
         self.assertEqual(len(sections), 4)
         self.assertTrue(all(o["invalid"] for o in sections))
 
-    def test_pause_breaks_the_lap(self):
+    def test_a_pause_stops_the_clock_and_the_lap_counts(self):
         car = Car(self.rec, p=0.0)
         car.drive(300)
-        self.rec.feed(frame(car.p, status="pause"), "demo", car.t + 1)
-        car.t += 5
+        for second in range(60):                       # one minute in the pause menu, then on
+            self.rec.feed(frame(car.p, v=0.0, status="pause"), "demo", car.t + second)
+        car.t += 60
         car.drive(720)
-        self.assertTrue(self.rec.last_lap.broken)
-        self.assertFalse(self.rec.last_lap.counts)
-        self.assertEqual(self.offers("lap"), [])
-        self.assertNotIn(1, [o["sec"] for o in self.offers("section")])   # the paused section
+        lap = self.rec.last_lap
+        self.assertFalse(lap.broken)
+        self.assertTrue(lap.counts)
+        self.assertAlmostEqual(lap.time, 20.0, delta=0.1)          # without the minute
+        self.assertAlmostEqual(lap.done(1).time, 5.0, delta=0.1)   # the paused section too
+        self.assertEqual(len(self.offers("lap")), 1)
+        self.assertIn(1, [o["sec"] for o in self.offers("section")])
+        lines = [json.loads(l) for l in lap.file.read_text().splitlines()]
+        ts = [l["t"] for l in lines if l["type"] == "s"]
+        self.assertLess(max(b - a for a, b in zip(ts, ts[1:])), 0.1)   # no gap in the samples
+
+    def test_invalid_at(self):
+        car = Car(self.rec, p=0.0)
+        car.drive(400)
+        car.drive(620, lap_valid=False)
+        self.assertAlmostEqual(self.rec.last_lap.invalid_at, 0.4, delta=0.01)
 
     def test_stage_with_standing_start(self):
         car = Car(self.rec, p=0.0)

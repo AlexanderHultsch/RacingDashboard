@@ -13,7 +13,9 @@ Laps are written as JSON Lines when they end (nothing is written while driving).
 laps become offers (SAVE / SKIP) that wait until answered; a saved baseline keeps one backup of the
 previous one for UNDO. One run = one game session (game, track, car, session id), or until END RUN.
 
-Times in memory are monotonic seconds; the files store seconds from the lap / section start.
+Times in memory are seconds of the recorder's own clock: monotonic, but it stands still while nothing is
+recorded (game paused, menu, no data), so a pause does not add to lap or section times and a lap with a
+pause counts normally. The files store seconds from the lap / section start.
 """
 import json
 import math
@@ -30,6 +32,7 @@ MIN_TRACK_M = 300.0
 STAGE_END_POS = 0.9995       # a stage (no line to cross again) ends when the car stays at its end
 STAGE_END_S = 1.0
 STANDING_KMH = 3.0           # a lap that starts standing (stage start) is timed from the moment it moves
+GAME_TIME_WAIT_S = 5.0       # after a lap ends, wait this long for the game's own lap time (last_ms) to change
 OUTLINE_STEP_M = 5.0
 LINE_STEP = 2                # every 2nd sample for the full-lap race lines on the map
 AMBIENT = ("air_c", "road_c", "tyre_compound", "time_of_day", "fuel_l")
@@ -79,7 +82,9 @@ class Lap:
         self.no, self.t0, self.out_lap, self.standing = no, t0, out_lap, standing
         self.rows, self.attempts = [], {}
         self.max_p, self.broken, self.repeated, self.valid = -1.0, False, False, True
+        self.invalid_at = None                         # lap position where the game first said invalid
         self.time, self.ambient, self.file = None, None, None
+        self.game_before, self.game_ms = None, None    # the game's last lap time (ms) at the start / for this lap
 
     def line(self) -> list:
         return [row for row in self.rows if row[LINE]]
@@ -132,6 +137,8 @@ class Recorder:
         self.last, self.cur_sec, self.attempt, self.end_since = None, None, None, None
         self.base = {"lap": None, "sections": {}}
         self.lap_no, self.laps_written, self.run_best, self.paused = 0, 0, None, False
+        self.game_last, self.waiting = None, None      # the game's last_ms now; (lap, deadline) waiting for it
+        self.held = 0.0                                # time the clock stood still (pauses): clock = now - held
         self.version += 1
 
     def _start_run(self, key: tuple, frame: dict) -> None:
@@ -183,6 +190,12 @@ class Recorder:
             if key != self.key:
                 self._end_run("new session")
                 self._start_run(key, frame)
+            if self.paused and self.last is not None:             # back from a pause: the clock skips it
+                self.held = now - (self.last[NOW] + self.period)
+            now -= self.held
+            self.game_last = frame.get("last_ms")
+            if self.waiting is not None:
+                self._game_time(now)
             if self.last is not None and not self.paused and now - self.last[NOW] < self.period * 0.95:
                 return
             self._sample(frame, now)
@@ -204,11 +217,8 @@ class Recorder:
         return None
 
     def _pause(self) -> None:
-        """No live data (pause, menu, replay): the lap and the attempt in progress no longer count."""
-        if self.lap is not None and not self.paused:
-            self.lap.broken = True
-            if self.attempt is not None:
-                self.attempt.broken = True
+        """No live data (pause, menu, replay): the clock stops; the lap goes on when the game does. A jump
+        during the pause (back to the pits, a reset) still breaks the lap when the car is seen again."""
         self.paused = True
 
     def _section(self, p: float) -> int:
@@ -223,7 +233,7 @@ class Recorder:
         row = [now, p, frame.get("pos_x"), frame.get("pos_y"), float(frame.get("speed_kmh") or 0.0),
                float(frame.get("gas") or 0.0), float(frame.get("brake") or 0.0), float(frame.get("steer") or 0.0),
                int(frame.get("gear") or 0), sec, 0, 0]
-        last, resumed = self.last, self.paused
+        last = self.last
         self.paused = False
         self.last = row
         if last is None:                                           # first sample of the run
@@ -260,8 +270,6 @@ class Recorder:
         lap = self.lap
         if lap is None:
             return
-        if resumed and self.attempt is not None:
-            self.attempt.broken = True
         if lap.standing:
             moved = (p - lap.rows[0][P]) * self.length if lap.rows else 0.0
             if row[V] < STANDING_KMH and moved < 2.0:              # still standing at the start: time from here
@@ -304,8 +312,8 @@ class Recorder:
         p = row[P]
         if lap.ambient is None:                                    # ambient once per lap
             lap.ambient = {name: frame.get(name) for name in AMBIENT}
-        if p > 0.02 and frame.get("lap_valid") is False:
-            lap.valid = False
+        if p > 0.02 and frame.get("lap_valid") is False and lap.valid:
+            lap.valid, lap.invalid_at = False, round(p, 4)
         if self.attempt is not None and p > self.attempt.max_p:
             row[ATT] = self.attempt.no
             self.attempt.samples.append(row)
@@ -322,6 +330,7 @@ class Recorder:
         self.lap_no += 1
         out_lap = p > 0.02
         self.lap = Lap(self.lap_no, t0, out_lap, standing=row[V] < STANDING_KMH)
+        self.lap.game_before = self.game_last
         self.attempt, self.cur_sec, self.end_since = None, self._section(p), None
         if not out_lap:
             self._open_attempt(0, t0)
@@ -354,6 +363,8 @@ class Recorder:
         if lap is None:
             return
         lap.time = t_end - lap.t0
+        self.waiting = (lap, t_end + GAME_TIME_WAIT_S)
+        self._game_time(t_end, write=False)
         self._write_lap(lap, complete=True)
         for offer in self.offers:                                  # sections of an invalid lap: say so
             if offer.get("run") == self.run_started and offer["lap"] == lap.no:
@@ -368,6 +379,21 @@ class Recorder:
         self._save_pending()
         self.prev_lap, self.last_lap = self.last_lap, lap
         self.version += 1
+
+    def _game_time(self, now: float, write: bool = True) -> None:
+        """The game's own time for the lap that just ended: its last lap time once it changes (it may come
+        a few frames after the line). Stored in the lap summary as game_time, to compare with our time."""
+        lap, deadline = self.waiting
+        value = self.game_last
+        if value is not None and value != lap.game_before:
+            lap.game_ms = value
+            self.waiting = None
+            if self.lap is not None and self.lap is not lap:
+                self.lap.game_before = value                       # the lap after it starts from this value
+            if write and lap.file is not None:
+                self._write_lap(lap, complete=True, again=True)
+        elif now > deadline:
+            self.waiting = None
 
     # ------------------------------------------------------------------ files
 
@@ -411,7 +437,7 @@ class Recorder:
             f.write(json.dumps({"type": kind, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), **event},
                                separators=(",", ":")) + "\n")
 
-    def _write_lap(self, lap: Lap, complete: bool) -> None:
+    def _write_lap(self, lap: Lap, complete: bool, again: bool = False) -> None:
         lines = [self._header("racing-dashboard.lap", run=self.run_started, lap=lap.no, out_lap=lap.out_lap)]
         lines += [self._sample_line(row, lap.t0) for row in lap.rows]
         for sec in sorted(lap.attempts):
@@ -420,11 +446,15 @@ class Recorder:
                               "t_in": round(attempt.t_in - lap.t0, 3), "complete": attempt.t_out is not None,
                               "broken": attempt.broken})
         lines.append({"type": "ambient", **(lap.ambient or {})})
-        lines.append({"type": "summary", "time": r3(lap.time), "complete": complete, "valid": lap.valid,
+        lines.append({"type": "summary", "time": r3(lap.time),
+                      "game_time": None if lap.game_ms is None else round(lap.game_ms / 1000, 3),
+                      "complete": complete, "valid": lap.valid, "invalid_at": lap.invalid_at,
                       "counts": lap.counts, "out_lap": lap.out_lap, "repeated": lap.repeated, "broken": lap.broken,
                       "sections": [r3(self._section_time(lap, n)) for n in range(self.sections)]})
         lap.file = self.run_dir / f"lap-{lap.no:03d}.jsonl"
         self._write_jsonl(lap.file, lines)
+        if again:                                                  # the same lap, now with the game's time
+            return
         self.laps_written += 1
         self._run_log({"type": "lap", "lap": lap.no, "time": r3(lap.time), "counts": lap.counts, "complete": complete})
 
