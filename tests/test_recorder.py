@@ -230,6 +230,40 @@ class RecorderTest(unittest.TestCase):
         self.assertEqual(len(state["borders"]), 4)
         self.assertTrue(state["outline"])
 
+    def test_strip_shows_the_last_lap_until_the_new_one_gets_there(self):
+        car = Car(self.rec, p=0.0)
+        car.drive(1020)
+        self.rec.save_all()
+        car.drive(1000, ms=48)                         # lap 2 done (slower than the baseline)
+        car.drive(300, ms=48)                          # lap 3: only section 1 done
+        strip = self.rec.live()["strip"]
+        self.assertFalse(strip["old"][0])              # section 1: from the lap in progress
+        self.assertTrue(all(strip["old"][1:]))         # the rest: from lap 2
+        self.assertTrue(all(v is not None and v > 0 for v in strip["best"]))
+        self.assertIsNotNone(self.rec.live()["deltas"]["lap_last"])
+
+    def test_paused_shows_the_last_lap_and_why(self):
+        car = Car(self.rec, p=0.0)
+        car.drive(1020)
+        car.drive(200)
+        self.rec.feed(frame(car.p, status="pause"), "demo", car.t + 0.1)
+        live = self.rec.live()
+        self.assertFalse(live["recording"])
+        self.assertEqual(live["why"], "GAME PAUSED")
+        self.assertEqual(live["red_lap"], 1)          # the last complete lap, not the started one
+        self.assertIsNotNone(live["deltas"]["lap_time"])
+        self.assertTrue(all(v is not None for v in live["strip"]["times"]))
+        self.assertEqual(live["last_lap"]["lap"], 1)
+        self.rec.feed(frame(car.p, lap_pos=None), "demo", car.t + 0.2)
+        self.assertEqual(self.rec.live()["why"], "THE GAME SENDS NO LAP POSITION")
+
+    def test_invalid_last_lap_still_gives_the_delta_to_last(self):
+        car = Car(self.rec, p=0.0)
+        car.drive(1020, lap_valid=False)
+        car.drive(300)
+        self.assertFalse(self.rec.last_lap.counts)
+        self.assertIsNotNone(self.rec.live()["deltas"]["lap_last"])
+
 
 if __name__ == "__main__":
     unittest.main()

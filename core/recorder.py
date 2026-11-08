@@ -96,9 +96,18 @@ class Lap:
         return attempts[-1] if attempts else None
 
     @property
+    def clean(self) -> bool:
+        """Driven in one go from line to line: no out lap, no pause, no turning around, nothing repeated."""
+        return self.time is not None and not (self.out_lap or self.broken or self.repeated)
+
+    @property
     def counts(self) -> bool:
-        """A lap time that counts: one go from line to line, nothing repeated, the game says valid."""
-        return self.time is not None and not (self.out_lap or self.broken or self.repeated) and self.valid
+        """A lap time that counts: clean, and the game says valid."""
+        return self.clean and self.valid
+
+    def info(self) -> dict:
+        return {"lap": self.no, "time": r3(self.time), "counts": self.counts, "valid": self.valid,
+                "out_lap": self.out_lap, "broken": self.broken, "repeated": self.repeated}
 
 
 class Recorder:
@@ -109,6 +118,7 @@ class Recorder:
         self.lock = threading.RLock()
         self.offers, self.next_offer, self.undo_stack = [], 1, []
         self.ended = None                      # the run that ended last, for the end-of-run menu
+        self.why = "NO DATA YET"               # why nothing is recorded right now (None while recording)
         self.version = 0                       # +1 whenever state() changes (a lap, an offer, a save)
         self._reset_run()
         self._load_pending()
@@ -163,9 +173,8 @@ class Recorder:
 
     def feed(self, frame: dict, game: str, now: float) -> None:
         with self.lock:
-            ok = (frame.get("connected") and not frame.get("error") and frame.get("status") == "live"
-                  and frame.get("lap_pos") is not None and (frame.get("track_length_m") or 0) >= MIN_TRACK_M)
-            if not ok:
+            self.why = self._why_not(frame)
+            if self.why:
                 if frame.get("error") == "no_game" and self.key is not None:
                     self._end_run("game closed")
                 self._pause()
@@ -177,6 +186,22 @@ class Recorder:
             if self.last is not None and not self.paused and now - self.last[NOW] < self.period * 0.95:
                 return
             self._sample(frame, now)
+
+    @staticmethod
+    def _why_not(frame: dict):
+        """Why this frame is not recorded (shown on the page), or None."""
+        if frame.get("error"):
+            return frame.get("error_text") or str(frame["error"]).upper()
+        if not frame.get("connected"):
+            return "NO DATA FROM THE GAME"
+        status = frame.get("status")
+        if status != "live":
+            return {"pause": "GAME PAUSED", "replay": "REPLAY", "off": "NOT ON TRACK"}.get(status, f"STATUS {status}".upper())
+        if frame.get("lap_pos") is None:
+            return "THE GAME SENDS NO LAP POSITION"
+        if (frame.get("track_length_m") or 0) < MIN_TRACK_M:
+            return "TRACK LENGTH UNKNOWN"
+        return None
 
     def _pause(self) -> None:
         """No live data (pause, menu, replay): the lap and the attempt in progress no longer count."""
@@ -580,8 +605,9 @@ class Recorder:
         return f"{what} · lap {offer['lap']}" + (f" · attempt {offer['att']}" if (offer.get("att") or 1) > 1 else "")
 
     def _shown(self):
-        """(red, blue): the lap in progress and the last lap; between laps the last lap and the one before."""
-        if self.lap is not None and len(self.lap.rows) > 1:
+        """(red, blue): the lap in progress and the last lap; between laps and while nothing is recorded
+        (pause, pits, after the run) the last lap and the one before."""
+        if self.lap is not None and len(self.lap.rows) > 1 and not self.paused:
             return self.lap, self.last_lap
         return self.last_lap, self.prev_lap
 
@@ -626,17 +652,23 @@ class Recorder:
         return attempt.time if attempt else None
 
     def _strip(self) -> dict:
+        """Per section: delta of the red lap against the best section and the blue lap. Sections the lap in
+        progress has not reached yet show the last lap's values instead (old = True, drawn dimmer)."""
         red, blue = self._shown()
-        best, last, times, attempts = [], [], [], []
+        best, last, times, attempts, old = [], [], [], [], []
         for n in range(self.sections):
-            t = self._section_time(red, n)
+            lap, other, prev = red, blue, False
+            if self._section_time(red, n) is None and red is self.lap and blue is not None:
+                lap, other, prev = blue, self.prev_lap, True
+            t = self._section_time(lap, n)
             base = self.base["sections"].get(n)
-            tb = self._section_time(blue, n)
+            tb = self._section_time(other, n)
             times.append(r3(t))
             best.append(None if t is None or base is None else r3(t - base["time"]))
             last.append(None if t is None or tb is None else r3(t - tb))
-            attempts.append(len(red.attempts.get(n, [])) if red is not None else 0)
-        return {"best": best, "last": last, "times": times, "attempts": attempts,
+            attempts.append(len(lap.attempts.get(n, [])) if lap is not None else 0)
+            old.append(prev and t is not None)
+        return {"best": best, "last": last, "times": times, "attempts": attempts, "old": old,
                 "base": [r3(self.base["sections"][n]["time"]) if n in self.base["sections"] else None
                          for n in range(self.sections)]}
 
@@ -659,7 +691,7 @@ class Recorder:
             if base_lap:
                 ref = interp(base_lap["p"], base_lap["t"], p)
                 out["lap_best"] = None if ref is None else r3(now - red.t0 - ref)
-            if blue is not None and blue.counts:
+            if blue is not None and blue.clean:                   # the last lap need not be valid
                 line = blue.line()
                 ref = interp([r[P] for r in line], [r[NOW] - blue.t0 for r in line], p)
                 out["lap_last"] = None if ref is None else r3(now - red.t0 - ref)
@@ -707,8 +739,10 @@ class Recorder:
             red, _ = self._shown()
             line = self._xy(red.line()) if red else []
             since = max(0, min(since, len(line)))
+            why = self.why or (None if self.lap is not None or self.key is None else "STAGE FINISHED")
             return {"version": self.version, "active": self.key is not None,
-                    "recording": self.lap is not None and not self.paused,
+                    "recording": self.lap is not None and not self.paused, "why": why,
+                    "last_lap": self.last_lap.info() if self.last_lap else None,
                     "sec": self.cur_sec, "lap": self.lap.no if self.lap else None, "red_lap": red.no if red else None,
                     "deltas": self._deltas(), "strip": self._strip() if self.key else None,
                     "now_from": since, "now_line": line[since:], "offers": len(self.offers)}

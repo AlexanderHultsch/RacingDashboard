@@ -153,9 +153,14 @@
       const game = RD.info && RD.info.game === st.game ? RD.info.game_name : st.game;
       const lap = S.live && S.live.lap ? " · LAP " + S.live.lap : "";
       text = esc([game, st.car, st.track].join(" · ").toUpperCase()) + lap;
+      const last = S.live && S.live.last_lap;
+      if (last && last.time) {
+        const note = last.out_lap ? "OUT LAP" : last.repeated ? "REPEATED" : last.broken ? "INTERRUPTED" : !last.valid ? "INVALID" : "";
+        text += " · LAST " + fmtLap(last.time) + (note ? " " + note : "");
+      }
     }
     if (!S.offline && !recording()) {
-      const why = RD.errorOf(RD.frame);
+      const why = (S.live && S.live.why) || RD.errorOf(RD.frame);
       text += " · <b>NOT RECORDING" + (why ? ": " + esc(why) : "") + "</b>";
     }
     if (what.innerHTML !== text) what.innerHTML = text;
@@ -236,7 +241,8 @@
       const isBest = el.classList.contains("best");
       let v = isBest ? strip.best[n] : strip.last[n];
       if (n === runningSec) v = isBest ? d.sec_best : d.sec_last;
-      const cls = "c " + (isBest ? "best " : "last ") + cellClass(v) + (sel ? " sel" : "");
+      const old = n !== runningSec && strip.old && strip.old[n];
+      const cls = "c " + (isBest ? "best " : "last ") + cellClass(v) + (old ? " old" : "") + (sel ? " sel" : "");
       if (el.className !== cls) el.className = cls;
       const text = fmtCell(v);
       if (el.textContent !== text) el.textContent = text;
@@ -503,7 +509,8 @@
     const nowEnd = sec.now.length ? sec.now[sec.now.length - 1][0] : null;
     for (const panel of panels) {
       const ph = (usable * panel.weight) / total;
-      const Y = (v) => top + 4 + (1 - (v - panel.lo) / (panel.hi - panel.lo)) * (ph - 8);
+      const band = 15;                                   // the title sits above the plot, never under a line
+      const Y = (v) => top + band + 3 + (1 - (v - panel.lo) / (panel.hi - panel.lo)) * (ph - band - 6);
       ctx.font = "600 10px " + font;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
@@ -515,7 +522,7 @@
         ctx.fillText(panel.fmt ? panel.fmt(g) : String(Math.round(g)), pl - 5, Y(g));
       }
       ctx.save();
-      ctx.beginPath(); ctx.rect(pl, top, W, ph); ctx.clip();
+      ctx.beginPath(); ctx.rect(pl, top + band, W, ph - band); ctx.clip();
       const draw = (rows, val, color, width) => {
         if (rows.length < 2) return;
         ctx.beginPath();
@@ -536,7 +543,7 @@
       }
       if (recording() && S.live && S.live.sec === S.sel && nowEnd !== null) {
         ctx.setLineDash([3, 3]);
-        ctx.beginPath(); ctx.moveTo(X(nowEnd), top); ctx.lineTo(X(nowEnd), top + ph);
+        ctx.beginPath(); ctx.moveTo(X(nowEnd), top + band); ctx.lineTo(X(nowEnd), top + ph);
         stroke(ctx, COL.now, 1, 0.5);
         ctx.setLineDash([]);
       }
@@ -545,7 +552,7 @@
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.fillStyle = COL.title;
-      ctx.fillText(panel.title, pl + 5, top + 3);
+      ctx.fillText(panel.title, pl + 2, top + 2);
       top += ph + gap;
     }
     // metres along the section

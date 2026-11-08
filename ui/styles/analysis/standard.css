@@ -10,6 +10,7 @@
   --last: #3f8cff;
   --now: #ff4545;
   --sel: #ffe93b;
+  --top-gap: 0px;     /* extra space above the header in landscape: the iPad screen fades at its top edge */
 }
 
 html, body { background: var(--bg); }
@@ -18,8 +19,9 @@ html, body { background: var(--bg); }
   height: 100%;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+  padding: calc(var(--safe-t) + var(--top-gap)) var(--safe-r) var(--safe-b) var(--safe-l);
 }
+@media (orientation: landscape) { :root { --top-gap: 26px; } }
 
 /* the chip of the other pages: here the header says why nothing is recorded */
 .rd-nodata { display: none !important; }
@@ -143,6 +145,7 @@ html, body { background: var(--bg); }
 .cells .c.m { background: rgba(34, 211, 107, 0.2); color: #7fe0a3; }
 .cells .c.mm { background: rgba(34, 211, 107, 0.42); color: #fff; }
 .cells .c.none { background: #12171c; color: #3a424c; }
+.cells .c.old { opacity: 0.55; }     /* not reached in this lap yet: the last lap's value */
 .cells .c.sel { outline: 2px solid var(--sel); outline-offset: 1px; }
 .cells .n.sel { color: var(--sel); }
 .cells .n.rep::after { content: "\2009\21BB"; color: var(--amber); }
@@ -162,7 +165,7 @@ html, body { background: var(--bg); }
 .pop {
   position: fixed;
   right: calc(14px + var(--safe-r));
-  top: calc(62px + var(--safe-t));
+  top: calc(62px + var(--safe-t) + var(--top-gap));
   width: min(480px, calc(100% - 28px));
   max-height: calc(100% - 80px);
   overflow-y: auto;
