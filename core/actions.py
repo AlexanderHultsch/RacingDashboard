@@ -13,6 +13,8 @@ GROUPS = [
     {"name": "AIDS", "buttons": [
         {"action": "tc_down", "label": "TC -", "type": "tap", "field": "tc_level"},
         {"action": "tc_up", "label": "TC +", "type": "tap", "field": "tc_level"},
+        {"action": "tc_cut_down", "label": "TC CUT -", "type": "tap", "field": "tc_cut_level"},
+        {"action": "tc_cut_up", "label": "TC CUT +", "type": "tap", "field": "tc_cut_level"},
         {"action": "abs_down", "label": "ABS -", "type": "tap", "field": "abs_level"},
         {"action": "abs_up", "label": "ABS +", "type": "tap", "field": "abs_level"},
         {"action": "esc_down", "label": "ESC -", "type": "tap", "field": "esc_level"},

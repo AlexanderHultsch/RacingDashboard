@@ -25,7 +25,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `rpm_pct` | graphics `rpm_percent` | 0..1; a value over 1.5 is taken as percent; 0 falls back to rpm / rpm_max |
 | `shift_up`, `shift_down`, `limiter` | graphics `is_change_up_rpm`, `is_change_down_rpm`, `is_rpm_limiter_on` | the game's own per-car shift point |
 | `speed_kmh`, `gas`, `brake`, `clutch` | physics | |
-| `tc_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
+| `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
 | `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per setting the car has |
 | `launch`, `auto_clutch` | graphics `launch_active`, `assists_state.auto_clutch` | |
 | `esc_active` | graphics `esc_active` | |

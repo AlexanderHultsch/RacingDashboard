@@ -214,7 +214,7 @@ def level(current: int, modifiable: int):
 
 
 # universal name -> ACE electronics field (current value, range and "car has it")
-STEPPED = {"tc_level": "tc_level", "abs_level": "abs_level", "esc_level": "esc_level",
+STEPPED = {"tc_level": "tc_level", "tc_cut_level": "tc_cut_level", "abs_level": "abs_level", "esc_level": "esc_level",
            "engine_map": "engine_map_level", "diff_power": "diff_power_level", "diff_coast": "diff_coast_level"}
 
 
@@ -285,6 +285,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "brake": round(ph.brake, 3),
         "clutch": round(ph.clutch, 3),
         "tc_level": level(el.tc_level, can.tc_level),
+        "tc_cut_level": level(el.tc_cut_level, can.tc_cut_level),
         "tc_active": bool(gr.tc_active or ph.tcInAction),
         "abs_level": level(el.abs_level, can.abs_level),
         "abs_active": bool(gr.abs_active or ph.absInAction),

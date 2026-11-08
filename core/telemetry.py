@@ -31,6 +31,7 @@ FIELDS = {
     # driving aids and car systems
     "tc_level": None,        # driver setting, None = not available
     "tc_active": False,      # TC is cutting right now
+    "tc_cut_level": None,    # TC cut (TC2, how much power is cut) setting, None = not on this car
     "abs_level": None,
     "abs_active": False,
     "brake_bias": None,      # front share 0..1

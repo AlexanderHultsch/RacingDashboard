@@ -7,6 +7,8 @@
  *   pair     two values side by side, shown only
  *   fuel     litres with a tank bar and laps left
  *   lamps    warning lamps as icons, state only: off (grey), cold (blue), warn (yellow), alert (red)
+ *   cycle    a stage setting (lights, wipers): the lamp steps to the next stage, optional extra button
+ *   ignition ignition lamp (OFF / ON / RUNNING) that toggles the ignition, and a START button (held)
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
  * when it is pressed (until the new value arrives) and whenever its value changes in the game, so a
@@ -42,18 +44,25 @@
     Seg14.draw(svg, text, Seg14.DIGIT);
   }
 
-  /* A button that sends an action; with repeat it keeps sending while held. */
-  function actionButton(html, action, enabled, card, repeat) {
+  /* A button that sends an action. repeat: keeps sending taps while held (brake bias).
+     A "hold" action (def.kinds) is pressed while the finger is on the button and released after. */
+  function actionButton(html, action, enabled, card, repeat, def) {
     const b = el("button", "btn", html);
     b.dataset.action = action;
     b._enabled = enabled;
-    let timer = null;
-    const stop = () => { clearTimeout(timer); clearInterval(timer); timer = null; b.classList.remove("pressed"); };
+    const hold = !!def && (def.kinds || {})[action] === "hold";
+    let timer = null, held = false;
+    const stop = () => {
+      clearTimeout(timer); clearInterval(timer); timer = null;
+      b.classList.remove("pressed");
+      if (held) { held = false; RD.command(action, "up"); }
+    };
     b.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      if (b.disabled) return;
+      if (b.disabled || held) return;
       b.classList.add("pressed");
       try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+      if (hold) { held = true; card.press(action, "down"); return; }
       card.press(action);
       if (repeat) timer = setTimeout(() => { timer = setInterval(() => card.press(action), REPEAT_EVERY); }, REPEAT_DELAY);
     });
@@ -72,9 +81,9 @@
       clearTimeout(litTimer);
       litTimer = setTimeout(() => card.classList.remove("lit"), ms);
     };
-    card.press = (action) => {
+    card.press = (action, state) => {
       light(PENDING_MS);
-      RD.command(action);
+      RD.command(action, state || "tap");
     };
     // called with the card's current value on every frame: a change lights the card
     card.settle = (value) => {
@@ -272,13 +281,65 @@
     return card;
   }
 
-  const TYPES = { stepper, bias, pair, toggle, fuel, lamps };
+  function cycle(def) {
+    const card = baseCard(def, "cycle amber");
+    const lamp = actionButton("", def.action, def.enabled[def.action], card, false, def);
+    lamp.classList.add("lamp");
+    card.insertBefore(lamp, card.querySelector(".hint"));
+    let extra = null;
+    if (def.extra) {
+      extra = actionButton(`<small>${def.extra_label || def.extra.toUpperCase()}</small>`, def.extra, def.enabled[def.extra], card, false, def);
+      extra.classList.add("extra");
+      card.insertBefore(extra, card.querySelector(".hint"));
+    }
+    card.update = (f, error) => {
+      const v = f[def.field];
+      const missing = isNone(v);
+      setState(card, error, missing);
+      card.settle(v);
+      const ok = !error && !missing;
+      lamp.classList.toggle("on", ok && v > 0);
+      const names = def.names || [];
+      const text = !ok ? "\u2013" : names[v] !== undefined ? names[v] : v === 0 ? "OFF" : String(v);
+      if (lamp.textContent !== text) lamp.textContent = text;
+      setButtons(card, ok);
+    };
+    return card;
+  }
+
+  function ignition(def) {
+    const card = baseCard(def, "ignition");
+    const lamp = actionButton("", def.action, def.enabled[def.action], card, false, def);
+    lamp.classList.add("lamp");
+    const start = actionButton("<small>START</small>", def.starter, def.enabled[def.starter], card, false, def);
+    start.classList.add("extra");
+    card.insertBefore(lamp, card.querySelector(".hint"));
+    card.insertBefore(start, card.querySelector(".hint"));
+    card.update = (f, error) => {
+      const on = f[def.field], running = f[def.running];
+      const missing = isNone(on);
+      setState(card, error, missing);
+      card.settle([on, running]);
+      const ok = !error && !missing;
+      const state = !ok ? "" : running ? "running" : on ? "on" : "off";
+      lamp.classList.toggle("on", state === "on");
+      lamp.classList.toggle("run", state === "running");
+      const text = { "": "\u2013", off: "OFF", on: "ON", running: "RUNNING" }[state];
+      if (lamp.textContent !== text) lamp.textContent = text;
+      setButtons(card, ok);
+      if (ok && running) start.disabled = true;      // the engine already runs
+    };
+    return card;
+  }
+
+  const TYPES = { stepper, bias, pair, toggle, fuel, lamps, cycle, ignition };
 
   RD.dashbox = function (grid) {
     RD.loadInfo().then((info) => {
       const cards = (info.dash || []).filter((def) => TYPES[def.type]).map((def) => TYPES[def.type](def));
       cards.forEach((card) => grid.appendChild(card));
       grid.dataset.count = cards.length;
+      grid.dataset.size = cards.length > 8 ? "large" : "normal";      // more than 8 cards: 5 columns
       if (!cards.length) grid.appendChild(el("p", "empty", "No dash box for this game yet (games/&lt;game&gt;/dash.toml)."));
       const update = (f) => {
         const error = RD.errorOf(f);

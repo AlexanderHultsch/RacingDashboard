@@ -76,8 +76,10 @@ DASH_TYPES = {
     "pair": {"need": ("fields", "labels"), "actions": ()},
     "fuel": {"need": ("field",), "actions": ()},
     "lamps": {"need": ("fields", "icons"), "actions": ()},
+    "cycle": {"need": ("field", "action"), "actions": ("action", "extra")},
+    "ignition": {"need": ("field", "running", "action"), "actions": ("action", "starter")},
 }
-DASH_FIELD_KEYS = ("field", "active", "max", "per_lap")   # map keys that name one telemetry field
+DASH_FIELD_KEYS = ("field", "active", "max", "per_lap", "running")   # map keys that name one telemetry field
 LAMP_ICONS = ("brake", "engine", "oil", "coolant")
 
 
@@ -106,12 +108,14 @@ def check_dash(game: dict) -> None:
 
 
 def dash_layout(game: dict, handled: set) -> list[dict]:
-    """The dash box cards for the page, with "enabled" per action (a key is set or the game handles it)."""
+    """The dash box cards for the page, with "enabled" per action (a key is set or the game handles it)
+    and "kinds" per action ("tap", or "hold": pressed while the finger is on the button)."""
     out = []
     for control in game["dash"]:
         card = dict(control)
-        card["enabled"] = {control[key]: bool(game["keys"].get(control[key])) or control[key] in handled
-                           for key in DASH_TYPES[control["type"]]["actions"] if control.get(key)}
+        names = [control[key] for key in DASH_TYPES[control["type"]]["actions"] if control.get(key)]
+        card["enabled"] = {name: bool(game["keys"].get(name)) or name in handled for name in names}
+        card["kinds"] = {name: actions.BY_NAME[name]["type"] for name in names}
         out.append(card)
     return out
 

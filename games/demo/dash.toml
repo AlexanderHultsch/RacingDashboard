@@ -13,6 +13,11 @@
 # type = "fuel"      fuel in litres with a tank bar: field, max (full tank), per_lap (laps left)
 # type = "lamps"     warning lamps, state only (grey off, blue cold, yellow warning, red alert):
 #                    fields, icons (brake, engine, oil, coolant), labels
+# type = "cycle"     a setting that steps on with one button (lights, wipers): field (0 = off),
+#                    action (next stage), names (optional, one text per stage), extra / extra_label
+#                    (optional second button, e.g. headlight flash; a "hold" action is held while pressed)
+# type = "ignition"  ignition and starter: field (ignition on), running (engine running),
+#                    action (toggle ignition), starter (held while pressed)
 # active             (stepper) a field that is true while the system works: the digits light amber
 # label              card title;  hint: small text at the bottom of the card
 #
@@ -25,6 +30,14 @@ active = "tc_active"
 field = "tc_level"
 down = "tc_down"
 up = "tc_up"
+
+[[control]]
+type = "stepper"
+label = "TC CUT"
+active = "tc_active"
+field = "tc_cut_level"
+down = "tc_cut_down"
+up = "tc_cut_up"
 
 [[control]]
 type = "stepper"
@@ -41,6 +54,13 @@ active = "esc_active"
 field = "esc_level"
 down = "esc_down"
 up = "esc_up"
+
+[[control]]
+type = "stepper"
+label = "ENGINE MAP"
+field = "engine_map"
+down = "map_down"
+up = "map_up"
 
 [[control]]
 type = "bias"
@@ -81,6 +101,31 @@ on = "ACTIVE"
 off = "OFF"
 style = "amber"
 hint = "Hold brake + full throttle"
+
+[[control]]
+type = "cycle"
+label = "LIGHTS"
+field = "lights"
+action = "lights"
+extra = "flash"
+extra_label = "FLASH"
+hint = "Tap to switch, hold FLASH"
+
+[[control]]
+type = "cycle"
+label = "WIPERS"
+field = "wipers"
+action = "wipers"
+hint = "Tap for the next speed"
+
+[[control]]
+type = "ignition"
+label = "IGNITION"
+field = "ignition"
+running = "engine_running"
+action = "ignition"
+starter = "starter"
+hint = "Tap to switch, hold START"
 
 [[control]]
 type = "toggle"

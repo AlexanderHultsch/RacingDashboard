@@ -51,7 +51,7 @@ class Connector(telemetry.Connector):
         self.best_ms = None
         self.fuel = 42.0
         self.coolant = 35.0                      # starts cold: blue lamp until about 50 C
-        self.state = {"tc_level": 3, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
+        self.state = {"tc_level": 3, "tc_cut_level": 2, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
                       "lights": 0, "wipers": 0, "ignition": True, "engine_running": True, "auto_shifter": True}
         self.gearbox = 0
 
@@ -60,6 +60,7 @@ class Connector(telemetry.Connector):
         if state == "up":
             return True
         steps = {"tc_up": ("tc_level", 1, 0, 11), "tc_down": ("tc_level", -1, 0, 11),
+                 "tc_cut_up": ("tc_cut_level", 1, 0, 8), "tc_cut_down": ("tc_cut_level", -1, 0, 8),
                  "abs_up": ("abs_level", 1, 0, 12), "abs_down": ("abs_level", -1, 0, 12),
                  "map_up": ("engine_map", 1, 1, 5), "map_down": ("engine_map", -1, 1, 5),
                  "bias_front": ("brake_bias", 0.005, 0.45, 0.7), "bias_rear": ("brake_bias", -0.005, 0.45, 0.7)}
@@ -166,7 +167,7 @@ class Connector(telemetry.Connector):
             "shift_up": self.gear < GEARS and self.gear > 0 and rpm_pct >= SHIFT_PCT - 0.02,
             "shift_down": False, "limiter": rpm >= RPM_MAX - 1,
             "speed_kmh": round(self.speed, 1), "gas": gas, "brake": brake, "clutch": 1.0 if now < self.shift_until else 0.0,
-            "tc_level": s["tc_level"], "tc_active": slip and random.random() < 0.5,
+            "tc_level": s["tc_level"], "tc_cut_level": s["tc_cut_level"], "tc_active": slip and random.random() < 0.5,
             "abs_level": s["abs_level"], "abs_active": brake > 0.9 and s["abs_level"] > 0 and random.random() < 0.4,
             "brake_bias": s["brake_bias"], "engine_map": s["engine_map"], "pit_limiter": s["pit_limiter"],
             "esc_level": None,                                   # the demo car has no stability control
@@ -175,7 +176,7 @@ class Connector(telemetry.Connector):
             "auto_clutch": s["auto_shifter"],
             "gear_mode": GEARBOXES[self.gearbox][2],
             **self.warnings(running),
-            "limits": {"tc_level": [0, 11], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10]},
+            "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],
             "fuel_l": round(self.fuel, 2), "fuel_max_l": FUEL_MAX, "fuel_per_lap_l": 2.6,
             "lap": self.lap, "position": 3, "cars": 18,
