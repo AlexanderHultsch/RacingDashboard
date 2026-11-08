@@ -28,6 +28,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `tc_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | graphics `electronics.*_level` | `None` when `electronics_is_modifiable` says the car has no setting |
 | `limits` | graphics `electronics_min_limit` / `electronics_max_limit` | per setting the car has |
 | `launch`, `auto_clutch` | graphics `launch_active`, `assists_state.auto_clutch` | |
+| `gear_mode` | graphics `assists_state.auto_gear` | `D` while the automatic gearbox assist is on; ACE reports no P / S selector, sport mode or electric drive yet (`engine_type` numbers unpublished) |
 | `tc_active`, `abs_active` | graphics `tc_active` / `abs_active` or physics `tcInAction` / `absInAction` | |
 | `brake_bias` | physics `brakeBias` | 0.56 = 56 % front |
 | `pit_limiter` | physics `pitLimiterOn` or `electronics.is_pitlimiter_on` | |

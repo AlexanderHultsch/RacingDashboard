@@ -2,7 +2,7 @@
 
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
-- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
+- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. Cars with an automatic gearbox or electric drive show the selector letter (P, D, S, B, L) instead of the number; the settings can switch this to the gear number. When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
 - **DASH** (`/dash`), for a tablet: the dash box. One big card per setting (TC, ABS, stability, brake bias, differential, pit limiter, launch, auto clutch) that shows the value the game applied and changes it while driving with large − / + buttons. Settings a car does not have are greyed out. The cards come from a map per game (`games/<game>/dash.toml`), so the page looks the same for every car of a game.
 - **BUTTONS** (`/buttons`), for a tablet: a telemetry strip and four tabs of buttons sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
@@ -64,6 +64,7 @@ The gear button at the bottom right of every page opens the settings:
 | PAGE | this device | HOME, GEAR + REV or DASH |
 | GAME | all devices | the connector: Assetto Corsa EVO or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
+| AUTOMATIC GEARBOX | this device | SHOW D / S (the selector letter) or SHOW GEAR NUMBER, for cars with an automatic gearbox or electric drive |
 | SPEED | this device | KM/H or MPH |
 | STYLE OF THIS PAGE | this device | shown when a page has more than one style (the half-moon button cycles them) |
 | KEEP SCREEN ON | this device | uses the browser's wake lock where allowed. iOS allows it only on HTTPS, so for a phone used as a display set **Settings → Display & Brightness → Auto-Lock → Never** |

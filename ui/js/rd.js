@@ -43,9 +43,22 @@
   const pad = (n, w) => String(n).padStart(w, "0");
   RD.formats = {
     text: (v) => (v === null || v === undefined || v === "" ? "-" : String(v)),
-    gear: (v, f) => (RD.errorOf(f || {}) || !Number.isInteger(v) ? "E" : v < 0 ? "R" : v === 0 ? "N" : String(v)),
+    /* the gear as the car's display shows it: E on errors; P for park; D / S / B / L for an automatic
+       gearbox or an electric car in a forward gear (unless this device is set to show the gear number);
+       R, N, or the gear number */
+    gear: (v, f) => {
+      f = f || {};
+      if (RD.errorOf(f) || !Number.isInteger(v)) return "E";
+      const mode = f.gear_mode;
+      if (mode === "P") return "P";
+      if (v > 0 && "DSBL".includes(mode || "-") && store.get("autoGear", "letter") === "letter") return mode;
+      return v < 0 ? "R" : v === 0 ? "N" : String(v);
+    },
     // one-character gear display: E also for gears above 9 or below R
-    gearseg: (v, f) => (Number.isInteger(v) && v >= -1 && v <= 9 ? RD.formats.gear(v, f) : "E"),
+    gearseg: (v, f) => {
+      const text = RD.formats.gear(v, f);
+      return /^\d+$/.test(text) && Number(text) > 9 ? "E" : text;
+    },
     int: (v) => (v === null || v === undefined ? "-" : String(Math.round(v))),
     rpm: (v) => (v ? String(Math.round(v)) : "0"),
     speed: (v) => String(Math.round((v || 0) * (RD.units() === "mph" ? 0.621371 : 1))),
@@ -429,6 +442,9 @@
           store.set("hz", hz); RD.connect();
         }));
       }
+      body.appendChild(choice("AUTOMATIC GEARBOX (THIS DEVICE)", [["letter", "SHOW D / S"], ["number", "SHOW GEAR NUMBER"]],
+        store.get("autoGear", "letter"), (mode) => { store.set("autoGear", mode); bound.forEach((b) => (b.last = undefined)); },
+        "For cars with an automatic gearbox or electric drive: show the selector letter, or the gear the gearbox is in."));
       body.appendChild(choice("SPEED (THIS DEVICE)", [["kmh", "KM/H"], ["mph", "MPH"]], RD.units(), (u) => {
         store.set("units", u); bound.forEach((b) => (b.last = undefined));
       }));

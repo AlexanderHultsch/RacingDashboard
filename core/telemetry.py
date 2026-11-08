@@ -15,6 +15,8 @@ FIELDS = {
     # engine and gearbox
     "gear": 0,               # -1 = R, 0 = N, 1.. = forward gears
     "max_gears": 0,          # number of forward gears, 0 = unknown
+    "gear_mode": None,       # automatic gearbox / electric selector: None (manual or unknown), "P" park,
+                             # "D" drive, "S" sport, "B" regen, "L" low, "M" manual mode (shows the number)
     "rpm": 0,                # engine speed, 1/min
     "rpm_max": 0,            # redline / limiter, 1/min, 0 = unknown
     "rpm_pct": 0.0,          # rpm as share of rpm_max, 0..1
@@ -82,7 +84,8 @@ RANGES = {
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
     "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
 }
-REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
+REQUIRED = ("gear", "rpm", "rpm_pct")
+GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")    # what the gear page needs; must be present and numeric
 
 
 def check(values: dict) -> str | None:
@@ -101,6 +104,8 @@ def check(values: dict) -> str | None:
             return f"{name.upper()} {value:g}"
     if not isinstance(values.get("gear"), int):
         return f"GEAR {values.get('gear')}"
+    if values.get("gear_mode") not in GEAR_MODES:
+        return f"GEAR MODE {values.get('gear_mode')}"
     rpm, rpm_max = values.get("rpm"), values.get("rpm_max")
     if rpm_max and rpm > rpm_max * 1.3:
         return f"RPM {rpm:g} ABOVE MAX {rpm_max:g}"

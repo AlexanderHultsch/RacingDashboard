@@ -46,11 +46,16 @@ class Errors(unittest.TestCase):
             "RPM_PCT 3": dict(rpm_pct=3.0),
             "SPEED_KMH 900": dict(speed_kmh=900.0),
             "RPM 20000 ABOVE MAX 8000": dict(rpm=20000),
+            "GEAR MODE X": dict(gear_mode="X"),
         }
         for text, changes in cases.items():
             result = frame(**changes)
             self.assertEqual(result["error"], "bad_value", text)
             self.assertEqual(result["error_text"], "UNEXPECTED DATA: " + text)
+
+    def test_gear_modes(self):
+        for mode in (None, "P", "D", "S", "B", "L", "M"):
+            self.assertIsNone(frame(gear_mode=mode)["error"], mode)
 
     def test_gear_ten_is_valid_data(self):
         # a 10-speed gearbox is real; only the one-digit display shows E (a page notice, not a data error)

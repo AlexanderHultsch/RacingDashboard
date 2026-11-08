@@ -269,6 +269,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "diff_coast": level(el.diff_coast_level, can.diff_coast_level),
         "launch": bool(gr.launch_active),
         "auto_clutch": bool(gr.assists_state.flags[2]),     # assists: auto_gear, auto_blip, auto_clutch, ...
+        # automatic gearbox assist on: the gear page shows D (ACE reports no P / S selector or sport mode)
+        "gear_mode": "D" if gr.assists_state.flags[0] else None,
         "limits": limits(gr),
         "pit_limiter": bool(ph.pitLimiterOn or el.is_pitlimiter_on),
         "ignition": bool(gr.is_ignition_on),

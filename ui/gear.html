@@ -31,7 +31,8 @@
 <script src="js/seg14.js"></script>
 <script>
   // the display has one digit: gears above 9 show E (the rev lights keep working)
-  RD.notices.push((f) => (Number.isInteger(f.gear) && f.gear > 9 ? "GEAR " + f.gear + ": THE DISPLAY SHOWS ONE DIGIT" : null));
+  RD.notices.push((f) => (Number.isInteger(f.gear) && f.gear > 9 && RD.formats.gear(f.gear, f) === String(f.gear)
+    ? "GEAR " + f.gear + ": THE DISPLAY SHOWS ONE DIGIT" : null));
   RD.start();
 </script>
 </body>
