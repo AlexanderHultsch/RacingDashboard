@@ -2,7 +2,7 @@
 
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
-- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. Cars with an automatic gearbox or electric drive show the selector letter (P, D, S, B, L) instead of the number; the settings can switch this to the gear number. When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
+- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. Always the gear number, also with an automatic gearbox or electric drive (P only for park). When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
 - **DASH** (`/dash`), for a tablet: the dash box. One big card per setting (TC, TC cut, ABS, stability, engine map, brake bias, fuel, differential, pit limiter, lights with flash, wipers, ignition with starter, warning lamps) that shows the value the game applied and changes it while driving with large − / + buttons. TC, ABS and stability turn amber while they work; a card lights up when its setting changes, on the tablet or in the car. The warning lamps (brake, engine, oil, coolant) show only a state: grey, blue, yellow or red. Settings a car does not have are greyed out. The cards come from a map per game (`games/<game>/dash.toml`), so the page looks the same for every car of a game.
 - **ANALYSIS** (`/analysis`), for a tablet in landscape: where the time goes. The bridge records every lap; the page shows the track map cut into 250 m sections on the left and graphs of one section on the right (speed, throttle, brake, steering, gear, time delta), each with three lines: **green** your best, **blue** the last lap, **red** the lap now. Always visible: the delta of the lap and of the section against your best ever and the last lap, and a strip with the delta of every section. Tap any section, while driving or afterwards. New best laps and sections wait in the REVIEW tab to SAVE or SKIP, one by one or all at once (nothing is saved without a tap, one backup kept for UNDO); the GRAPHS tab is for the deep dive. Details: [docs/ANALYSIS.md](docs/ANALYSIS.md).
 - **BUTTONS** (`/buttons`), for a tablet: a telemetry strip and four tabs of buttons sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
@@ -46,11 +46,11 @@ Unattended options for `tools\install.ps1`: `-Yes` (accept all defaults), `-Inst
 
 ## Use
 
-1. **Start** Racing Dashboard from the Start menu or the desktop (or double-click `start_dashboard.bat`). The window shows the address, for example `http://192.168.1.20:8080`. Keep the window open while you drive.
-2. **Phone / tablet** (same Wi-Fi as the PC): open the address in the browser and choose a page, or open `/gear` or `/dash` directly. For full screen: Share → **Add to Home Screen**.
+1. **Start** Racing Dashboard from the Start menu or the desktop (or double-click `start_dashboard.bat`). The window shows the address, for example `http://192.168.1.20:8080/Racing_Dashboard`. Keep the window open while you drive.
+2. **Phone / tablet** (same Wi-Fi as the PC): open the address in the browser and choose a page, or open `/gear` or `/dash` directly. Save **`/Racing_Dashboard`** (the home page) on the tablet: Share → **Add to Home Screen** runs it full screen under the name Racing_Dashboard. The name keeps it apart from other dashboards (e.g. flight simulator ones) on the same address and port; `/` opens the same home page.
 3. **Game.** Start Assetto Corsa EVO and drive; the pages follow as soon as the car is on track. ACE needs no set-up: it publishes its shared memory by itself.
 
-No game at hand? Open the settings (gear button, bottom right) and choose **DEMO** under GAME.
+No game at hand? Open the settings (gear button, top right) and choose **DEMO** under GAME.
 
 **Phone cannot connect?** Check that phone and PC are in the same network, that the PC's network is *Private* (Settings → Network & internet), and run the installer again to repair the firewall rule.
 
@@ -58,14 +58,13 @@ Manual set-up without the installer: install Python 3.12 or newer from [python.o
 
 ## Settings
 
-The gear button at the bottom right of every page opens the settings:
+The gear button at the top right of every page (same size and place on every page) opens the settings:
 
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
 | PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS or BUTTONS |
 | GAME | all devices | the connector: Assetto Corsa EVO or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
-| AUTOMATIC GEARBOX | this device | SHOW D / S (the selector letter) or SHOW GEAR NUMBER, for cars with an automatic gearbox or electric drive |
 | SPEED | this device | KM/H or MPH |
 | STYLE OF THIS PAGE | this device | shown when a page has more than one style (the half-moon button cycles them) |
 | KEEP SCREEN ON | this device | uses the browser's wake lock where allowed. iOS allows it only on HTTPS, so for a phone used as a display set **Settings → Display & Brightness → Auto-Lock → Never** |

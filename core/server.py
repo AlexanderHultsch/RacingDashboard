@@ -42,6 +42,7 @@ key_lock = threading.Lock()
 held: dict[str, float] = {}       # action -> time the key went down
 latched: set[str] = set()         # latch actions whose key is down until the next tap (no time limit)
 address = ""
+HOME = "Racing_Dashboard"     # the home page: http://<pc>:8080/Racing_Dashboard (other dashboards share the address)
 recorder: recording.Recorder | None = None    # the analysis page's lap recorder ([analysis] enabled)
 
 
@@ -286,7 +287,7 @@ def info() -> dict:
         "games": [{"id": g["id"], "name": g["game"]["name"]} for g in games.values()],
         "groups": actions.layout(active["keys"], handled, active.get("kinds", {})),
         "dash": dash_layout(active, handled),
-        "address": address,
+        "address": f"{address}/{HOME}",
         "hz_choices": [hz for hz in HZ_CHOICES if hz <= cfg["telemetry"]["read_hz"]],
         "keys_available": keys.available,
     }
@@ -381,7 +382,10 @@ class Handler(BaseHTTPRequestHandler):
         self.reply_json(404, {"error": "not found"})
 
     def static(self, path: str) -> None:
-        name = path.strip("/") or "index"
+        name = path.strip("/")
+        if name.lower() == HOME.lower() or name.lower().startswith(HOME.lower() + "/"):
+            name = name[len(HOME) + 1:]               # /Racing_Dashboard, /Racing_Dashboard/gear, ...
+        name = name or "index"
         target = (config.UI / name).resolve()
         if not target.suffix:
             target = target.with_suffix(".html")
@@ -470,7 +474,7 @@ def banner(port: int) -> None:
     line = "=" * 64
     print(f"\n{line}\n  Racing Dashboard is running  ({active['game']['name']})\n")
     print("  On your phone or tablet (same Wi-Fi), open in the browser:\n")
-    print(f"      {address}\n")
+    print(f"      {address}/{HOME}\n")
     print(f"      Gear + Rev   {address}/gear")
     print(f"      Dash         {address}/dash")
     print(f"      Analysis     {address}/analysis\n")

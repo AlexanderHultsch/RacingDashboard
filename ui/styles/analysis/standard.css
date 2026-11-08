@@ -10,7 +10,6 @@
   --last: #3f8cff;
   --now: #ff4545;
   --sel: #ffe93b;
-  --top-gap: 0px;     /* extra space above the header in landscape: the iPad screen fades at its top edge */
 }
 
 html, body { background: var(--bg); }
@@ -21,7 +20,6 @@ html, body { background: var(--bg); }
   grid-template-rows: auto auto minmax(0, 1fr);
   padding: calc(var(--safe-t) + var(--top-gap)) var(--safe-r) var(--safe-b) var(--safe-l);
 }
-@media (orientation: landscape) { :root { --top-gap: 26px; } }
 
 /* the chip of the other pages: here the header says why nothing is recorded */
 .rd-nodata { display: none !important; }
@@ -33,7 +31,7 @@ html, body { background: var(--bg); }
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 8px 0 18px;
+  padding: 0 64px 0 18px;                    /* right: the settings button (base.css) */
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
@@ -42,7 +40,6 @@ html, body { background: var(--bg); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar .what b { color: var(--amber); font-weight: 800; }
 .bar .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex: none; }
-.bar .settings { opacity: 0.6; }
 
 .btn {
   height: 42px;
@@ -108,6 +105,10 @@ html, body { background: var(--bg); }
 .mapwrap canvas, .gwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .mapcard .tag { position: absolute; left: 14px; top: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--dim); pointer-events: none; }
 .mapcard .tag b { color: var(--text); }
+.mapcard .tag.shift { left: 104px; top: 18px; }
+.mapcard .btn.back { position: absolute; left: 10px; top: 8px; z-index: 2; height: 34px; padding: 0 14px 0 10px; font-size: 13px; }
+.mapcard .btn.back[hidden] { display: none; }
+#map { touch-action: none; }                 /* the finger drags the cursor, the page does not scroll */
 .legend { position: absolute; right: 14px; top: 10px; display: flex; gap: 12px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--dim); pointer-events: none; }
 .legend i { display: inline-block; width: 16px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
 .legend i.best { background: var(--best); }

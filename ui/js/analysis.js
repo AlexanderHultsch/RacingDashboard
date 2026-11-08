@@ -11,10 +11,12 @@
   "use strict";
 
   const COL = {
-    best: "#22d36b", last: "#3f8cff", now: "#ff4545", sel: "#ffe93b",
+    best: "#22d36b", last: "#3f8cff", now: "#ff4545", sel: "#ffe93b", cur: "#ffe93b",
     grid: "#20272f", label: "#5f6974", title: "#7d8794", track: "#1b2128", edge: "#39424d", border: "#55606c",
   };
   const POLL_MS = 250;
+  const LINE_ALPHA = 0.8;        // best / last / now lines: slightly see-through, so crossing lines stay readable
+  const AHEAD_ALPHA = 0.28;      // the part after the cursor line: faded
   const $ = (id) => document.getElementById(id);
 
   const S = {
@@ -24,6 +26,7 @@
     liveMode: true,       // LIVE: follow the current section
     sel: 0,               // selected section (0-based)
     zoom: false,          // map zoomed into the selected section
+    cursor: null,         // metres into the selected section where the finger is on the map (null = none)
     sec: null,            // /api/analysis/section of the selected section
     nowLine: [],          // red full-lap line, filled incrementally
     nowLap: null,
@@ -136,6 +139,7 @@
     S.liveMode = false;
     S.sel = Math.max(0, Math.min(sections() - 1, n));
     S.zoom = zoom;
+    S.cursor = null;
     mapDirty = true;
     loadSection().then(renderAll);
     renderAll();
@@ -393,10 +397,17 @@
     });
     // race lines
     if (zoom) {
+      const cur = S.cursor;
       const xy = (rows) => rows.map((r) => [r[7], r[8]]);
-      if (path(ctx, v, xy(S.sec.best))) stroke(ctx, COL.best, 3);
-      if (path(ctx, v, xy(S.sec.last))) stroke(ctx, COL.last, 3);
-      if (path(ctx, v, xy(S.sec.now))) stroke(ctx, COL.now, 3.2);
+      const line = (rows, color, width) => {
+        const before = cur === null ? rows : rows.filter((r) => r[0] <= cur);
+        const after = cur === null ? [] : rows.filter((r) => r[0] >= cur);
+        if (path(ctx, v, xy(before))) stroke(ctx, color, width, LINE_ALPHA);
+        if (path(ctx, v, xy(after))) stroke(ctx, color, width, AHEAD_ALPHA);
+      };
+      line(S.sec.best, COL.best, 3);
+      line(S.sec.last, COL.last, 3);
+      line(S.sec.now, COL.now, 3.2);
     } else {
       if (path(ctx, v, st.lines.best)) stroke(ctx, COL.best, 1.6, 0.85);
       if (path(ctx, v, st.lines.last)) stroke(ctx, COL.last, 1.6, 0.7);
@@ -418,28 +429,93 @@
       ctx.strokeStyle = "#fff";
       ctx.stroke();
     }
+    const at = cursorPoint();
+    if (mapView && at) {                               // where the cursor line in the graphs is
+      const x = mapView.X(at[0]), y = mapView.Y(at[1]);
+      ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2);
+      ctx.lineWidth = 3; ctx.strokeStyle = COL.cur; ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = COL.cur; ctx.fill();
+    }
     const tag = $("map-tag");
     const n = sections() ? S.sel + 1 : "-";
-    const html = S.zoom ? "<b>SECTION " + n + "</b> · TAP AGAIN FOR OVERVIEW"
+    const html = S.zoom ? "<b>SECTION " + n + "</b>" + (S.cursor !== null ? " · " + Math.round(S.cursor) + " M" : "")
       : "OVERVIEW · <b>SECTION " + n + "</b>" + (S.liveMode ? " LIVE" : "");
     if (tag.innerHTML !== html) tag.innerHTML = html;
+    tag.classList.toggle("shift", S.zoom);
+    $("back").hidden = !S.zoom;
   }
 
-  function mapTap(e) {
-    if (!S.state || !S.state.active) return;
-    if (S.zoom) { S.zoom = false; mapDirty = true; renderAll(); return; }
-    const outline = S.state.outline;
-    if (!mapView || !outline.length || outline[0][2] === null) return;
+  function cursorPoint() {
+    const st = S.state;
+    if (S.cursor === null || !st || !st.outline.length || st.outline[0][2] === null) return null;
+    const p = (S.sel * st.section_m + S.cursor) / st.track_length_m;
+    const ps = st.outline.map((q) => q[2]);
+    const x = interp(ps, st.outline.map((q) => q[0]), p), y = interp(ps, st.outline.map((q) => q[1]), p);
+    return x === null ? null : [x, y];
+  }
+
+  // Map: tap a section in the overview to open it; drag along the track (overview or section) to move the
+  // cursor line in the graphs. BACK returns to the overview.
+  function nearest(e) {
+    const st = S.state;
+    const outline = st && st.outline;
+    if (!mapView || !outline || !outline.length || outline[0][2] === null) return null;
     const r = $("map").getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    let best = null, dist = 48;
-    for (const p of outline) {
+    let pts = outline;
+    if (S.zoom) {                                      // in a section the cursor stays in that section
+      const [a, b] = secRange(S.sel);
+      pts = outline.filter((p) => p[2] >= a && p[2] <= b);
+    }
+    let best = null, dist = S.zoom ? Infinity : 48;
+    for (const p of pts) {
       const d = Math.hypot(mapView.X(p[0]) - x, mapView.Y(p[1]) - y);
       if (d < dist) { dist = d; best = p; }
     }
-    if (!best) return;
-    const n = Math.min(sections() - 1, Math.floor((best[2] * S.state.track_length_m) / S.state.section_m));
-    select(n, true);
+    return best;
+  }
+
+  function sectionOf(p) {
+    return Math.min(sections() - 1, Math.floor((p * S.state.track_length_m) / S.state.section_m));
+  }
+
+  function scrub(p) {
+    const st = S.state;
+    const n = sectionOf(p[2]);
+    setTab("graphs");
+    S.liveMode = false;
+    const load = n !== S.sel || !S.sec || S.sec.n !== n;
+    S.sel = n;
+    const [a, b] = secRange(n);
+    S.cursor = Math.max(0, Math.min((b - a) * st.track_length_m, p[2] * st.track_length_m - n * st.section_m));
+    mapDirty = true;
+    if (load) loadSection().then(renderAll);
+    renderAll();
+  }
+
+  let drag = null;
+  function mapDown(e) {
+    if (!S.state || !S.state.active) return;
+    drag = { x: e.clientX, y: e.clientY, moved: false };
+    try { $("map").setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+    if (S.zoom) { const p = nearest(e); if (p) scrub(p); }
+  }
+  function mapMove(e) {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+    drag.moved = true;
+    const p = nearest(e);
+    if (p) scrub(p);
+  }
+  function mapUp(e) {
+    if (!drag) return;
+    const tap = !drag.moved;
+    drag = null;
+    if (tap && !S.zoom) {
+      const p = nearest(e);
+      if (p) select(sectionOf(p[2]), true);
+    }
   }
 
   /* ------------------------------------------------------------ graphs */
@@ -510,6 +586,7 @@
     const font = getComputedStyle(document.body).fontFamily;
     let top = 0;
     const nowEnd = sec.now.length ? sec.now[sec.now.length - 1][0] : null;
+    const cx = S.cursor === null ? null : X(Math.min(S.cursor, len));
     for (const panel of panels) {
       const ph = (usable * panel.weight) / total;
       const band = 15;                                   // the title sits above the plot, never under a line
@@ -528,9 +605,15 @@
       ctx.beginPath(); ctx.rect(pl, top + band, W, ph - band); ctx.clip();
       const draw = (rows, val, color, width) => {
         if (rows.length < 2) return;
-        ctx.beginPath();
-        rows.forEach((r, i) => { const x = X(r[0]), y = Y(val(r)); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
-        stroke(ctx, color, width);
+        const trace = () => {
+          ctx.beginPath();
+          rows.forEach((r, i) => { const x = X(r[0]), y = Y(val(r)); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+        };
+        if (cx === null) { trace(); stroke(ctx, color, width, LINE_ALPHA); return; }
+        ctx.save(); ctx.beginPath(); ctx.rect(0, top, cx, ph); ctx.clip();
+        trace(); stroke(ctx, color, width, LINE_ALPHA); ctx.restore();
+        ctx.save(); ctx.beginPath(); ctx.rect(cx, top, w - cx, ph); ctx.clip();
+        trace(); stroke(ctx, color, width, AHEAD_ALPHA); ctx.restore();
       };
       if (panel.delta) {
         if (sec.best.length > 1 || refName === "LAST") {
@@ -564,7 +647,23 @@
     ctx.textBaseline = "bottom";
     ctx.fillStyle = COL.label;
     const mStep = len > 400 ? 100 : 50;
-    for (let m = 0; m <= len + 0.1; m += mStep) ctx.fillText(m + " m", Math.min(w - pr - 14, X(m)), h - 1);
+    for (let m = 0; m <= len + 0.1; m += mStep) {
+      if (cx !== null && Math.abs(X(m) - cx) < 26) continue;
+      ctx.fillText(m + " m", Math.min(w - pr - 14, X(m)), h - 1);
+    }
+    if (cx !== null) {                                 // the cursor: where the finger is on the map
+      ctx.beginPath(); ctx.moveTo(cx, 15); ctx.lineTo(cx, h - axisH);
+      stroke(ctx, COL.cur, 1.6, 0.95);
+      const label = Math.round(S.cursor) + " m";
+      ctx.font = "800 10.5px " + font;
+      const tw = ctx.measureText(label).width + 10;
+      const lx = Math.max(pl, Math.min(w - pr - tw, cx - tw / 2));
+      ctx.fillStyle = COL.cur;
+      ctx.beginPath(); ctx.roundRect(lx, h - axisH + 1, tw, axisH - 2, 4); ctx.fill();
+      ctx.fillStyle = "#1a1600";
+      ctx.textAlign = "left";
+      ctx.fillText(label, lx + 5, h - 2);
+    }
   }
 
   /* ------------------------------------------------------------ offers and end of run */
@@ -672,6 +771,7 @@
     $("live").addEventListener("click", () => {
       S.liveMode = true;
       S.zoom = false;
+      S.cursor = null;
       lastFollow = -1;
       if (S.live && S.live.sec !== null && S.live.sec !== undefined) S.sel = S.live.sec;
       mapDirty = true;
@@ -711,7 +811,11 @@
     });
     $("keep-all").addEventListener("click", () => finish("all"));
     $("keep-base").addEventListener("click", () => finish("baselines"));
-    $("map").addEventListener("click", mapTap);
+    $("map").addEventListener("pointerdown", mapDown);
+    $("map").addEventListener("pointermove", mapMove);
+    $("map").addEventListener("pointerup", mapUp);
+    $("map").addEventListener("pointercancel", () => { drag = null; });
+    $("back").addEventListener("click", () => { S.zoom = false; mapDirty = true; renderAll(); });
     $("cells").addEventListener("click", (e) => {
       const el = e.target.closest("[data-n]");
       if (el) select(+el.dataset.n, true);

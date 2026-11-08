@@ -43,15 +43,13 @@
   const pad = (n, w) => String(n).padStart(w, "0");
   RD.formats = {
     text: (v) => (v === null || v === undefined || v === "" ? "-" : String(v)),
-    /* the gear as the car's display shows it: E on errors; P for park; D / S / B / L for an automatic
-       gearbox or an electric car in a forward gear (unless this device is set to show the gear number);
-       R, N, or the gear number */
+    /* the gear: E on errors, P for park, R, N, or the gear number (also with an automatic gearbox or an
+       electric car: the owner wants the number, no D / S letters) */
     gear: (v, f) => {
       f = f || {};
       if (RD.errorOf(f) || !Number.isInteger(v)) return "E";
       const mode = f.gear_mode;
       if (mode === "P") return "P";
-      if (v > 0 && "DSBL".includes(mode || "-") && store.get("autoGear", "letter") === "letter") return mode;
       return v < 0 ? "R" : v === 0 ? "N" : String(v);
     },
     // one-character gear display: E also for gears above 9 or below R
@@ -375,6 +373,8 @@
 
   /* ------------------------------------------------------------ toolbar and settings */
 
+  RD.HOME = "/Racing_Dashboard";    // the home page; the link to save on the tablet
+
   RD.toolbar = function () {
     const bar = document.createElement("div");
     bar.className = "rd-toolbar";
@@ -432,7 +432,7 @@
       el.querySelector(".rd-back").addEventListener("click", () => this.close());
       const body = el.querySelector(".rd-set-body");
       const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["buttons", "BUTTONS"]];
-      body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? "/" : "/" + p; }));
+      body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? RD.HOME : "/" + p; }));
       if (info) {
         body.appendChild(choice("GAME (ALL DEVICES)", info.games.map((g) => [g.id, g.name.toUpperCase()]), info.game, (id) => {
           fetch("/api/settings", { method: "POST", body: JSON.stringify({ game: id }) })
@@ -442,9 +442,6 @@
           store.set("hz", hz); RD.connect();
         }));
       }
-      body.appendChild(choice("AUTOMATIC GEARBOX (THIS DEVICE)", [["letter", "SHOW D / S"], ["number", "SHOW GEAR NUMBER"]],
-        store.get("autoGear", "letter"), (mode) => { store.set("autoGear", mode); bound.forEach((b) => (b.last = undefined)); },
-        "For cars with an automatic gearbox or electric drive: show the selector letter, or the gear the gearbox is in."));
       body.appendChild(choice("SPEED (THIS DEVICE)", [["kmh", "KM/H"], ["mph", "MPH"]], RD.units(), (u) => {
         store.set("units", u); bound.forEach((b) => (b.last = undefined));
       }));

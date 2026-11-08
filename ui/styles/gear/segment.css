@@ -20,7 +20,7 @@ html, body { background: var(--bg); }
   padding: max(2.6vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
 }
 
-.rd-revlights { height: 9vmin; }
+.rd-revlights { height: 9vmin; margin: 0 54px; }   /* the corners stay free for the settings button */
 
 .gear-area { position: relative; min-height: 0; }
 
@@ -59,11 +59,7 @@ html, body { background: var(--bg); }
 }
 .gear-digit .on { fill: var(--seg); }
 
-/* settings button: faint, inside the frame corner */
-.rd-toolbar {
-  right: calc(max(var(--edge), var(--safe-r)) + var(--frame-w) + 6px);
-  bottom: calc(max(var(--edge), var(--safe-b)) + var(--frame-w) + 6px);
-}
+/* settings button: top right as on every page (base.css), faint; the rev lights leave that corner free */
 .rd-tool { opacity: 0.35; }
 
 @media (orientation: portrait) {

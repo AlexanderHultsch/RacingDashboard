@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Racing Dash">
+<meta name="apple-mobile-web-app-title" content="Racing_Dashboard">
 <meta name="theme-color" content="#0a0c0f">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Racing Dashboard</title>
@@ -18,7 +18,7 @@
     display: grid;
     grid-template-rows: auto 1fr auto;
     gap: 16px;
-    padding: calc(16px + var(--safe-t)) calc(20px + var(--safe-r)) calc(16px + var(--safe-b)) calc(20px + var(--safe-l));
+    padding: calc(16px + var(--safe-t) + var(--top-gap)) calc(20px + var(--safe-r)) calc(16px + var(--safe-b)) calc(20px + var(--safe-l));
     overflow-y: auto;
   }
   h1 { margin: 0; font-size: 22px; letter-spacing: 0.16em; }
@@ -39,7 +39,8 @@
   .page:active { background: var(--panel-2); }
   .page b { font-size: 26px; letter-spacing: 0.1em; }
   .page span { color: var(--dim); font-size: 15px; line-height: 1.4; }
-  .status { color: var(--dim); font-size: 14px; letter-spacing: 0.06em; padding-right: 60px; }
+  .status { color: var(--dim); font-size: 14px; letter-spacing: 0.06em; }
+  h1 { padding-right: 60px; }
   .status b { color: var(--text); }
 </style>
 </head>
@@ -48,7 +49,7 @@
   <h1>RACING DASHBOARD<small>CHOOSE A PAGE FOR THIS DEVICE</small></h1>
   <div class="pages">
     <a class="page" href="/gear"><b>GEAR + REV</b><span>The gear as a big 14-segment display and 8 rev lights. For a phone, portrait or landscape.</span></a>
-    <a class="page" href="/dash"><b>DASH</b><span>Dash box: TC, ABS, stability, brake bias, diff, pit limiter, launch, auto clutch. Change them while driving. For a tablet.</span></a>
+    <a class="page" href="/dash"><b>DASH</b><span>Dash box: TC, ABS, stability, brake bias, diff, pit limiter, lights, wipers, ignition. Change them while driving. For a tablet.</span></a>
     <a class="page" href="/analysis"><b>ANALYSIS</b><span>Where the time goes: map with 250 m sections, graphs per section (best, last, now), deltas, best laps and sections to save. For a tablet.</span></a>
     <a class="page" href="/buttons"><b>BUTTONS</b><span>Telemetry strip and all button groups (aids, car, view, pit).</span></a>
   </div>

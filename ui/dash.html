@@ -23,7 +23,6 @@
     <span class="status">
       <svg class="rd-seg mini-gear" data-field="gear" data-fmt="gearseg" aria-label="Gear"></svg>
       <span class="live"><i></i><b>LIVE</b></span>
-      <button class="rd-tool settings" aria-label="Settings"></button>
     </span>
   </header>
   <section class="cards"></section>
@@ -33,10 +32,7 @@
 <script src="js/seg14.js"></script>
 <script src="js/dashbox.js"></script>
 <script>
-  RD.start({ toolbar: false });
-  const settings = document.querySelector(".settings");
-  settings.innerHTML = RD.icons.gear;
-  settings.addEventListener("click", () => RD.settings.open());
+  RD.start();
   RD.loadInfo().then((info) => { document.getElementById("game").textContent = info.game_name.toUpperCase(); });
   RD.dashbox(document.querySelector(".cards"));
 </script>

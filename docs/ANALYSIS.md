@@ -4,7 +4,7 @@ The analysis page as agreed with the owner (interview, November 2026). **Built**
 
 ## The page (one page; iPad landscape; right side: REVIEW and GRAPHS tabs)
 
-- **Left: the circuit map** with the track cut into sections. Overview of the whole track; tapping a section zooms into it, tapping again returns to the overview.
+- **Left: the circuit map** with the track cut into sections. Overview of the whole track; tapping a section zooms into it, **BACK** (top left of the map) returns to the overview. **Dragging a finger along the track** (overview or section) moves a yellow ring on the map and a yellow cursor line through all graphs at the same place (no value readouts); the part of the lines after the cursor is faded. The best / last / now lines are slightly see-through (owner, November 2026).
 - **Race lines** drawn on the map in high quality: **green** = the best (baseline) section, **blue** = the last lap, **red** = the current lap (after the session: the lap being looked at). No braking markers.
 - **Right: graphs for the selected section**, each with the same three lines (green best, blue last, red current), over the position in the section: speed, throttle, brake, steering, gear (throttle / brake and steering / gear as separate small graphs, so the colours keep meaning best / last / current), and the time delta building up inside the section.
 - **Always visible:** delta per section against best ever and against last lap, and delta per lap against best ever and against last lap.

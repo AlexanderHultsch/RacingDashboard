@@ -6,10 +6,10 @@
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 10px;
-  padding: calc(10px + var(--safe-t)) calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(14px + var(--safe-l));
+  padding: calc(10px + var(--safe-t) + var(--top-gap)) calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(14px + var(--safe-l));
 }
 
-.rd-leds { height: 34px; padding: 0 4px; }
+.rd-leds { height: 34px; padding: 0 4px; margin-right: 46px; }   /* the corner stays free for the settings button */
 
 .strip {
   display: grid;

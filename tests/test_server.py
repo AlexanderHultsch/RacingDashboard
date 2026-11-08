@@ -71,6 +71,15 @@ class Bridge(unittest.TestCase):
             self.assertTrue(body, path)
         self.assertIn("text/html", get("/gear")[1])
 
+    def test_home_link(self):
+        # the home page to save on the tablet: /Racing_Dashboard (other dashboards share the address)
+        home = get("/")[2]
+        for path in ("/Racing_Dashboard", "/racing_dashboard", "/Racing_Dashboard/"):
+            status, _, body = get(path)
+            self.assertEqual((status, body), (200, home), path)
+        self.assertEqual(get("/Racing_Dashboard/gear")[2], get("/gear")[2])
+        self.assertEqual(get("/Racing_Dashboard/css/base.css")[0], 200)
+
     def test_no_files_outside_ui(self):
         for path in ("/../core/server.py", "/%2e%2e/core/server.py", "/nothing"):
             with self.assertRaises(urllib.error.HTTPError, msg=path):

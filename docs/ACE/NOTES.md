@@ -43,7 +43,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `lights`, `wipers` | graphics `instrumentation.main_light_stage`, `wiper_level` | ACE 0.9.1 leaves them at 0 even when lights / wipers work, so they are `None` (not reported: the cards show – and stay usable) until the game sends a stage above 0 once |
 | `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | graphics `fuel_liter_current_quantity`, `max_fuel`, `fuel_liter_per_lap` (or `fuel_per_lap`) | |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms` | graphics `current_lap_time_ms`, `last_laptime_ms`, `best_laptime_ms`, `delta_time_ms` | 0 or `INT_MAX` = no time |
-| `lap`, `position`, `cars`, `lap_valid` | graphics `total_lap_count`, `current_pos`, `total_drivers`, `is_valid_lap` | |
+| `lap`, `position`, `cars`, `lap_valid` | graphics `total_lap_count`, `current_pos`, `total_drivers`, `is_valid_lap` | `is_valid_lap` checked on the analysis page (Brands Hatch, November 2026): true on clean laps; false on the first lap after leaving the pits (correct, the game shows it invalid too) |
 | `car`, `track` | graphics `car_model`, static `track` | |
 | `status` | graphics `status` | assumed as in AC / ACC: 0 off, 1 replay, 2 live, 3 pause |
 | `lap_pos` | graphics `npos` | normalised position on the lap, 0..1 (analysis sections) |

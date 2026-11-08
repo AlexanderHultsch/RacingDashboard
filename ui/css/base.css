@@ -20,6 +20,7 @@
   --safe-r: env(safe-area-inset-right, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
+  --top-gap: 0px;          /* landscape: 26 px, the iPad screen fades at its top edge */
   color-scheme: dark;
 }
 
@@ -151,10 +152,16 @@ button {
 
 /* ------------------------------------------------------------ toolbar */
 
+/* iPad in landscape: the top edge of the screen fades into the frame, so pages start about 5 mm lower
+   (an iPad shows about 132 CSS px per inch: 5 mm = 26 px); not on a phone in landscape */
+@media (orientation: landscape) and (min-height: 600px) { :root { --top-gap: 26px; } }
+
+/* the settings button: the same size and place on every page (top right, in the header of DASH and
+   ANALYSIS); pages keep this corner free */
 .rd-toolbar {
   position: fixed;
-  right: calc(8px + var(--safe-r));
-  bottom: calc(8px + var(--safe-b));
+  top: calc(6px + var(--safe-t) + var(--top-gap));
+  right: calc(10px + var(--safe-r));
   display: flex;
   gap: 8px;
   z-index: 10;
@@ -202,7 +209,7 @@ button {
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  padding: calc(12px + var(--safe-t)) calc(16px + var(--safe-r)) calc(12px + var(--safe-b)) calc(16px + var(--safe-l));
+  padding: calc(16px + var(--safe-t) + var(--top-gap)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));
 }
 #rd-settings header {
   display: flex;
