@@ -1,6 +1,6 @@
 # Racing-Dashboard – Spec
 
-The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md).
+The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md). Driving assists of all planned games: [ASSISTS.md](ASSISTS.md).
 
 ## 1. Purpose and principles
 
