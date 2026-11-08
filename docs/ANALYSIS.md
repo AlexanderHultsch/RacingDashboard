@@ -2,7 +2,7 @@
 
 The analysis page as agreed with the owner (interview, November 2026). **Built** (November 2026): `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`; technical details in [SPEC.md](SPEC.md#analysis). Tested with the demo car and simulated laps; not yet with Assetto Corsa EVO or DiRT Rally 2.0. No coaching and no tips: the page only shows data (an AI coach may come later).
 
-## The page (one page, no tabs; iPad landscape)
+## The page (one page; iPad landscape; right side: REVIEW and GRAPHS tabs)
 
 - **Left: the circuit map** with the track cut into sections. Overview of the whole track; tapping a section zooms into it, tapping again returns to the overview.
 - **Race lines** drawn on the map in high quality: **green** = the best (baseline) section, **blue** = the last lap, **red** = the current lap (after the session: the lap being looked at). No braking markers.

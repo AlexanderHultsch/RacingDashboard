@@ -1,8 +1,8 @@
 # Handover – local session on the Windows PC
 
-For the next Claude session running on the owner's Windows PC, with Assetto Corsa EVO (ACE) and DiRT Rally 2.0 (DR2) installed. Written at the end of the cloud session that built the **analysis page** (November 2026). Read this first, then [ANALYSIS.md](ANALYSIS.md) (what the owner wants from the analysis page), [README.md](../README.md) and [SPEC.md](SPEC.md) (how it all works).
+For the next Claude session running on the owner's Windows PC, with Assetto Corsa EVO (ACE) and DiRT Rally 2.0 (DR2) installed. Written at the end of the cloud session that built the **analysis page** and fixed it after the owner's first drive with it (November 2026). Read this first, then [ANALYSIS.md](ANALYSIS.md) (what the owner wants from the analysis page), [README.md](../README.md) and [SPEC.md](SPEC.md) (how it all works).
 
-**The job for this session: test the analysis page in the real games** and fix what the games deliver differently from what the code assumes. Everything else already works in ACE.
+**The job for this session:** check the analysis page and **the data it records** with the real games, and fix what the games deliver differently from what the code assumes. Everything else already works in ACE.
 
 ## Start
 
@@ -13,102 +13,138 @@ python core\server.py --check
 python core\server.py
 ```
 
-The tests must pass (39 tests) and `--check` must print `Result OK` before anything else. The bridge prints the address for the iPad. Log: `logs\racing-dashboard.log`.
+The tests must pass (42 tests) and `--check` must print `Result OK`. The bridge prints the address for the iPad. Log: `logs\racing-dashboard.log`. The repository moved to `github.com/AlexanderHultsch/RacingDashboard` (the old name redirects); if `git pull` complains, ask the owner before changing the remote.
 
 ## Where things stand
 
 | Part | Where | State |
 | --- | --- | --- |
-| Bridge: web server, live stream, keypresses, game switch, data checks | `core/server.py` and friends | works on the PC (first test, November 2026) |
-| ACE connector (shared memory) | `games/ace/connector.py` | **reading works in the game**: gear, rpm, shift lights, dash box values (seen with BMW M4 CSL and Mazda RX-7). Lights / wipers are not published by ACE 0.9.1 ([ACE/NOTES.md](ACE/NOTES.md)) |
-| ACE keys | `games/ace/game.toml`, [ACE/KEYS.md](ACE/KEYS.md) | the owner bound them; keys reach the game (window `AssettoCorsaEVO.exe` verified) |
-| GEAR + REV (phone), DASH (iPad), BUTTONS | `ui/` | in use; the owner said it works very well |
+| Bridge, GEAR + REV (phone), DASH (iPad), BUTTONS | `core/`, `ui/` | in use in ACE; the owner said it works very well |
+| ACE connector (shared memory) | `games/ace/connector.py` | dash values verified in the game (BMW M4 CSL, Mazda RX-7, Toyota GR86). Lights / wipers are not published by ACE 0.9.1 ([ACE/NOTES.md](ACE/NOTES.md)) |
+| ACE keys | `games/ace/game.toml`, [ACE/KEYS.md](ACE/KEYS.md) | bound by the owner, keys reach the game |
 | DR2 connector (UDP) | `games/dr2/connector.py` | only tested with simulated packets |
-| Demo game | `games/demo/` | works; a 4.9 km track with laps that differ a little, so the analysis page has something to show |
-| **Analysis page** (iPad, landscape) | `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`, `ui/styles/analysis/standard.css` | **new, never run against a game.** Tested with the demo car in Chromium and with simulated laps in `tests/test_recorder.py` |
-| New telemetry fields for the analysis | `lap_pos`, `track_length_m`, `pos_x`, `pos_y`, `steer`, `session_id`, `air_c`, `road_c`, `tyre_compound`, `time_of_day` in all three connectors | **ACE and DR2 values are guesses from the documentation**; this is what must be checked first |
+| Demo game | `games/demo/` | a 4.9 km track whose laps differ a little; use it to tell page problems from game problems |
+| **Analysis page** (iPad, landscape) | `core/recorder.py`, `ui/analysis.html`, `ui/js/analysis.js`, `ui/styles/analysis/standard.css` | **first drive in ACE** (Toyota GR86, Brands Hatch, 6 laps): the map with the track and 16 sections was drawn, laps and section times were recorded, section bests saved. See below for what was fixed after it and what is still open |
+| Analysis fields in the connectors | `lap_pos`, `track_length_m`, `pos_x`, `pos_y`, `steer`, `session_id`, ambient values | ACE: lap position, track length and position evidently work (the map is the track). **Not checked yet:** map mirrored or not, steering scale, lap times against the game, `session_id` stability, `lap_valid`. DR2: never seen |
+| Tools | `tools/ace_probe.py --analysis`, **`tools/analysis_check.py`** (new) | see the plan |
 | Installer | `install.bat`, `tools/install.ps1` | ask the owner whether it was ever run |
 
-## Test plan for the analysis page
+### What the owner saw on the first drive, and what was done
+
+| Owner's finding | Cause | Now |
+| --- | --- | --- |
+| Section strip and the four deltas at the top empty | they compared against the lap just started (lap 6, which had reached no section yet) | sections the new lap has not reached show the last lap's values (dimmed); while paused / in the pits the page shows the last complete lap; the delta to the last lap no longer needs a valid last lap |
+| "NOT RECORDING" without a reason | the game sent no error; the recorder stopped for its own reason (most likely the game was paused) | the header says why (GAME PAUSED, REPLAY, NOT ON TRACK, no lap position, track length unknown, STAGE FINISHED) and shows the last lap time with OUT LAP / INVALID / INTERRUPTED / REPEATED |
+| Graph titles covered by the lines on the iPad | the plot started at the panel top | titles in their own band |
+| Page too close to the top edge (the iPad fades there) | | 26 px lower in landscape, as DASH |
+| "Store the analysis even when I am in another tab" | the recording runs in the bridge on the PC, whatever page or tab the iPad shows; the page only *looked* empty (first finding) | no change needed; confirm it with the owner on the next drive |
+| Wanted: REVIEW and GRAPHS tabs, REVIEW as start view (many new bests at the beginning), SKIP ALL | | built: REVIEW (SAVE / SKIP, SAVE ALL, SKIP ALL with a second tap, UNDO; tap an offer to see its section), GRAPHS for the deep dive |
+
+**Still open from the screenshot:** no green best-lap line on the map, so no best lap was ever offered or saved. The header now shows why the last lap did not count; if it says INVALID on clean laps, ACE's `is_valid_lap` is wrong or inverted (check it, see the table below). If it says INTERRUPTED, the recorder saw a pause or a jump (check `status` and the gaps in step 2).
+
+## Test plan
 
 Do it in this order, one step at a time, and tell the owner what you see after each step.
 
-### 1. Demo first (separates page problems from game problems)
+### 1. Demo first
 
-Settings (gear button) → GAME → DEMO. Open `http://localhost:8080/analysis` on the PC and `http://<PC address>:8080/analysis` on the iPad. After the first lap (about 1:30) the map, the section strip and the graphs fill; the REVIEW tab counts the offers. If the demo works but a game does not, the problem is in that game's connector.
+Settings (gear button) → GAME → DEMO. Open `http://localhost:8080/analysis` on the PC and on the iPad. After the first lap (about 1:30) the map, the strip and the REVIEW tab fill. If the demo works but a game does not, the problem is in that game's connector.
 
-### 2. ACE: the raw values
+### 2. Check the real data already recorded (and after every drive)
 
-GAME → ASSETTO CORSA EVO, drive a practice session, and in a second window run:
+The owner's drives are on the PC in `data\` (ignored by git): `data\runs\ace\<track>\<car>\<date_time>\lap-NNN.jsonl` plus `run.jsonl`, the baselines in `data\baselines\...`, open offers in `data\pending.jsonl`. Run:
+
+```
+python tools\analysis_check.py
+python tools\analysis_check.py --last 1
+python tools\analysis_check.py --game ace
+```
+
+Per run it prints the session id, the track length, the section count and the log (laps, offers, saves, skips); per lap the time, whether it counts (and why not), the sample rate, gaps, the lap position range, steering and map ranges, the distance driven on the map against the track length, the sum of the section times against the lap time and the ambient values. Problems are marked `!!`. What to look for:
+
+- **Many runs for one session** (a new folder every few seconds or laps): `session_id` changes while driving → simplify it in `parse()` of `games/ace/connector.py`.
+- **Laps that do not count:** `invalid` on clean laps → `is_valid_lap`; `broken` (interrupted) → pauses, `status` flicker or gaps; `out_lap` only for the first lap.
+- **Sample rate** well below 30 Hz or long gaps → the frames had errors (`data | error` in the log) or `status` was not `live`.
+- **Lap time** against the game's lap time (in the game or `last_ms` in `/state`): a few hundredths at most.
+- **Section times** add up to the lap time.
+- **Steering** stuck at ±1 → wrong unit (degrees / radians), scale it in `parse()`; near 0 all the time → wrong field.
+- **Driven distance / track length** far from 1 → `track_length_m` or the position scale is wrong.
+- **Ambient** values plausible (air / road temperature, tyre compound, time of day).
+
+Open one lap file as well and read a few lines: the header, some samples, the `section`, `ambient` and `summary` lines (formats in [SPEC.md](SPEC.md#analysis)).
+
+### 3. ACE: the live values
+
+GAME → ASSETTO CORSA EVO, drive, and in a second window run:
 
 ```
 py tools\ace_probe.py --analysis
 ```
 
-It prints the analysis values five times per second, and below them every occupied car slot (`[index] x,z id ...`), with `*` on the slot the connector uses as the player. Check:
+It prints the analysis values five times per second, and every occupied car slot (`[index] x,z id ...`) with `*` on the slot the connector uses as the player.
 
 | Value | Expected | If not |
 | --- | --- | --- |
-| `status` | `live` while driving | the recorder only records `live`; check the `STATUS` mapping in the connector |
-| `lap_pos` | grows from 0 to 1 and **wraps to 0 at the start / finish line** | the lap only ends when the value jumps from above 0.9 to below 0.1 (`_sample` in `recorder.py`). If ACE's `npos` starts somewhere else, laps end at the wrong place |
-| `track_length_m` | the track length in metres (compare with the track's published length) | 0 or missing = **nothing is recorded** (needs at least 300 m). Then find the length elsewhere in `Static` or work it out |
-| `pos_x`, `pos_y` | change smoothly in metres while driving; the `*` slot is the one that moves with your car | wrong slot = the map shows another car. Fix `player_xy()` in `games/ace/connector.py` (it matches `car_ids` against `player_car_id_a/b`, else slot 0) |
-| `steer` | about −1 full left … +1 full right | if it is in degrees or radians, scale it in `parse()` (it is clamped to −1..1, so wrong units show as a flat line at ±1) |
-| `session_id` | **stays the same** while driving; changes with a new session | if it changes while driving, every change ends the run: the log fills with `analysis | run` lines. Then build it from fewer fields (`parse()`, `session_id`) |
-| `lap_valid` | false after cutting the track | a lap that is not valid is never offered as best lap |
+| `status` | `live` while driving | the recorder only records `live`; check the `STATUS` mapping |
+| `lap_pos` | grows from 0 to 1 and wraps to 0 at the start / finish line | laps end where it jumps from above 0.9 to below 0.1 (`_sample` in `recorder.py`) |
+| `track_length_m` | the track length in metres (Brands Hatch GP about 3.9 km: the 16 sections fit) | |
+| `pos_x`, `pos_y` | change smoothly; the `*` slot moves with your car | in a session with AI cars check that `*` is still your car; else fix `player_xy()` |
+| `steer` | about −1 full left … +1 full right | scale in `parse()` |
+| `session_id` | the same while driving; changes with a new session | build it from fewer fields |
+| `lap_valid` | true on a clean lap, false after cutting | if always false (or inverted), every lap is INVALID and never a best lap: fix the mapping |
 
-### 3. ACE: the page
+### 4. ACE: the page
 
-Drive three laps, then look at the iPad:
+Drive three clean laps, then on the iPad:
 
-- **Map:** is it the track as in the game, or mirrored / rotated? The map draws `pos_x` to the right and `pos_y` (the game's z) downwards. If it is mirrored, negate `pos_y` (or `pos_x`) in `parse()` of the connector and say so in [ACE/NOTES.md](ACE/NOTES.md).
-- **Car dot** follows the car; the red line grows behind it.
-- **Lap time:** after a lap, the strip and `data\runs\ace\...\lap-00N.jsonl` (last line, `summary`, `time`) against the game's lap time. Expect a difference of a few hundredths at most (the recorder interpolates at the line at 30 Hz).
-- **Sections:** tap a section on the map and in the strip; the graphs show green (best), blue (last), red (now). LIVE returns to following the car.
-- **Offers:** REVIEW tab (the start view on the right) → SAVE one, SKIP one, UNDO, SKIP ALL (tap twice); files appear in `data\baselines\ace\<track>\<car>\` (`lap.jsonl`, `sections\section-NN.jsonl`, and `*.prev.jsonl` after a second save).
-- **Pause** (Esc) during a lap: that lap must not count (no best lap offered for it).
-- **END RUN** (tap twice): the end-of-run menu with KEEP ALL LAPS / KEEP BASELINES ONLY.
-- **Practice repeat** (the owner asked for it): turn around, drive back into the previous section, then forward again: the strip shows ↻ on the repeated section, the lap no longer counts, a faster repeat is offered as a section best.
+- **Map:** compare with the track map in the game. The page draws `pos_x` to the right and `pos_y` (the game's z) downwards. Mirrored → negate `pos_y` (or `pos_x`) in `parse()` and note it in [ACE/NOTES.md](ACE/NOTES.md).
+- **Car dot** follows the car, the red line grows behind it; strip and the four deltas fill while driving.
+- **REVIEW** (start view on the right): a best lap is offered after a clean lap; SAVE one, SKIP one, UNDO, SKIP ALL (tap twice). A saved best lap shows as the green line on the map. Files in `data\baselines\ace\<track>\<car>\`.
+- **GRAPHS:** tap a section on the map, in the strip or in REVIEW; green best, blue last, red now; LIVE follows the car again.
+- **Pause** (Esc) during a lap: the header says GAME PAUSED, that lap shows INTERRUPTED and is not offered.
+- **Another tab** (switch the iPad to DASH, drive, come back): the laps driven meanwhile are there.
+- **END RUN** (tap twice): the end-of-run menu (KEEP ALL LAPS / KEEP BASELINES ONLY).
+- **Practice repeat:** turn around into the previous section, then forward again: ↻ on that section in the strip, the lap does not count, a faster repeat is offered as a section best.
 
-### 4. DR2
+Then run `python tools\analysis_check.py --last 1` again.
 
-Enable UDP ([DR2/NOTES.md](DR2/NOTES.md)), GAME → DIRT RALLY 2.0, drive a stage. One stage = one lap: the time starts when the car moves off and ends when the car stops after the finish (`lap_pos` must reach 0.9995: check `/state` at the finish). The run is named after the stage length (`session_id` `stage-<length>`); car and track names are not in DR2's packet, so baselines go to `data\baselines\dr2\unknown\unknown\` – sort by stage length if the owner wants it better. Check the map orientation and steering sign as for ACE.
+### 5. DR2
+
+Enable UDP ([DR2/NOTES.md](DR2/NOTES.md)), GAME → DIRT RALLY 2.0, drive a stage. One stage = one lap: timed from the moment the car moves to when it stops after the finish (`lap_pos` must reach 0.9995: check `/state` at the finish; the header says STAGE FINISHED). The run is named `stage-<length>`; DR2 sends no car or track name, so baselines go to `data\baselines\dr2\unknown\unknown\` – ask the owner whether to sort them by stage length. Check map orientation, steering and the data with `analysis_check.py`.
 
 ## How the analysis works (where to look)
 
-- **Recorder** `core/recorder.py`, fed every frame by the reader thread in `core/server.py` (an exception is logged as `analysis | error` and never stops the bridge). Constants at the top: `BACKWARD_BREAK_M` (100 m back = lap does not count), `RESTART_M`, `MIN_TRACK_M`, `STAGE_END_POS`, `STANDING_KMH`. `_sample()` holds the line crossing, restart, stage end and the repeat rule; `_enter()` decides whether a section attempt starts (only forward from the section before).
-- **Config** `[analysis]` in `config/config.toml`: `enabled`, `data_dir` (`data`), `hz` (30), `section_m` (250).
-- **API for debugging** (open in the PC browser): `/api/analysis` (state, outline, offers), `/api/analysis/live` (deltas, strip, current section), `/api/analysis/section?n=3` (the three lines of section 4). Full list in [SPEC.md](SPEC.md#5-requests).
-- **Files** (JSON Lines, header line first): `data\runs\<game>\<track>\<car>\<date_time>\lap-007.jsonl` and `run.jsonl`; `data\baselines\<game>\<track>\<car>\`; open offers in `data\pending.jsonl`. `data\` is ignored by git. Formats in [SPEC.md](SPEC.md#analysis).
-- **Page** `ui/js/analysis.js`: polls `/live` 4 × per second, the selected section 2 × per second, draws map and graphs on canvas; the car dot comes from the normal stream.
+- **Recorder** `core/recorder.py`, fed every frame by the reader thread in `core/server.py` (an exception is logged as `analysis | error` and never stops the bridge). Constants at the top (`BACKWARD_BREAK_M`, `RESTART_M`, `MIN_TRACK_M`, `STAGE_END_POS`, `STANDING_KMH`). `_why_not()` says why a frame is not recorded; `_sample()` holds the line crossing, restart, stage end and repeat rule; `_enter()` decides whether a section attempt starts; `_shown()` picks the red / blue laps; `_strip()` and `_deltas()` feed the page.
+- **Config** `[analysis]` in `config\config.toml`: `enabled`, `data_dir`, `hz` (30), `section_m` (250).
+- **API** (PC browser): `/api/analysis`, `/api/analysis/live` (deltas, strip, `why`, `last_lap`), `/api/analysis/section?n=3`. Full list in [SPEC.md](SPEC.md#5-requests).
+- **Page** `ui/js/analysis.js`: polls `/live` 4 × per second, the selected section 2 × per second; map and graphs on canvas; the car dot from the normal stream; REVIEW / GRAPHS tabs (`setTab`).
 
 ## Known limitations (tell the owner if they come up)
 
-- After the session, red is always the last lap and blue the one before; there is no lap picker yet.
+- After the session, red is always the last lap and blue the one before; no lap picker yet.
 - UNDO restores the previous baseline but does not bring the offer back into REVIEW.
 - KEEP BASELINES ONLY deletes the lap files; offers still open then live only in memory until the bridge restarts.
 - A lap started standing on a circuit (race start) counts as a normal lap.
-- Baselines are kept per game / track / car folder. If a game reports a slightly different track length in another session, the section count can change and old section baselines no longer line up (not seen yet).
+- If a game reports a different track length in another session, the section count can change and old section baselines no longer line up (not seen yet).
 
 ## Debugging tools
 
-- Log `logs\racing-dashboard.log`: `analysis | run` (a run starts: track length and section count), `analysis | run end`, `analysis | baseline` (saved / undo), `analysis | error`; `data | error` for bad frames; `ace | shared memory` (game and layout version); `ace | raw` (light / wiper raw values).
-- `http://localhost:8080/state`: the current frame with all fields, including the analysis ones.
-- `py tools\ace_probe.py` (dash values) and `py tools\ace_probe.py --analysis` (analysis values and car slots).
-- Force a game: settings → GAME, or `config\settings.json` `{"game": "ace"}`.
-- Key overrides: `[games.<id>.keys]` in `config\config.toml` (local, not committed).
+- Log `logs\racing-dashboard.log`: `analysis | run` (a run starts: length, sections), `analysis | run end`, `analysis | baseline`, `analysis | error`; `data | error` for bad frames; `ace | shared memory`, `ace | raw`.
+- `http://localhost:8080/state`: the current frame with all fields.
+- `py tools\ace_probe.py [--analysis]`, `python tools\analysis_check.py [--last N] [--game ID]`.
+- Force a game: settings → GAME, or `config\settings.json` `{"game": "ace"}`. Key overrides: `[games.<id>.keys]` in `config\config.toml`.
 
 ## Decisions the owner made (keep them)
 
-- Universal UI, one folder per game (`games/<id>/connector.py`, `game.toml`, `dash.toml`); UI in `ui/` (plain HTML / CSS / JS); Python standard library only; commit directly to `main`.
+- Universal UI, one folder per game (`games/<id>/connector.py`, `game.toml`, `dash.toml`); UI in `ui/` (plain HTML / CSS / JS); Python standard library only.
 - GEAR + REV: yellow 14-segment digit in a light grey frame close to the screen edges, GEAR in the top line, as large as possible; 8 rev lights blue-green-yellow-red-red-yellow-green-blue filling from the outside in, flashing at the shift point, unlit fields dim; no rpm / speed numbers; E for errors with a chip; P D S B L M letters (S like a 5); gears above 9 show E; ACE auto-shift shows the gear number. **No** dimmed gear with the engine off, **no** flashing gear in the pit lane.
-- DASH (iPad): cards, the same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; a card lights up after a tap and when the value changes in the game; TC / ABS / ESC amber while active; warning lamps as colours only; no hints on the cards. ACE: IGNITION held, WIPERS as a latch, LIGHTS / WIPERS without state, diff locking in % for cars without diff steps, fixed settings shown as FIXED, no LAUNCH and no AUTO CLUTCH card. Landscape starts 26 px lower.
-- ANALYSIS ([ANALYSIS.md](ANALYSIS.md)): one page, no tabs, no coaching or tips; map left, six graphs right (speed, throttle, brake, steering, gear, delta); green best, blue last, red now; deltas for lap and section vs best ever and vs last always visible; section strip with slider; no braking markers; LIVE start view and tapping sections while driving; sections of 250 m by track position (not driven distance), last piece under 125 m joins the previous one; recording by time at 30 Hz, written at lap end; JSON Lines with a header line; baselines per game / track / car for the lap and every section; every new best is **offered, never saved without a tap**; one backup per baseline for UNDO; invalid laps: sections may be offered, the lap never; a run is a game session, all its laps kept, the end-of-run menu can keep baselines only; the repeat rule (entering N−1 then N replaces N; a spin at a border replaces nothing; backwards never recorded; all attempts kept, the latest shown).
+- DASH (iPad): cards, the same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; a card lights up after a tap and when the value changes in the game; TC / ABS / ESC amber while active; warning lamps as colours only; no hints. ACE: IGNITION held, WIPERS as a latch, LIGHTS / WIPERS without state, diff locking in % for cars without diff steps, FIXED settings, no LAUNCH, no AUTO CLUTCH. Landscape starts 26 px lower.
+- ANALYSIS ([ANALYSIS.md](ANALYSIS.md)): one page, no coaching or tips; map left; right side two tabs, **REVIEW first** (offers, SAVE / SKIP, SAVE ALL, SKIP ALL, UNDO) and GRAPHS (speed, throttle, brake, steering, gear, delta); green best, blue last, red now; lap and section deltas vs best ever and vs last always visible; section strip with slider; no braking markers; LIVE start view and tapping sections while driving; 250 m sections by track position (last piece under 125 m joins the previous one); recording by time at 30 Hz, written at lap end; JSON Lines with a header line; baselines per game / track / car for the lap and every section; every new best **offered, never saved without a tap**; one backup per baseline for UNDO; invalid laps: sections may be offered, the lap never; a run is a game session, all its laps kept, end-of-run menu can keep baselines only; the repeat rule (entering N−1 then N replaces N; a spin at a border replaces nothing; backwards never recorded; all attempts kept, the latest shown). Landscape starts 26 px lower.
 
 ## Working with the owner
 
 - The owner writes short messages (sometimes with typos); reply short and plain, in English.
-- Branches: `main`, plus one work-in-progress branch for a prototype the owner has not approved yet; no other branches.
+- Branches: commit to `main`; the only other branch is one work-in-progress branch for a prototype the owner has not approved yet, merged into `main` once approved. No branch per feature.
 - For visual changes: **show PNG mockups first** (HTML rendered with a headless browser), ask for feedback, then build. For bigger features the owner likes a short interview first.
 - Keep README, SPEC, the game notes and tests in step with every change; no personal data in commits; no emoji in the UI.
 - Ideas not built yet: lap picker after the session, AI coach (maybe later), tyre / brake temperature / damage cards, two-page dash box, names for light / wiper stages, flags, more games ([ASSISTS.md](ASSISTS.md)).

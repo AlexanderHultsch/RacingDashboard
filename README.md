@@ -117,4 +117,5 @@ docs/                     SPEC.md (the engine), ANALYSIS.md (the analysis page),
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields
+tools/analysis_check.py   checks the recorded laps and baselines in data/ (rate, gaps, lap / section times, ranges)
 ```
