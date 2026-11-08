@@ -5,16 +5,27 @@ The analysis page as agreed with the owner (interview, November 2026). Not built
 ## The page (one page, no tabs; iPad landscape)
 
 - **Left: the circuit map** with the track cut into sections. Overview of the whole track; tapping a section zooms into it, tapping again returns to the overview.
-- **Race lines** drawn on the map in high quality: **green** = the best (baseline) section, **blue** = the last lap, **red** = the current lap.
+- **Race lines** drawn on the map in high quality: **green** = the best (baseline) section, **blue** = the last lap, **red** = the current lap (after the session: the lap being looked at). No braking markers.
 - **Right: graphs for the selected section**, each with the same three lines (green best, blue last, red current), over the position in the section: speed, throttle, brake, steering, gear (throttle / brake and steering / gear as separate small graphs, so the colours keep meaning best / last / current), and the time delta building up inside the section.
 - **Always visible:** delta per section against best ever and against last lap, and delta per lap against best ever and against last lap.
-- **LIVE** is the start view: the current section is selected and the graphs update while driving. Tapping any section leaves LIVE (after the session every section can be looked at); the LIVE button returns.
+- **Section strip** under the map: the delta of every section against best and against last (two rows), horizontally scrollable with a slider for long tracks; in LIVE it scrolls along with the current section. Tapping a cell opens that section.
+- **LIVE** is the start view: the current section is selected and the graphs update while driving. Any section can be tapped and analysed **while driving** as well as after the session; the page stays there until LIVE is tapped, while recording, the top deltas and the strip keep updating.
 - A small list of **pending save offers** ("4 to review") and the **end-of-run menu** (below).
 
 ## Sections
 
 - Equal sections of **250 m along the track**, from the track length and the car's position on the lap (the game's normalised lap position), **not** the driven distance, so borders stay in the same place whatever line is driven. The last piece joins the previous section if it is shorter than 125 m.
 - Section times are interpolated at the borders, so they do not depend on the sample rate.
+
+## Repeating a section (practice)
+
+In practice you may turn around and drive a section again. The rule:
+
+- Entering section **N−1** (driving forward) means a repeat may follow; the new attempt replaces section **N** from the moment the car drives into N. A section's attempt is only ever replaced when it is entered **from the section before it**.
+- So a spin at a border does not overwrite anything: spinning at the N / N+1 border and rolling back into N leaves N untouched (it was not entered from N−1); entering N+1 again only restarts the N+1 attempt.
+- Driving backwards (lap position decreasing) is never recorded.
+- All attempts are kept in the run's files (numbered); the page shows the latest as the red line.
+- A faster repeat is offered in TO REVIEW like any best section; the lap it belongs to never counts as a lap.
 
 ## Recording
 
@@ -49,6 +60,6 @@ The bridge records at 30 Hz from the frame it already reads and writes only at l
 
 ## Next steps
 
-1. PNG mockup of the page (map left, graphs right, deltas, offers, end-of-run menu), feedback.
+1. PNG mockup of the page (map left, graphs right, deltas, offers, end-of-run menu) - done; feedback taken over above.
 2. Verify the new ACE / DR2 fields on the PC.
 3. Build: recorder and files in the bridge, API, page; tests with the demo car.
