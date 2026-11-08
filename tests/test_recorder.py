@@ -279,7 +279,7 @@ class RecorderTest(unittest.TestCase):
         self.assertTrue(all(v is not None and v > 0 for v in strip["best"]))
         self.assertIsNotNone(self.rec.live()["deltas"]["lap_last"])
 
-    def test_paused_shows_the_last_lap_and_why(self):
+    def test_paused_keeps_the_lap_in_progress_and_says_why(self):
         car = Car(self.rec, p=0.0)
         car.drive(1020)
         car.drive(200)
@@ -287,12 +287,26 @@ class RecorderTest(unittest.TestCase):
         live = self.rec.live()
         self.assertFalse(live["recording"])
         self.assertEqual(live["why"], "GAME PAUSED")
-        self.assertEqual(live["red_lap"], 1)          # the last complete lap, not the started one
+        self.assertEqual(live["red_lap"], 2)          # the lap in progress stays red while paused
+        self.assertTrue(live["now_line"])
+        state = self.rec.state()
+        self.assertEqual(state["blue_lap"], 1)        # and the last lap stays blue
+        self.assertTrue(state["lines"]["last"])
         self.assertIsNotNone(live["deltas"]["lap_time"])
-        self.assertTrue(all(v is not None for v in live["strip"]["times"]))
         self.assertEqual(live["last_lap"]["lap"], 1)
         self.rec.feed(frame(car.p, lap_pos=None), "demo", car.t + 0.2)
         self.assertEqual(self.rec.live()["why"], "THE GAME SENDS NO LAP POSITION")
+
+    def test_map_from_the_lap_in_progress_after_a_short_out_lap(self):
+        # out lap from the pit box a few metres before the line, no best lap yet (a new car)
+        car = Car(self.rec, p=0.995)
+        car.drive(30)                                  # over the line: lap 1 is 25 m long
+        car.drive(600)                                 # lap 2 in progress
+        outline = self.rec.state()["outline"]
+        self.assertGreater(outline[-1][2] - outline[0][2], 0.5)   # drawn from lap 2, not from the 25 m
+        car.drive(420)                                 # lap 2 complete: from the last lap
+        outline = self.rec.state()["outline"]
+        self.assertGreater(outline[-1][2] - outline[0][2], 0.95)
 
     def test_invalid_last_lap_still_gives_the_delta_to_last(self):
         car = Car(self.rec, p=0.0)

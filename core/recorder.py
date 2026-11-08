@@ -639,9 +639,9 @@ class Recorder:
         return f"{what} · lap {offer['lap']}" + (f" · attempt {offer['att']}" if (offer.get("att") or 1) > 1 else "")
 
     def _shown(self):
-        """(red, blue): the lap in progress and the last lap; between laps and while nothing is recorded
-        (pause, pits, after the run) the last lap and the one before."""
-        if self.lap is not None and len(self.lap.rows) > 1 and not self.paused:
+        """(red, blue): the lap in progress and the last lap, also while the game is paused (the owner wants
+        to look at the lap while paused); between laps and after the run the last lap and the one before."""
+        if self.lap is not None and len(self.lap.rows) > 1:
             return self.lap, self.last_lap
         return self.last_lap, self.prev_lap
 
@@ -650,11 +650,15 @@ class Recorder:
         return [[row[X], row[Y]] for row in rows[::step] if row[X] is not None]
 
     def _outline(self) -> list:
-        """The track drawn from the best lap, else the last lap, else the lap in progress: a point every 5 m."""
+        """The track drawn from the best lap, else from the last lap or the lap in progress, whichever covers
+        more of the track (the last lap may be a few metres from the pit box to the line): a point every 5 m."""
         if self.base["lap"]:
             rows = [(s["p"], s["x"], s["y"]) for s in self.base["lap"]["samples"]]
         else:
-            lap = self.last_lap if self.last_lap is not None else self.lap
+            def cover(lap):
+                line = lap.line() if lap is not None else []
+                return line[-1][P] - line[0][P] if len(line) > 1 else -1.0
+            lap = max((self.last_lap, self.lap), key=cover)
             rows = [(r[P], r[X], r[Y]) for r in (lap.line() if lap else [])]
         out, next_p = [], -1.0
         for p, x, y in rows:

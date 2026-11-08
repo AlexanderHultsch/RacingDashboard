@@ -33,7 +33,7 @@ The tests must pass (42 tests) and `--check` must print `Result OK`. The bridge 
 
 | Owner's finding | Cause | Now |
 | --- | --- | --- |
-| Section strip and the four deltas at the top empty | they compared against the lap just started (lap 6, which had reached no section yet) | sections the new lap has not reached show the last lap's values (dimmed); while paused / in the pits the page shows the last complete lap; the delta to the last lap no longer needs a valid last lap |
+| Section strip and the four deltas at the top empty | they compared against the lap just started (lap 6, which had reached no section yet) | sections the new lap has not reached show the last lap's values (dimmed); between laps the page shows the last complete lap (while paused it keeps the lap in progress, owner's wish, November 2026); the delta to the last lap no longer needs a valid last lap |
 | "NOT RECORDING" without a reason | the game sent no error; the recorder stopped for its own reason (most likely the game was paused) | the header says why (GAME PAUSED, REPLAY, NOT ON TRACK, no lap position, track length unknown, STAGE FINISHED) and shows the last lap time with OUT LAP / INVALID / INTERRUPTED / REPEATED |
 | Graph titles covered by the lines on the iPad | the plot started at the panel top | titles in their own band |
 | Page too close to the top edge (the iPad fades there) | | 26 px lower in landscape, as DASH |
