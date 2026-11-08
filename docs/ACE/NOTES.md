@@ -66,7 +66,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 - [ ] Analysis fields (not verified at all): `npos` runs 0..1 and wraps at the line; `track_length_m` is filled; the `car_ids` / `player_car_id` match finds the player (else the dot and lines show another car); `steerAngle` is −1..1; the map is not mirrored; `session_id` stays the same while driving and changes with a new session. `/state` shows `lap_pos`, `pos_x`, `pos_y`, `steer`, `session_id`.
 - [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), tyre data.
 
-`python tools/ace_probe.py` prints these values live.
+`python tools/ace_probe.py` prints these values live; `--analysis` prints the analysis fields and every occupied car slot with its driver id (the `*` slot is the one used as the player).
 
 The bridge also writes an `ace | raw | ...` line to the log whenever one of the rarely changing raw values changes: every `instrumentation` field (light and wiper stages, indicators, flash, hazards, display), the min..max range of `main_light_stage` and `wiper_level` on this car, and the seven `assists_state` flags by name. The first line after attaching lists them all. Switch lights or wipers in the game and the log shows which number each stage is.
 

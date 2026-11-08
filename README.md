@@ -116,5 +116,5 @@ data/                     recorded laps and baselines (JSON Lines; local, ignore
 docs/                     SPEC.md (the engine), ANALYSIS.md (the analysis page), ACE/ and DR2/ NOTES.md
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
-tools/ace_probe.py        prints the live ACE values (Windows, game running)
+tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields
 ```
