@@ -9,6 +9,8 @@
  *   lamps    warning lamps as icons, state only: off (grey), cold (blue), warn (yellow), alert (red)
  *   cycle    a stage setting (lights, wipers): the lamp steps to the next stage, optional extra button
  *   ignition ignition lamp (OFF / ON / RUNNING) that toggles the ignition, and a START button (held)
+ *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
+ *   push     a big button without a state; confirm_ms: hold that long before it fires
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
  * when it is pressed (until the new value arrives) and whenever its value changes in the game, so a
@@ -332,14 +334,72 @@
     return card;
   }
 
-  const TYPES = { stepper, bias, pair, toggle, fuel, lamps, cycle, ignition };
+  const VALUE_FORMATS = {
+    lap: (v) => RD.formats.lap(v),
+    pct: (v) => String(Math.round(v * 100)),
+    speed: (v) => RD.formats.speed(v),
+    int: (v) => String(Math.round(v)),
+  };
+  const VALUE_UNITS = { lap: () => "", pct: () => "%", speed: () => RD.formats.speedunit(), int: () => "" };
+
+  function value(def) {
+    const fmt = def.fmt || "int";
+    const card = baseCard(def, "value");
+    const body = el("div", "value-body");
+    const svg = segSvg("value-num");
+    body.appendChild(svg);
+    const bar = def.bar ? el("div", "tank", "<b></b>") : null;
+    if (bar) body.appendChild(bar);
+    card.insertBefore(body, card.querySelector(".hint"));
+    card.update = (f, error) => {
+      const v = f[def.field];
+      const missing = isNone(v);
+      setState(card, error, false);
+      card.classList.toggle("empty-value", !error && missing);
+      card.querySelector(".rng").textContent = (VALUE_UNITS[fmt] || VALUE_UNITS.int)();
+      drawSeg(svg, error || missing ? (fmt === "lap" ? "-:--.---" : "-") : (VALUE_FORMATS[fmt] || VALUE_FORMATS.int)(v));
+      if (bar) bar.firstChild.style.width = error || missing ? "0" : `${Math.max(0, Math.min(100, v * 100))}%`;
+    };
+    return card;
+  }
+
+  function push(def) {
+    const card = baseCard(def, "push");
+    const b = el("button", "btn lamp push-btn", "<span></span><i class=\"fill\"></i>");
+    b.querySelector("span").textContent = def.text || def.label;
+    b.dataset.action = def.action;
+    b._enabled = def.enabled[def.action];
+    const confirm = Number(def.confirm_ms || 0);
+    let timer = null;
+    const cancel = () => { clearTimeout(timer); timer = null; b.classList.remove("pressed", "arming"); };
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (b.disabled || timer) return;
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+      b.classList.add("pressed");
+      if (!confirm) { card.press(def.action); return; }
+      b.style.setProperty("--confirm", `${confirm}ms`);
+      b.classList.add("arming");                      // the fill grows while the finger stays on the button
+      timer = setTimeout(() => { timer = null; b.classList.remove("arming"); card.press(def.action); }, confirm);
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((n) => b.addEventListener(n, cancel));
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    card.insertBefore(b, card.querySelector(".hint"));
+    card.update = (f, error) => {
+      setState(card, error, false);
+      b.disabled = !!error || !b._enabled;
+    };
+    return card;
+  }
+
+  const TYPES = { stepper, bias, pair, toggle, fuel, lamps, cycle, ignition, value, push };
 
   RD.dashbox = function (grid) {
     RD.loadInfo().then((info) => {
       const cards = (info.dash || []).filter((def) => TYPES[def.type]).map((def) => TYPES[def.type](def));
       cards.forEach((card) => grid.appendChild(card));
       grid.dataset.count = cards.length;
-      grid.dataset.size = cards.length > 8 ? "large" : "normal";      // more than 8 cards: 5 columns
+      grid.dataset.size = cards.length > 8 ? "large" : cards.length <= 6 ? "small" : "normal";   // 5 / 3 / 4 columns
       if (!cards.length) grid.appendChild(el("p", "empty", "No dash box for this game yet (games/&lt;game&gt;/dash.toml)."));
       const update = (f) => {
         const error = RD.errorOf(f);

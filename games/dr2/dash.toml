@@ -1,0 +1,51 @@
+# The iPad dash box (page DASH) for DiRT Rally 2.0.
+#
+# DiRT Rally 2.0 has no driving aids to change while driving and reports no light, wiper or assist
+# state, so its dash box is different from Assetto Corsa EVO: stage information to read, and big
+# buttons for what you need on a stage. Card types: see games/ace/dash.toml, plus
+#
+# type = "value"     a value in segments: field, fmt ("lap" time, "pct" share, "speed", "int"),
+#                    bar = true (a bar for a 0..1 share)
+# type = "push"      a big button without a state: action, text (button text), confirm_ms (hold this
+#                    long before it fires, for buttons that must not fire by accident)
+
+[[control]]
+type = "value"
+label = "STAGE TIME"
+field = "lap_ms"
+fmt = "lap"
+
+[[control]]
+type = "value"
+label = "STAGE"
+field = "lap_progress"
+fmt = "pct"
+bar = true
+
+[[control]]
+type = "value"
+label = "SPEED"
+field = "speed_kmh"
+fmt = "speed"
+
+[[control]]
+type = "push"
+label = "LIGHTS"
+action = "lights"
+text = "LIGHTS"
+hint = "On / off (the game does not report the state)"
+
+[[control]]
+type = "push"
+label = "WIPERS"
+action = "wipers"
+text = "WIPERS"
+hint = "On / off (the game does not report the state)"
+
+[[control]]
+type = "push"
+label = "RECOVER"
+action = "recover"
+text = "HOLD TO RECOVER"
+confirm_ms = 1000
+hint = "Back on the road - costs time"

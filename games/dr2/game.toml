@@ -1,0 +1,27 @@
+# DiRT Rally 2.0 (PC). Reads the game's UDP telemetry, sends buttons as keypresses.
+# Turn the telemetry on once (the dashboard log says if it is off):
+#   Documents\My Games\DiRT Rally 2.0\hardware_settings\hardware_settings_config.xml
+#   <udp enabled="true" extradata="3" ip="127.0.0.1" port="20777" delay="1" />
+# Do not edit for your own key changes: put overrides in config/config.toml under [games.dr2.keys].
+
+[game]
+name = "DiRT Rally 2.0"
+
+[window]
+process = "dirtrally2.exe"
+title = "DiRT Rally 2.0"
+
+[udp]
+# Must match port="..." in hardware_settings_config.xml. Another telemetry tool on the same port
+# (SimHub, a motion rig) needs the game's data forwarded to the dashboard, or a different port.
+port = 20777
+
+# Action -> key combo (key names: see games/ace/game.toml). Empty = no key, the button is greyed out.
+# DiRT Rally 2.0 can change ABS / TC / stability only in the assist menu, not while driving.
+# The keys below are the commonly listed keyboard defaults and are not verified: check them in the game
+# (Options > Controls > Keyboard) and change what differs.
+[keys]
+lights = "H"
+wipers = "W"
+recover = "F2"
+pause = "Esc"

@@ -77,6 +77,8 @@ DASH_TYPES = {
     "fuel": {"need": ("field",), "actions": ()},
     "lamps": {"need": ("fields", "icons"), "actions": ()},
     "cycle": {"need": ("field", "action"), "actions": ("action", "extra")},
+    "value": {"need": ("field",), "actions": ()},
+    "push": {"need": ("action",), "actions": ("action",)},
     "ignition": {"need": ("field", "running", "action"), "actions": ("action", "starter")},
 }
 DASH_FIELD_KEYS = ("field", "active", "max", "per_lap", "running")   # map keys that name one telemetry field
@@ -97,6 +99,8 @@ def check_dash(game: dict) -> None:
             fields = list(control.get("fields", [])) + [control[key] for key in DASH_FIELD_KEYS if control.get(key)]
             unknown = [f for f in fields if f not in telemetry.FIELDS]
             unknown += [icon for icon in control.get("icons", []) if icon not in LAMP_ICONS]
+            if control["type"] == "value" and control.get("fmt", "int") not in ("lap", "pct", "speed", "int"):
+                unknown.append(f"fmt {control.get('fmt')}")
             unknown += [control[key] for key in kind["actions"] if control.get(key) and control[key] not in actions.BY_NAME]
             if unknown:
                 problem = f"unknown {', '.join(unknown)}"

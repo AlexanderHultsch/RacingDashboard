@@ -48,6 +48,7 @@ GROUPS = [
     ]},
     {"name": "PIT", "buttons": [
         {"action": "pause", "label": "PAUSE / ESC", "type": "tap"},
+        {"action": "recover", "label": "RECOVER", "type": "tap"},
         {"action": "auto_shifter", "label": "AUTO SHIFT", "type": "tap"},
         {"action": "shift_down", "label": "SHIFT -", "type": "tap", "field": "gear"},
         {"action": "shift_up", "label": "SHIFT +", "type": "tap", "field": "gear"},

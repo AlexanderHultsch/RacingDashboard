@@ -1,6 +1,6 @@
 # Racing-Dashboard – Spec
 
-The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md). Driving assists of all planned games: [ASSISTS.md](ASSISTS.md).
+The specification of the engine that all games share. Game notes: [ACE/NOTES.md](ACE/NOTES.md). DiRT Rally 2.0: [DR2/NOTES.md](DR2/NOTES.md). Driving assists of all planned games: [ASSISTS.md](ASSISTS.md).
 
 ## 1. Purpose and principles
 
@@ -71,6 +71,7 @@ Phone / tablet pages (ui/)
 | `pit_limiter`, `ignition`, `engine_running`, `lights`, `wipers` | car systems (lights / wipers are stages, 0 = off) |
 | `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | litres |
 | `lap`, `position`, `cars` | completed laps, position, number of cars |
+| `lap_progress` | share of the lap / stage driven, 0..1 |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
 | `flag` | `none`, `blue`, `yellow`, ... (not filled for ACE yet) |
 | `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
@@ -151,13 +152,15 @@ The tablet page (`dash.html`, `js/dashbox.js`, style **CARDS** `styles/dash/card
 | `fuel` | litres (segments), a tank bar (yellow below 15 %, red below 7 %), laps left (or "OF n L") | none | `field`, `max`?, `per_lap`? |
 | `cycle` | a stage setting (lights, wipers): a lamp with the stage (`names`, else OFF / the number), lit amber above 0 | the lamp steps to the next stage; optional second button `extra` (e.g. FLASH) | `field`, `action`, `names`?, `extra`?, `extra_label`? |
 | `ignition` | OFF / ON (amber) / RUNNING (green) | the lamp toggles the ignition; START is held like a starter (disabled while the engine runs) | `field`, `running`, `action`, `starter` |
+| `value` | a value in segments (`fmt` `lap` time, `pct`, `speed` with the device's unit, `int`), optional bar for a 0..1 share | none | `field`, `fmt`, `bar`? |
+| `push` | a big button without a state | the button; with `confirm_ms` it fires only after being held that long (a fill shows the progress) | `action`, `text`?, `confirm_ms`? |
 | `lamps` | warning lamps as icons, state only: grey off, blue cold, yellow warning, red alert (icons `brake`, `engine`, `oil`, `coolant`) | none | `fields`, `icons`, `labels` |
 
 Every card has `label` and an optional `hint` (small text at the bottom, e.g. "Set in the game's assist menu"). A stepper may name an `active` field (`tc_active`, `abs_active`, `esc_active`): while it is true the digits, dots and frame turn amber. Every value is read back from the game, so the card shows what the game applied. A card **lights up** (yellow outline) after a press until the new value arrives (at most 1.2 s), and for 0.7 s whenever its value changes in the game, so a change made in the car looks the same as one made on the tablet (fuel and lamps do not light up). A card whose value is `None` (the car does not have it) is greyed out with "NOT ON THIS CAR" and takes no presses; a button whose action has no key for the game is disabled. While there is an error ([Errors](#errors)) all cards show "-" and take no presses, and the chip sits in a strip above the cards. The bridge checks the map at start (`check_dash`: known type, action and field names; a bad card is logged and left out) and serves it in `/api/info` as `dash`, with `enabled` per action.
 
-Actions of type `hold` (`actions.py`, e.g. FLASH, START) are pressed while the finger is on the button (`/api/info` sends `kinds` per action). Landscape: 4 columns, 5 for more than 8 cards (15 cards: 5 × 3); portrait: 2 columns, 3 for more than 8 cards. Tappable lamps stay at least 56 px high.
+Actions of type `hold` (`actions.py`, e.g. FLASH, START) are pressed while the finger is on the button (`/api/info` sends `kinds` per action). Landscape: 3 columns for up to 6 cards, 4 up to 8, 5 for more (15 cards: 5 × 3); portrait: 2 columns, 3 for more than 8 cards. Tappable lamps stay at least 56 px high.
 
-Assetto Corsa EVO: TC, TC CUT, ABS, STABILITY, ENGINE MAP (steppers; TC, TC CUT, ABS and STABILITY amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LAUNCH (shown only: activated in the car by holding brake and throttle), LIGHTS (cycle + FLASH), WIPERS (cycle), IGNITION (+ START), AUTO CLUTCH (shown only: set in the game's assist menu), WARNINGS (brake, engine, oil, coolant). The demo game has the same map; its car has no stability control, warms up from cold and overheats with engine map 5.
+Assetto Corsa EVO: TC, TC CUT, ABS, STABILITY, ENGINE MAP (steppers; TC, TC CUT, ABS and STABILITY amber while active), BRAKE BIAS, FUEL, DIFF (pair, shown only: ACE has no key binding for it), PIT LIMITER (toggle), LAUNCH (shown only: activated in the car by holding brake and throttle), LIGHTS (cycle + FLASH), WIPERS (cycle), IGNITION (+ START), AUTO CLUTCH (shown only: set in the game's assist menu), WARNINGS (brake, engine, oil, coolant). DiRT Rally 2.0 has its own map ([DR2/NOTES.md](DR2/NOTES.md)): STAGE TIME, STAGE, SPEED, LIGHTS, WIPERS, RECOVER (held 1 s). The demo game has the same map as Assetto Corsa EVO; its car has no stability control, warms up from cold and overheats with engine map 5.
 
 The former tablet page with the telemetry strip and the four button tabs is now **BUTTONS** (`buttons.html`, `styles/buttons/standard.css`).
 

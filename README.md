@@ -8,7 +8,7 @@ A universal dashboard for PC racing games on your phone and tablet. A small Pyth
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
 
-**Games:** Assetto Corsa EVO (PC) and a **Demo** game, a simulated car for trying the pages without a game. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
+**Games:** Assetto Corsa EVO (PC), DiRT Rally 2.0 (PC) and a **Demo** game, a simulated car for trying the pages without a game. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
 
 **Status:** the bridge, the pages and the demo game are built and tested. The ACE connector is built from Kunos' shared memory documentation and tested against a simulated shared memory, not yet in the game. The ACE keyboard defaults could not be confirmed, so check the keys once in the game, see [ACE keys](#ace-keys).
 
@@ -98,6 +98,7 @@ core/                     the bridge, the same for every game
   config.py, log.py       configuration and rolling log
 games/                    one folder per game
   ace/                    Assetto Corsa EVO: connector.py (shared memory), game.toml (window, keys), dash.toml (dash box)
+  dr2/                    DiRT Rally 2.0: connector.py (UDP telemetry), game.toml (window, keys, port), dash.toml
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
   index.html, gear.html, dash.html, buttons.html    the pages
