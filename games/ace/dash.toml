@@ -121,15 +121,6 @@ starter = "starter"
 hint = "Hold to switch (ACE needs a few s), hold START"
 
 [[control]]
-type = "toggle"
-label = "AUTO CLUTCH"
-field = "auto_clutch"
-on = "ON"
-off = "OFF"
-style = "green"
-hint = "Set in the game's assist menu"
-
-[[control]]
 type = "lamps"
 label = "WARNINGS"
 fields = ["warn_brake", "warn_engine", "warn_oil", "warn_coolant"]
