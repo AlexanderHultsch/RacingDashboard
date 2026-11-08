@@ -29,7 +29,7 @@ GROUPS = [
         {"action": "lights", "label": "LIGHTS", "type": "tap", "field": "lights"},
         {"action": "flash", "label": "FLASH", "type": "hold"},
         {"action": "wipers", "label": "WIPERS", "type": "tap", "field": "wipers"},
-        {"action": "ignition", "label": "IGNITION", "type": "tap", "field": "ignition"},
+        {"action": "ignition", "label": "IGNITION", "type": "hold", "field": "ignition"},
         {"action": "starter", "label": "STARTER", "type": "hold", "field": "engine_running"},
         {"action": "indicator_left", "label": "IND LEFT", "type": "tap"},
         {"action": "indicator_right", "label": "IND RIGHT", "type": "tap"},

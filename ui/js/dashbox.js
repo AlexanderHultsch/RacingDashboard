@@ -8,7 +8,7 @@
  *   fuel     litres with a tank bar and laps left
  *   lamps    warning lamps as icons, state only: off (grey), cold (blue), warn (yellow), alert (red)
  *   cycle    a stage setting (lights, wipers): the lamp steps to the next stage, optional extra button
- *   ignition ignition lamp (OFF / ON / RUNNING) that toggles the ignition, and a START button (held)
+ *   ignition ignition lamp (OFF / ON / RUNNING) that sends the ignition action (held if its kind is hold), and a START button (held)
  *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
  *   push     a big button without a state; confirm_ms: hold that long before it fires
  *

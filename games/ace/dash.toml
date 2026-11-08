@@ -16,7 +16,7 @@
 #                    action (next stage), names (optional, one text per stage), extra / extra_label
 #                    (optional second button, e.g. headlight flash; a "hold" action is held while pressed)
 # type = "ignition"  ignition and starter: field (ignition on), running (engine running),
-#                    action (toggle ignition), starter (held while pressed)
+#                    action (ignition, held while pressed: a short touch is a tap), starter (held while pressed)
 # active             (stepper) a field that is true while the system works: the digits light amber
 # label              card title;  hint: small text at the bottom of the card
 #
@@ -93,15 +93,6 @@ style = "amber"
 hint = "Tap to switch"
 
 [[control]]
-type = "toggle"
-label = "LAUNCH"
-field = "launch"
-on = "ACTIVE"
-off = "OFF"
-style = "amber"
-hint = "Hold brake + full throttle"
-
-[[control]]
 type = "cycle"
 label = "LIGHTS"
 field = "lights"
@@ -124,7 +115,7 @@ field = "ignition"
 running = "engine_running"
 action = "ignition"
 starter = "starter"
-hint = "Tap to switch, hold START"
+hint = "Hold to switch (ACE needs a few s), hold START"
 
 [[control]]
 type = "toggle"
