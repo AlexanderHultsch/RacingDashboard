@@ -20,10 +20,10 @@ Principles:
 | --- | --- |
 | First game | Assetto Corsa EVO on PC (shared memory) |
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
-| Pages | GEAR + REV (phone, 2 styles), DASH (tablet); every device can open every page |
+| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH (tablet); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap or hold |
-| Shift lights | The game's own shift signal; the strip is scaled to the learned shift point |
+| Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
 | Units | km/h by default, mph per device |
 | Code | Public GitHub repo `Racing-Dashboard`, main branch |
 
@@ -108,7 +108,7 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 - **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `rpm`, `speed`, `speedunit`, `level`, `bias`, `fuel`, `onoff`, `lap`, `delta`, `position`, `fuellaps`, `pct`, `int`, `text`; more in `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
 - **Body classes** for styles: `rd-stale` (no data for 2.5 s or not connected; a "NO DATA" chip shows), `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`.
-- **Widgets.** `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
+- **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. They light over the last `range` (0.25) of the rpm share below the shift point, in pairs from the outside in (or from the left); unlit fields stay dim. At the game's `shift_up` all fields flash, on the `limiter` faster. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `-` before the first data. Widgets register in `RD.widgetInits`. `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
 - **Styles.** `<body data-page="gear" data-styles="classic,bar">` and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
 - **Toolbar and settings.** Bottom right: the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). The settings are listed in the [README](../README.md#settings).
 - **Buttons** (`js/buttons.js`, DASH): built from `/api/info`, one tab per group, the chosen tab is stored on the device; pointer events, so a hold works with the finger resting on it.
@@ -116,7 +116,7 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 ### GEAR + REV
 
-Elements: LED strip, RPM bar, gear, rpm, speed, chips (PIT, TC, ABS). **CLASSIC**: LED strip on top, a huge gear (blue at the shift point, red on the limiter), rpm and speed below. **BAR**: the gear in a box that turns blue / red, the rpm number, a full-width RPM bar with the shift mark, the speed.
+One style, **SEGMENT** (`styles/gear/segment.css`): 8 rev lights on top (blue, green, yellow, red, red, yellow, green, blue; filling from the outside in, flashing at the shift point); below, a light grey frame that runs close to the screen edges with GEAR (in segments) set into its top line, and the gear as a yellow 14-segment display at 92 % of the frame height (landscape) or width (portrait). No rpm or speed numbers. Without data the gear shows `-` in dim yellow. The settings button sits faintly inside the bottom right corner of the frame.
 
 ### DASH
 

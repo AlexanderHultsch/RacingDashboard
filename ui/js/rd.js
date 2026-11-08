@@ -4,7 +4,8 @@
  * - data-rd="field"    any element with this attribute shows that telemetry field,
  *   data-fmt="name"    formatted with RD.formats[name] (gear, speed, rpm, lap, delta, ...)
  * - data-rd-on="field" toggles the class "on" while the field is truthy
- * - RD.widgets         LED shift strip (.rd-leds) and RPM bar (.rd-rpmbar)
+ * - RD.widgets         rev lights (.rd-revlights), LED shift strip (.rd-leds), RPM bar (.rd-rpmbar);
+ *                      js/seg14.js adds 14-segment displays (.rd-seg, .rd-seg-text)
  * - RD.styles          the visual styles of a page, cycled with the style button
  * - RD.settings        the settings overlay (game, update rate, units, screen, info)
  * - RD.command()       sends a button to the game
@@ -184,6 +185,50 @@
       el.classList.toggle("shift", !!f.shift_up || !!f.limiter);
     });
   };
+
+  /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.25"></div>
+     One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
+     from the outside in; "left": one after another from the left. They light over the last `range` of the
+     rpm share below the learned shift point; at the game's shift signal all fields flash (class "shift"),
+     on the rev limiter they flash faster (class "limiter"). Unlit fields stay dim (CSS). */
+  RD.widgets.revlights = function (el) {
+    const colors = (el.dataset.colors || "b g y r r y g b").trim().split(/\s+/);
+    const outside = (el.dataset.fill || "outside") === "outside";
+    const range = Number(el.dataset.range || 0.25);
+    const n = colors.length;
+    const fields = colors.map((color) => {
+      const field = document.createElement("i");
+      field.className = color;
+      el.appendChild(field);
+      return field;
+    });
+    const step = fields.map((_, i) => (outside ? Math.min(i, n - 1 - i) : i));   // the step at which a field lights
+    const steps = Math.max(...step) + 1;
+    let lastLit = -1, lastState = "";
+    widgets.push((f) => {
+      const shift = RD.shiftPoint(f);
+      const share = ((f.rpm_pct || 0) - (shift - range)) / range;
+      let lit = f.connected ? Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6))) : 0;
+      const state = !f.connected ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
+      if (state) lit = steps;
+      if (lit !== lastLit) {
+        fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
+        lastLit = lit;
+      }
+      if (state !== lastState) {
+        el.classList.toggle("shift", state === "shift");
+        el.classList.toggle("limiter", state === "limiter");
+        lastState = state;
+      }
+    });
+  };
+
+  /* Widgets set up by RD.start: [selector, init]. Other scripts (js/seg14.js) add their own. */
+  RD.widgetInits = [
+    [".rd-revlights", RD.widgets.revlights],
+    [".rd-leds", RD.widgets.leds],
+    [".rd-rpmbar", RD.widgets.rpmbar],
+  ];
 
   /* ------------------------------------------------------------ styles */
 
@@ -365,8 +410,7 @@
   RD.start = function (options) {
     options = options || {};
     RD.styles.init();
-    document.querySelectorAll(".rd-leds").forEach(RD.widgets.leds);
-    document.querySelectorAll(".rd-rpmbar").forEach(RD.widgets.rpmbar);
+    for (const [selector, init] of RD.widgetInits) document.querySelectorAll(selector).forEach((el) => init(el));
     RD.bind();
     if (options.toolbar !== false) RD.toolbar();
     document.body.classList.add("rd-stale");

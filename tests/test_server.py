@@ -56,7 +56,7 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/bar.css", "/apple-touch-icon.png"):
+        for path in ("/", "/gear", "/dash", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/apple-touch-icon.png"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)

@@ -76,6 +76,28 @@ button {
 
 @keyframes rd-flash { 50% { opacity: 0.15; } }
 
+/* ------------------------------------------------------------ rev lights (fields) */
+
+/* Give .rd-revlights a height; the fields share the width. Unlit fields show a dim version of their colour. */
+.rd-revlights {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 1.4vmin;
+}
+.rd-revlights i { border-radius: 0.6vmin; opacity: 0.15; }
+.rd-revlights i.b { background: var(--blue); }
+.rd-revlights i.g { background: var(--green); }
+.rd-revlights i.y { background: var(--yellow); }
+.rd-revlights i.r { background: var(--red); }
+.rd-revlights i.on { opacity: 1; }
+.rd-revlights i.on.b { box-shadow: 0 0 3vmin var(--blue); }
+.rd-revlights i.on.g { box-shadow: 0 0 3vmin var(--green); }
+.rd-revlights i.on.y { box-shadow: 0 0 3vmin var(--yellow); }
+.rd-revlights i.on.r { box-shadow: 0 0 3vmin var(--red); }
+.rd-revlights.shift i { animation: rd-flash 0.16s steps(1) infinite; }
+.rd-revlights.limiter i { animation: rd-flash 0.1s steps(1) infinite; }
+
 /* ------------------------------------------------------------ RPM bar */
 
 .rd-rpmbar {

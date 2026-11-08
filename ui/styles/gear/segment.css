@@ -1,0 +1,76 @@
+/* Gear + Rev, style SEGMENT: 8 rev lights on top, the gear as a big yellow 14-segment display in a
+   light grey frame that runs close to the screen edges, with GEAR set into the top line. */
+
+:root {
+  --seg: #ffe93b;
+  --seg-label: #e6d23a;
+  --seg-dim: #4a4520;
+  --frame: #d9dde2;
+  --frame-w: 1.1vmin;
+  --edge: 2.8vmin;
+  --bg: #050607;
+}
+
+html, body { background: var(--bg); }
+
+.gear-page {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 2.4vmin;
+  padding: max(2.6vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
+}
+
+.rd-revlights { height: 9vmin; }
+
+.gear-area { position: relative; min-height: 0; }
+
+.gear-frame {
+  position: absolute;
+  top: 3vmin;          /* room for the label, which sits on the top line */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+}
+
+.gear-label {
+  position: absolute;
+  top: 3vmin;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 2.4vmin;
+  background: var(--bg);
+}
+.gear-label svg { display: block; height: 6vmin; width: auto; }
+.gear-label .on { fill: var(--seg-label); }
+
+/* the gear: as large as the frame allows */
+.gear-digit {
+  display: block;
+  height: 92%;
+  width: auto;
+  max-width: 94%;
+  overflow: visible;
+  filter: drop-shadow(0 0 1vmin rgba(255, 233, 59, 0.35));
+}
+.gear-digit .on { fill: var(--seg); }
+.rd-stale .gear-digit { filter: none; }
+.rd-stale .gear-digit .on { fill: var(--seg-dim); }
+
+/* settings button: faint, inside the frame corner */
+.rd-toolbar {
+  right: calc(max(var(--edge), var(--safe-r)) + var(--frame-w) + 6px);
+  bottom: calc(max(var(--edge), var(--safe-b)) + var(--frame-w) + 6px);
+}
+.rd-tool { opacity: 0.35; }
+
+@media (orientation: portrait) {
+  .gear-page { padding-top: max(4vmin, var(--safe-t)); gap: 4vmin; }
+  .rd-revlights { height: auto; aspect-ratio: 8 / 1.4; }
+  .gear-digit { width: 92%; height: auto; max-height: 92%; }
+}

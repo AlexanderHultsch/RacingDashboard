@@ -2,7 +2,7 @@
 
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
-- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: a huge gear and the shift lights. Two styles, **CLASSIC** (LED strip and big gear) and **BAR** (gear box and RPM bar), switched with the small style button.
+- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point.
 - **DASH** (`/dash`), for a tablet: gear, RPM, speed, TC, ABS, brake bias, engine map, fuel, position and lap times, plus four tabs of buttons that are sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
@@ -64,7 +64,7 @@ The gear button at the bottom right of every page opens the settings:
 | GAME | all devices | the connector: Assetto Corsa EVO or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
-| STYLE OF THIS PAGE | this device | e.g. CLASSIC or BAR on GEAR + REV (the half-moon button cycles them) |
+| STYLE OF THIS PAGE | this device | shown when a page has more than one style (the half-moon button cycles them) |
 | KEEP SCREEN ON | this device | uses the browser's wake lock where allowed. iOS allows it only on HTTPS, so for a phone used as a display set **Settings → Display & Brightness → Auto-Lock → Never** |
 | INFO | | game, data state, car, track, frames per second, the address for other devices |
 
@@ -101,6 +101,7 @@ ui/                       the web pages
   index.html, gear.html, dash.html    the pages
   icon.ico, apple-touch-icon.png      icons for the Windows shortcut and the home screen
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
+  js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml and settings.json are local and ignored)
