@@ -62,4 +62,5 @@ DiRT Rally 2.0 (`games/dr2/connector.py`, `docs/DR2/NOTES.md`): rpm sent as tent
 - Plain English docs; update README / SPEC / game notes with every behaviour change; keep tests passing and add tests for new logic.
 - No personal data in code, docs, logs or commits; machine settings only in the ignored `config/config.toml`.
 - No emoji in the UI (icons are inline SVG).
+- Analysis page: agreed strategy in [ANALYSIS.md](ANALYSIS.md), not built yet.
 - Ideas not built yet: tyres / brake temperature / damage cards, two-page dash box (DRIVE / CAR), names for light / wiper stages, flags (ACE enum unpublished), electric single-speed detection (ACE `engine_type` numbers unpublished), more games (see [ASSISTS.md](ASSISTS.md)).

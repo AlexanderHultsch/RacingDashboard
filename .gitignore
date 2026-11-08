@@ -22,3 +22,6 @@ tools/package-lock.json
 .idea/
 .DS_Store
 Thumbs.db
+
+# Recorded laps and baselines (analysis page)
+data/
