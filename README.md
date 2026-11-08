@@ -74,12 +74,12 @@ The gear button at the bottom right of every page opens the settings:
 
 The buttons are keypresses (scan codes, like a real keyboard). ACE has to be the active window on the PC; the bridge brings it to the front if needed.
 
-ACE has no keyboard defaults for the car controls, so bind the keys once in ACE under **Options → Controls → Car**. [docs/ACE/KEYS.md](docs/ACE/KEYS.md) lists every ACE control by its exact name with the proposed key (numpad for TC / ABS / ESC / map / brake bias, the Insert-to-PageDown block for pit limiter, lights, flash, wipers, ignition and starter), what is not needed, and what to check after binding. The same keys are set in `games/ace/game.toml`. If you bind other keys, put yours in `config/config.toml`:
+ACE has no keyboard defaults for the car controls, so bind the keys once in ACE under **Options → Controls → Car**. [docs/ACE/KEYS.md](docs/ACE/KEYS.md) lists every ACE control by its exact name with the proposed key (numpad for TC / ABS / ESC / map / brake bias and lights, PageUp / PageDown for flash and starter, letters P / U / I for pit limiter, wipers and ignition; Insert, Home, Delete and End do not work in ACE), what is not needed, and what to check after binding. The same keys are set in `games/ace/game.toml`. If you bind other keys, put yours in `config/config.toml`:
 
 ```toml
 [games.ace.keys]
-tc_up = "Num9"
-pit_limiter = "P"
+tc_up = "Num6"
+pit_limiter = "J"
 ```
 
 A button without a key is greyed out. `tools/ace_probe.py` prints the live values the bridge reads from ACE, which is useful for checking the connector in the game.

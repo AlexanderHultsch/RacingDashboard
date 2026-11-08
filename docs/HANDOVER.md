@@ -46,7 +46,7 @@ Assetto Corsa EVO (`games/ace/connector.py`, `docs/ACE/NOTES.md`):
 - `esc_level`, `tc_cut_level`, `diff_power/coast`, `launch_active`, `assists_state` order (auto_gear = index 0, auto_clutch = index 2; the `ace | raw` log lines show all flags by name). The gear no longer shows D for auto_gear: it is an auto-shifter, the owner wants the gear number.
 - Warning lamp thresholds (coolant 50 / 108 / 118 °C, oil 135 °C, oil pressure 0.5 bar, handbrake > 5 %) and that `oil_pressure_bar`, `water_temperature_c` are filled.
 - Light and wiper stages (`main_light_stage`, `wiper_level`): what each number means → names in `games/ace/dash.toml` (`names = [...]`).
-- Keys: ACE has no keyboard defaults for the car tab (verified). The proposed plain keys and the exact ACE control names are in [ACE/KEYS.md](ACE/KEYS.md); the owner binds them, then each DASH card is checked. "Starter" assumed to work while held. Window process `AssettoCorsaEVO.exe` verified (keys were sent, none refused).
+- Keys: ACE has no keyboard defaults for the car tab (verified). Insert, Home, Delete and End do not work in ACE bindings (moved to P, Num9, U, I). The proposed keys and the exact ACE control names are in [ACE/KEYS.md](ACE/KEYS.md); the owner binds them, then each DASH card is checked. "Starter" assumed to work while held. Window process `AssettoCorsaEVO.exe` verified (keys were sent, none refused).
 
 DiRT Rally 2.0 (`games/dr2/connector.py`, `docs/DR2/NOTES.md`): rpm sent as tenths or not (auto-detected from max rpm < 2000), reverse encoding (negative, or 10), stage progress 0..100 %, keys `H` / `W` / `F2` / `Esc`, port 20777 free.
 

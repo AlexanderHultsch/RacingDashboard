@@ -2,7 +2,7 @@
 
 The iPad buttons are keypresses. ACE has **no keyboard defaults** for the car controls (first test, Nov 2026: every row on Options → Controls → Car was empty, only Horn had a controller button), so each key below has to be bound once in ACE. The keys are already set in `games/ace/game.toml`; bind the same ones in ACE.
 
-The names in the first column are written exactly as ACE shows them. All proposals are plain keys without Ctrl / Shift, so it does not matter whether ACE accepts key combinations. They sit on the numpad and the Insert / Home / PageUp block, where a driving game rarely has a default.
+The names in the first column are written exactly as ACE shows them. All proposals are plain keys without Ctrl / Shift, so it does not matter whether ACE accepts key combinations. They sit on the numpad, PageUp / PageDown and a few letters. Insert, Home, Delete and End are not used: ACE did not take them when binding (Home showed as `$`, Delete as `.`).
 
 **How to bind:** in ACE open Options → Controls → Car, click the keyboard field (the dark box) next to the row and press the key. Or, with the bridge running, tap the matching iPad button while ACE waits for the key: the bridge then sends exactly the key it will use later.
 
@@ -22,14 +22,14 @@ The names in the first column are written exactly as ACE shows them. All proposa
 | Engine Map Cycle + | ENGINE MAP + | `NumPlus` |
 | Brake Bias Rear | BRAKE BIAS REAR | `NumDivide` |
 | Brake Bias Front | BRAKE BIAS FRONT | `NumMultiply` |
-| Pit Limiter Toggle | PIT LIMITER | `Insert` |
-| Light Cycle + | LIGHTS | `Home` |
+| Pit Limiter Toggle | PIT LIMITER | `P` |
+| Light Cycle + | LIGHTS | `Num9` |
 | Flashing Lights | FLASH (held) | `PageUp` |
-| Wiper Cycle + | WIPERS | `Delete` |
-| Toggle Ignition | IGNITION | `End` |
+| Wiper Cycle + | WIPERS | `U` |
+| Toggle Ignition | IGNITION | `I` |
 | Starter | START (held) | `PageDown` |
 
-On the numpad each setting is a pair, − on the left and + on the right: TC on 7 / 8, TC CUT on 4 / 5, ABS on 1 / 2, STABILITY on 0 / decimal point, ENGINE MAP on − / +, BRAKE BIAS on / (rear) and * (front). Num Lock should be on.
+On the numpad each setting is a pair, − on the left and + on the right: TC on 7 / 8, TC CUT on 4 / 5, ABS on 1 / 2, STABILITY on 0 / decimal point, ENGINE MAP on − / +, BRAKE BIAS on / (rear) and * (front), LIGHTS on 9. Letters: P pit limiter, U wipers, I ignition. Num Lock should be on.
 
 ## 2. Useful extras (BUTTONS page, bind if you want them)
 
@@ -54,6 +54,7 @@ On the numpad each setting is a pair, − on the left and + on the right: TC on 
 - **The window is right.** The bridge sent every iPad press to the game window and refused none, so the process name `AssettoCorsaEVO.exe` is correct.
 - **Stages per setting (the most any car can have):** lights 3, wipers 5, TC 15, TC CUT 15, ABS at least 8, engine map 10, ESC 10, performance mode 10, display pages 5. The real range per car comes from the game's limit blocks; the `ace | raw` log lines show the light and wiper range of the car you drive.
 - **ACE has no keyboard defaults for the car tab.** The `AC` key defaults in `game.toml` (lights `L`, TC `LCtrl+T`, ABS `LCtrl+A`) were wrong for ACE and are replaced by the keys above.
+- **Insert, Home, Delete and End do not work in ACE bindings** (Home showed as `$`, Delete as `.`), so pit limiter, lights, wipers and ignition use `P`, `Num9`, `U` and `I`.
 
 ## 5. What to check after binding (one drive)
 

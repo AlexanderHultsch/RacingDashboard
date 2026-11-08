@@ -31,6 +31,6 @@ backups = 2
 # Format: modifiers and key joined by "+"; the key names are listed in games/ace/game.toml.
 # An empty string disables a button.
 # [games.ace.keys]
-# tc_up = "Num9"
-# tc_down = "Num6"
-# pit_limiter = "P"
+# tc_up = "Num6"
+# tc_down = "Num3"
+# pit_limiter = "J"
