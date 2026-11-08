@@ -21,14 +21,18 @@
   <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.25"></div>
   <div class="gear-area">
     <div class="gear-frame">
-      <svg class="rd-seg gear-digit" data-field="gear" data-fmt="gear" role="img" aria-label="Gear"></svg>
+      <svg class="rd-seg gear-digit" data-field="gear" data-fmt="gearseg" role="img" aria-label="Gear"></svg>
     </div>
     <div class="gear-label"><svg class="rd-seg-text" data-text="GEAR" aria-hidden="true"></svg></div>
   </div>
 </main>
-<div class="rd-nodata">NO DATA &middot; WAITING FOR THE GAME</div>
+<div class="rd-nodata"></div>
 <script src="js/rd.js"></script>
 <script src="js/seg14.js"></script>
-<script>RD.start();</script>
+<script>
+  // the display has one digit: gears above 9 show E (the rev lights keep working)
+  RD.notices.push((f) => (Number.isInteger(f.gear) && f.gear > 9 ? "GEAR " + f.gear + ": THE DISPLAY SHOWS ONE DIGIT" : null));
+  RD.start();
+</script>
 </body>
 </html>

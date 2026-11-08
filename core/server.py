@@ -112,10 +112,10 @@ def reader() -> None:
                 except Exception:  # noqa: BLE001
                     pass
                 opened_for = None
-        fresh = telemetry.blank()
-        if values:
-            fresh.update(values)
+        fresh = telemetry.with_error(values, bool(failed))
         with data_lock:
+            if fresh["error_text"] != data.get("error_text"):
+                log.line("data", "error" if fresh["error"] else "ok", fresh["error_text"] or "data as expected")
             if fresh != data:
                 data = fresh
                 seq += 1

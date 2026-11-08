@@ -68,8 +68,23 @@ Phone / tablet pages (ui/)
 | `lap`, `position`, `cars` | completed laps, position, number of cars |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
 | `flag` | `none`, `blue`, `yellow`, ... (not filled for ACE yet) |
+| `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
 
 Each frame also carries `game` (the active game id).
+
+### Errors
+
+The pages show **E** instead of the gear when the data cannot be trusted, and a chip names the reason ("E · GAME NOT RUNNING"). The core checks every frame (`telemetry.with_error`, the same for every game) and logs each change (`data | error | ...`):
+
+| Code | Text | When |
+| --- | --- | --- |
+| `no_game` | GAME NOT RUNNING | the connector finds no game (`read()` returns `None`) |
+| `read_error` | CANNOT READ THE GAME | the connector raised an error |
+| `bad_value` | UNEXPECTED DATA: <field> <value> | `gear`, `rpm` or `rpm_pct` missing or not a number; a value outside its possible range (`RANGES`: gear −1..20, rpm 0..25000, rpm_pct 0..1.5, speed 0..600 km/h, pedals 0..1, brake bias 0..1, fuel 0..1000 l, lap times up to 24 h); a gear that is not a whole number; NaN or infinity; rpm more than 30 % above `rpm_max`. Typical causes: a game update changed the shared memory layout, the wrong game is selected, a connector bug |
+| `no_data` | NO NEW DATA FROM THE GAME | the game is running but its data does not change for `stale_s` (pause, menu, loading, setup screen) |
+| `not_driving` | NOT ON TRACK | the game reports no live session (`status` `off`) |
+
+The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION TO THE PC (no message for 2.5 s: Wi-Fi, PC asleep, bridge closed) and DATA FROM THE PC NOT READABLE. While there is an error the rev lights stay off. `RD.checks` takes further page checks; `RD.notices` only fill the chip: on GEAR + REV a gear above 9 shows E with "GEAR 10: THE DISPLAY SHOWS ONE DIGIT" while the rev lights keep working (the data itself is fine). The ACE connector logs the game and shared memory version when it attaches, so a layout change after a game update shows in the log.
 
 ## 4. Buttons
 
@@ -108,7 +123,7 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 - **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `rpm`, `speed`, `speedunit`, `level`, `bias`, `fuel`, `onoff`, `lap`, `delta`, `position`, `fuellaps`, `pct`, `int`, `text`; more in `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
 - **Body classes** for styles: `rd-stale` (no data for 2.5 s or not connected; a "NO DATA" chip shows), `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`.
-- **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. They light over the last `range` (0.25) of the rpm share below the shift point, in pairs from the outside in (or from the left); unlit fields stay dim. At the game's `shift_up` all fields flash, on the `limiter` faster. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `-` before the first data. Widgets register in `RD.widgetInits`. `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
+- **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. They light over the last `range` (0.25) of the rpm share below the shift point, in pairs from the outside in (or from the left); unlit fields stay dim. At the game's `shift_up` all fields flash, on the `limiter` faster. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `E` = a f e d g1 g2. Format `gearseg` shows E for errors and for gears outside R..9. Widgets register in `RD.widgetInits`. `.rd-leds` (`data-count`, `data-range`): the LED shift strip. It lights over the last `range` (0.25) of the rpm share below the shift point, green, yellow, red, and flashes blue at the game's shift signal and red on the limiter. The shift point is learned per car and gear as the rpm share at which the game first signals `shift_up` (until then 0.95). `.rd-rpmbar` (with `<i class="fill">` and `<i class="mark">`): the RPM bar with the shift mark, driven by the CSS variables `--rpm` and `--shift`.
 - **Styles.** `<body data-page="gear" data-styles="classic,bar">` and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
 - **Toolbar and settings.** Bottom right: the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). The settings are listed in the [README](../README.md#settings).
 - **Buttons** (`js/buttons.js`, DASH): built from `/api/info`, one tab per group, the chosen tab is stored on the device; pointer events, so a hold works with the finger resting on it.
@@ -116,7 +131,7 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 
 ### GEAR + REV
 
-One style, **SEGMENT** (`styles/gear/segment.css`): 8 rev lights on top (blue, green, yellow, red, red, yellow, green, blue; filling from the outside in, flashing at the shift point); below, a light grey frame that runs close to the screen edges with GEAR (in segments) set into its top line, and the gear as a yellow 14-segment display at 92 % of the frame height (landscape) or width (portrait). No rpm or speed numbers. Without data the gear shows `-` in dim yellow. The settings button sits faintly inside the bottom right corner of the frame.
+One style, **SEGMENT** (`styles/gear/segment.css`): 8 rev lights on top (blue, green, yellow, red, red, yellow, green, blue; filling from the outside in, flashing at the shift point); below, a light grey frame that runs close to the screen edges with GEAR (in segments) set into its top line, and the gear as a yellow 14-segment display at 92 % of the frame height (landscape) or width (portrait). No rpm or speed numbers. On an error the gear shows E and the chip sits in the bottom frame line ([Errors](#errors)). The settings button sits faintly inside the bottom right corner of the frame.
 
 ### DASH
 

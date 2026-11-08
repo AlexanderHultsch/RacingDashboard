@@ -4,7 +4,6 @@
 :root {
   --seg: #ffe93b;
   --seg-label: #e6d23a;
-  --seg-dim: #4a4520;
   --frame: #d9dde2;
   --frame-w: 1.1vmin;
   --edge: 2.8vmin;
@@ -59,8 +58,6 @@ html, body { background: var(--bg); }
   filter: drop-shadow(0 0 1vmin rgba(255, 233, 59, 0.35));
 }
 .gear-digit .on { fill: var(--seg); }
-.rd-stale .gear-digit { filter: none; }
-.rd-stale .gear-digit .on { fill: var(--seg-dim); }
 
 /* settings button: faint, inside the frame corner */
 .rd-toolbar {
@@ -73,4 +70,17 @@ html, body { background: var(--bg); }
   .gear-page { padding-top: max(4vmin, var(--safe-t)); gap: 4vmin; }
   .rd-revlights { height: auto; aspect-ratio: 8 / 1.4; }
   .gear-digit { width: 92%; height: auto; max-height: 92%; }
+}
+
+/* error / notice chip: set into the bottom frame line, like the label in the top line */
+.rd-nodata {
+  bottom: calc(max(var(--edge), var(--safe-b)) + var(--frame-w) / 2);
+  transform: translate(-50%, 50%);
+  padding: 0.6vmin 2.4vmin;
+  font-size: max(11px, 3.2vmin);
+  border: 0.4vmin solid var(--bg);
+}
+.rd-notice .gear-digit { height: 86%; }
+@media (orientation: portrait) {
+  .rd-notice .gear-digit { height: auto; }
 }

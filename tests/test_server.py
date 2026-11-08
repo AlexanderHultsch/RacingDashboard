@@ -71,6 +71,7 @@ class Bridge(unittest.TestCase):
         state = json.loads(get("/state")[2])
         self.assertTrue(state["connected"])
         self.assertEqual(state["game"], "demo")
+        self.assertIsNone(state["error"])
         info = json.loads(get("/api/info")[2])
         self.assertEqual([g["name"] for g in info["groups"]], ["AIDS", "CAR", "VIEW", "PIT"])
         self.assertIn("ace", [g["id"] for g in info["games"]])

@@ -2,7 +2,7 @@
 
 A universal dashboard for PC racing games on your phone and tablet. A small Python bridge on the gaming PC reads the game's live data and serves web pages on the local network. Open them on an iPhone, iPad or any device with a browser. The pages look the same for every game; the game (the "connector") is chosen in the settings.
 
-- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point.
+- **GEAR + REV** (`/gear`), for a phone, portrait or landscape: the gear as a big yellow 14-segment display in a frame, with 8 rev lights above it (blue, green, yellow from the outside, two red in the middle). The lights fill from the outside in and flash at the shift point. When the data cannot be trusted the gear shows **E** and a small chip says why, for example *GAME NOT RUNNING*, *NO NEW DATA FROM THE GAME* (pause, menu), *NO CONNECTION TO THE PC* or *UNEXPECTED DATA: RPM -5*.
 - **DASH** (`/dash`), for a tablet: gear, RPM, speed, TC, ABS, brake bias, engine map, fuel, position and lap times, plus four tabs of buttons that are sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.

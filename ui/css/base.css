@@ -147,7 +147,7 @@ button {
   white-space: nowrap;
   z-index: 5;
 }
-.rd-stale .rd-nodata { display: block; }
+.rd-notice .rd-nodata { display: block; }
 
 /* ------------------------------------------------------------ toolbar */
 

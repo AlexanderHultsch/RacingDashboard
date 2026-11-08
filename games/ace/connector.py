@@ -12,6 +12,7 @@ Field notes and what is not verified yet: docs/ACE/NOTES.md.
 import time
 from ctypes import Structure, c_bool, c_byte, c_char, c_float, c_int8, c_int16, c_int32, c_uint8, c_uint16, c_uint32, c_uint64, sizeof
 
+import log
 import telemetry
 import winmem
 
@@ -275,6 +276,7 @@ class Connector(telemetry.Connector):
         self.last_packet = None
         self.last_change = 0.0
         self.stale_s = cfg["telemetry"]["stale_s"]
+        self.version = None
 
     def attach(self) -> bool:
         now = time.monotonic()
@@ -290,6 +292,13 @@ class Connector(telemetry.Connector):
                 block.close()
             return False
         self.blocks, self.attached_at = blocks, now
+        # Log the game and shared memory version once: if values look wrong after a game update,
+        # the log shows which layout the game publishes (the connector follows layout v1).
+        static = Static.from_buffer_copy(blocks[2].read()[:sizeof(Static)])
+        version = (text(static.ac_evo_version), text(static.sm_version))
+        if version != self.version:
+            self.version = version
+            log.line("ace", "shared memory", f"game {version[0] or '?'}, layout {version[1] or '?'}")
         return True
 
     def read(self) -> dict | None:

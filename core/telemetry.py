@@ -52,7 +52,76 @@ FIELDS = {
     "delta_ms": None,        # to best lap, negative = faster
     "lap_valid": True,
     "flag": "none",          # "none", "blue", "yellow", "black", "white", "checkered", "green", ...
+    # set by the core, not by a connector (see check() below)
+    "error": None,           # None, or a code from ERRORS
+    "error_text": "",        # short text for the pages, e.g. "UNEXPECTED DATA: RPM -5"
 }
+
+# Error codes the core sets in "error". The pages then show E instead of the gear.
+ERRORS = {
+    "no_game": "GAME NOT RUNNING",              # the connector finds no game
+    "read_error": "CANNOT READ THE GAME",       # the connector raised an error
+    "no_data": "NO NEW DATA FROM THE GAME",     # the game is running but its data does not change (pause, menu, loading)
+    "not_driving": "NOT ON TRACK",              # the game reports no live session (menus)
+    "bad_value": "UNEXPECTED DATA",             # a value is missing, not a number or out of its possible range
+}
+
+# Possible ranges of the numeric fields; a value outside means the data is not what we expect
+# (a changed shared memory layout after a game update, a wrong game selected, a connector bug).
+RANGES = {
+    "gear": (-1, 20), "max_gears": (0, 20),
+    "rpm": (0, 25000), "rpm_max": (0, 25000), "rpm_pct": (0.0, 1.5),
+    "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05), "clutch": (-0.05, 1.05),
+    "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
+    "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
+}
+REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
+
+
+def check(values: dict) -> str | None:
+    """Returns a short description of the first unexpected value, or None if the data looks right."""
+    for name in REQUIRED:
+        value = values.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return f"{name.upper()} MISSING"
+    for name, (low, high) in RANGES.items():
+        value = values.get(name)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value or value in (float("inf"), float("-inf")):
+            return f"{name.upper()} NOT A NUMBER"
+        if not low <= value <= high:
+            return f"{name.upper()} {value:g}"
+    if not isinstance(values.get("gear"), int):
+        return f"GEAR {values.get('gear')}"
+    rpm, rpm_max = values.get("rpm"), values.get("rpm_max")
+    if rpm_max and rpm > rpm_max * 1.3:
+        return f"RPM {rpm:g} ABOVE MAX {rpm_max:g}"
+    return None
+
+
+def with_error(values: dict | None, failed: bool) -> dict:
+    """The frame for the pages: the connector values plus "error" and "error_text"."""
+    frame = blank()
+    if failed:
+        code, detail = "read_error", ""
+    elif values is None:
+        code, detail = "no_game", ""
+    else:
+        frame.update(values)
+        frame["error"], frame["error_text"] = None, ""
+        problem = check(frame)
+        if problem:
+            code, detail = "bad_value", problem
+        elif not frame["connected"]:
+            code, detail = "no_data", ""
+        elif frame["status"] == "off":
+            code, detail = "not_driving", ""
+        else:
+            return frame
+    frame["error"] = code
+    frame["error_text"] = ERRORS[code] + (": " + detail if detail else "")
+    return frame
 
 
 def blank() -> dict:

@@ -12,7 +12,12 @@
  *
  * A page needs: <body data-page="gear" data-styles="classic,bar"> and
  * <link id="rd-style" rel="stylesheet">. Everything else is optional.
- * Body classes set while driving: rd-stale (no data), rd-shift, rd-limiter, rd-pit, rd-tc, rd-abs.
+ * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-pit, rd-tc, rd-abs.
+ *
+ * Errors: RD.errorOf(frame) returns the error text or null: no connection to the PC, data the page
+ * cannot read, an error the bridge reports (frame.error: game not running, no new data, unexpected
+ * values ...), or a page check (RD.checks, e.g. a gear above 9 on a one-digit display). While there is
+ * an error the gear shows E, the rev lights stay off and the .rd-nodata chip shows "E · <text>".
  */
 (function () {
   "use strict";
@@ -38,7 +43,9 @@
   const pad = (n, w) => String(n).padStart(w, "0");
   RD.formats = {
     text: (v) => (v === null || v === undefined || v === "" ? "-" : String(v)),
-    gear: (v) => (v === undefined || v === null ? "-" : v < 0 ? "R" : v === 0 ? "N" : String(v)),
+    gear: (v, f) => (RD.errorOf(f || {}) || !Number.isInteger(v) ? "E" : v < 0 ? "R" : v === 0 ? "N" : String(v)),
+    // one-character gear display: E also for gears above 9 or below R
+    gearseg: (v, f) => (Number.isInteger(v) && v >= -1 && v <= 9 ? RD.formats.gear(v, f) : "E"),
     int: (v) => (v === null || v === undefined ? "-" : String(Math.round(v))),
     rpm: (v) => (v ? String(Math.round(v)) : "0"),
     speed: (v) => String(Math.round((v || 0) * (RD.units() === "mph" ? 0.621371 : 1))),
@@ -70,21 +77,60 @@
 
   RD.rate = () => store.get("hz", 60);
 
+  RD.lost = true;          // no message from the PC for a while
+  RD.badData = false;      // the last message could not be read
+
+  function schedule() {
+    if (!pending) { pending = true; requestAnimationFrame(render); }
+  }
+
   RD.connect = function () {
     if (source) source.close();
     source = new EventSource("/stream?hz=" + RD.rate());
     source.onmessage = (event) => {
       lastMessage = performance.now();
       frames += 1;
-      RD.frame = JSON.parse(event.data);
-      if (!pending) { pending = true; requestAnimationFrame(render); }
+      RD.lost = false;
+      try {
+        const frame = JSON.parse(event.data);
+        if (!frame || typeof frame !== "object") throw new Error("not an object");
+        RD.frame = frame;
+        RD.badData = false;
+      } catch (e) {
+        RD.badData = true;
+      }
+      schedule();
     };
   };
 
   setInterval(() => { RD.fps = frames; frames = 0; }, 1000);
-  setInterval(() => {   // no message for 2.5 s: show "no data" (the stream sends a heartbeat every second)
-    if (performance.now() - lastMessage > 2500) document.body.classList.add("rd-stale");
+  setInterval(() => {   // no message for 2.5 s (the stream sends a heartbeat every second): the PC is gone
+    const lost = performance.now() - lastMessage > 2500;
+    if (lost !== RD.lost) { RD.lost = lost; schedule(); }
   }, 500);
+
+  /* Error text for a frame, or null. Pages add their own checks to RD.checks: (frame) => text | null.
+     RD.notices are hints for the chip only (the data is fine, e.g. a gear the display cannot show). */
+  RD.checks = [];
+  RD.notices = [];
+  RD.noticeOf = function (f) {
+    for (const notice of RD.notices) {
+      const text = notice(f);
+      if (text) return text;
+    }
+    return null;
+  };
+  RD.errorOf = function (f) {
+    if (RD.lost) return "NO CONNECTION TO THE PC";
+    if (RD.badData) return "DATA FROM THE PC NOT READABLE";
+    if (f.error) return f.error_text || String(f.error).toUpperCase();
+    if (!f.connected) return "NO DATA FROM THE GAME";
+    for (const check of RD.checks) {
+      const text = check(f);
+      if (text) return text;
+    }
+    return null;
+  };
   document.addEventListener("visibilitychange", () => { if (!document.hidden) RD.connect(); });
 
   /* ------------------------------------------------------------ rendering */
@@ -97,11 +143,20 @@
     });
   };
 
+  let lastError;
   function render() {
     pending = false;
     const f = RD.frame;
     const body = document.body.classList;
-    body.toggle("rd-stale", !f.connected);
+    const error = RD.errorOf(f);
+    const chipText = error || RD.noticeOf(f);
+    body.toggle("rd-stale", RD.lost || !f.connected);
+    body.toggle("rd-error", !!error);
+    body.toggle("rd-notice", !!chipText);
+    if (chipText !== lastError) {
+      document.querySelectorAll(".rd-nodata").forEach((chip) => { chip.textContent = chipText ? "E \u00b7 " + chipText : ""; });
+      lastError = chipText;
+    }
     body.toggle("rd-shift", !!f.shift_up);
     body.toggle("rd-limiter", !!f.limiter);
     body.toggle("rd-pit", !!f.pit_limiter);
@@ -154,7 +209,7 @@
       const shift = RD.shiftPoint(f);
       const start = shift - range;
       const share = Math.min(1, Math.max(0, (f.rpm_pct - start) / range));
-      const lit = f.connected ? Math.round(share * count) : 0;
+      const lit = RD.errorOf(f) ? 0 : Math.round(share * count);
       const state = f.limiter ? "limiter" : f.shift_up ? "shift" : "";
       if (lit !== lastLit) {
         leds.forEach((led, i) => led.classList.toggle("on", i < lit));
@@ -208,8 +263,9 @@
     widgets.push((f) => {
       const shift = RD.shiftPoint(f);
       const share = ((f.rpm_pct || 0) - (shift - range)) / range;
-      let lit = f.connected ? Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6))) : 0;
-      const state = !f.connected ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
+      const error = RD.errorOf(f);
+      let lit = error ? 0 : Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6)));
+      const state = error ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
       if (state) lit = steps;
       if (lit !== lastLit) {
         fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
@@ -388,7 +444,7 @@
       const f = RD.frame;
       const lines = [
         ["GAME", info ? info.game_name : "-"],
-        ["DATA", !f.connected ? "WAITING FOR THE GAME" : f.status && f.status !== "live" ? "LIVE (" + f.status.toUpperCase() + ")" : "LIVE"],
+        ["DATA", RD.errorOf(f) ? "E \u00b7 " + RD.errorOf(f) : "LIVE"],
         ["CAR", f.car || "-"],
         ["TRACK", f.track || "-"],
         ["FRAMES / S", String(RD.fps)],
@@ -413,7 +469,8 @@
     for (const [selector, init] of RD.widgetInits) document.querySelectorAll(selector).forEach((el) => init(el));
     RD.bind();
     if (options.toolbar !== false) RD.toolbar();
-    document.body.classList.add("rd-stale");
+    document.body.classList.add("rd-stale", "rd-error");
+    render();
     RD.connect();
     if (store.get("awake", false)) {
       // A wake lock needs a user gesture on most browsers: ask on the first touch.
