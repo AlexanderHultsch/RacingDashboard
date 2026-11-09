@@ -1,41 +1,83 @@
-# Handover – for a cloud session
+# Handover – local session on the Windows PC
 
-For the next Claude session **in the cloud** (no Windows, no games, no iPad / iPhone). Written at the end of the local session on the owner's Windows PC, 10 November 2026. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and iPhone at hand). Written at the end of the cloud session, 10 November 2026. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
-## What a cloud session can and cannot do
-
-| Can | Cannot |
-| --- | --- |
-| Read and change all code and docs, run `python -m unittest discover tests` (82 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
-| Run the bridge with the **demo game** (`python core/server.py`, GAME → DEMO): a simulated car with every field, a turbo (`boost_bar`) included, and laps for the analysis page | Send keypresses (`core/keys.py` is Windows only; the bridge reports "not available") |
-| Render pages with a headless browser for **PNG mockups** (the owner wants them before every visual change) | Check anything against real game data: say so, and leave a test step for the local session in this file |
-| Commit and push to `main` when the owner says so | See the owner's laps (`data/`), AI key (`config/trainer.json`) or mockups (`mockups/`): local, not in git |
-
-Headless rendering tips: a page keeps its EventSource open, so a headless screenshot can hang; stub `window.EventSource` with a class that polls `/state` and calls `onmessage`, and replace `requestAnimationFrame` with `setTimeout` (rendering waits for an animation frame). For phone sizes render the page in iframes (844 × 390 landscape, 390 × 844 portrait) inside one composite page.
+**The job for this session:** drive with the owner and check what the cloud session could only build against simulated data: the **GRIP** page and **BOOST** in a turbo car first, then the open items below. Pull the data live with `tools/live.py` (every game) and `tools/ace_probe.py --raw` (ACE raw values), fix what the games deliver differently, and write the findings into the game notes and this file.
 
 ## Start
 
 ```
 git pull
 python -m unittest discover tests
-python core/server.py --check
+python core\server.py --check
+python core\server.py
 ```
 
-`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change (frame field `ui`).
+All 84 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change, but **restart the bridge after a change to Python code**. Log: `logs\racing-dashboard.log`. The repository is `github.com/AlexanderHultsch/RacingDashboard` (the old name Racing-Dashboard redirects).
 
-## What the local session did (10 November 2026, newest first)
+## Live debugging: pull the data while the owner drives
+
+Keep the bridge running in one window and use a second one. Both tools only read; nothing is changed in the game.
+
+| Command | What it shows |
+| --- | --- |
+| `python tools\live.py` | the basic values five times a second, from the bridge's `/state` (works for every game) |
+| `python tools\live.py grip` | a preset: `basic`, `grip` (slip per wheel with the GRIP stage each tile shows, lock flags, ABS / TC), `boost`, `revs`, `aids`, `tyres`, `car`, `analysis` |
+| `python tools\live.py car --changes` | a line only when a value changes: good for lights, wipers, levels, lamps |
+| `python tools\live.py --fields rpm,boost_bar,gas` | any fields |
+| `python tools\live.py --once` | the whole frame once as JSON |
+| `python tools\live.py --record 90` | records every frame for 90 s (20 a second) to `logs\live-<game>-<date_time>.jsonl` and checks it |
+| `python tools\live.py --check last` | the check again for the newest recording (or give a file) |
+| `python tools\ace_probe.py --raw` | ACE only, straight from the shared memory: `slipRatio`, `wheelSlip`, the tyre `slip` / `lock`, `tcInAction` / `absInAction` and the graphics `tc_active` / `abs_active`, every turbo value (`turbo_boost`, `turbo_boost_level`, `turbo_boost_perc`, `electronics.turbo_level`, `max_turbo_boost`, physics `turboBoost`) |
+| `python tools\analysis_check.py --last 1` | the laps the analysis recorder wrote |
+
+The check after a recording prints per section, with "!!" for a problem:
+- **GRIP**: the slip of the front wheels under hard braking and of the rear wheels on full throttle, with the sign (braking must be negative, wheelspin positive; "!! ... the sign is the other way round" means flip it in the connector), the slip at part throttle (must stay near 0), the share of each GRIP stage per wheel, and whether the lock flag was ever set.
+- **ABS / TC**: the settings seen, how often each worked, and **the slip at the moment ABS / TC start to work**: that is the car's grip limit and the best guide for where GRIP stage 2 should start (`STAGES` in `ui/js/grip.js`; the tool reads the limits from there).
+- **REVS**: the rpm of the shift signal per gear and where the limiter starts.
+- **BOOST**: the boost range and the rpm of the highest boost.
+- **Every field**: min .. max or the values seen.
+
+Paste the output into the chat and the recording stays in `logs\` (not in git). Ask the owner to drive one thing per recording (for example "three hard stops with ABS off"), so each recording answers one question.
+
+## Test plan, in the owner's order of interest
+
+### 1. GRIP in ACE
+
+1. iPhone on `/grip`, bridge running, `python tools\live.py grip` in a second window. Car with ABS and TC (Porsche 992 GT3 R).
+2. `python tools\live.py --record 90`: the owner drives normally, then three hard stops with **ABS off** (DASH: ABS to 0), then full throttle out of slow corners with **TC off**.
+3. Read the check:
+   - Sign: braking negative, wheelspin positive. If it is the other way round, negate `slips()` in `core/kunos.py` (ACE and ACR share it) and the test values in `tests/test_ace.py` / `test_acr.py`.
+   - Part throttle near 0 (if not: the value is not a slip ratio; try `wheelSlip` or the graphics tyre `slip`, compare with `ace_probe.py --raw`).
+   - Lock flag: set during the ABS-off stops? If never, stage 4 comes from slip alone (50 %), which is fine.
+   - Slip when ABS / TC start (record again with ABS and TC on): if it is far from 12 %, move the stage limits in `ui/js/grip.js` (`STAGES`), with the owner. Same limits for every car (owner's rule), unless the owner wants them learned per car.
+4. Ask the owner whether the colours come too early or too late on the iPhone. Stage 4 must flash.
+
+### 2. BOOST in an ACE turbo car
+
+BMW M4 GT3, Ferrari 296 GT3 or McLaren 720S GT3 Evo. `python tools\ace_probe.py --raw` while accelerating in 2nd and 3rd: which value rises with boost and to what number (bar assumed; a value around 1–2.5 is bar, around 100–250 is kPa, 0..1 is a share). The connector reads graphics `turbo_boost` (physics `turboBoost` as a fallback) and `max_turbo_boost` (`games/ace/connector.py`, `kunos.boost`). Then `python tools\live.py boost` and the iPhone on `/boost`: the needle must follow, the gauge end must fit the car.
+
+### 3. AI trainer with ACE
+
+Three clean laps, save the bests, AI TRAINER for the whole track and one section (FAST, then BEST once). Read the facts sent with each answer (`data\trainer.jsonl`, field `data`) before changing the prompt (`core/trainer.py`, [TRAINER.md](TRAINER.md)).
+
+### 4. First drives in Assetto Corsa Rally, iRacing, DiRT Rally 2.0
+
+For each: `python tools\live.py` (values follow the car?), `python tools\live.py grip` (slip: ACR `slipRatio`, DR2 wheel speeds; iRacing has none and GRIP says so), `python tools\live.py --record 120` over one stage or a few laps, then `python tools\analysis_check.py --last 1`. The open questions per game are in its NOTES: ACR attaches only while `acr.exe` runs, stage start / end; iRacing process name, brake bias per car, map direction (`VelocityY` sign), steering sign; DR2 UDP switched on in the XML, wheel speeds in m/s (part throttle must leave GRIP grey).
+
+### 5. TYRES / PERFORMANCE cards in ACE
+
+`python tools\live.py tyres` and `aids`: pressure unit (a pressure below 6 is taken as bar), colour scales against the game's HUD, Num3 / Num6 for the performance mode.
+
+## What the cloud session did (10 November 2026, newest first)
 
 | Commit | What |
 | --- | --- |
-| cloud, after this handover | **GRIP page** `/grip` (phone): four tyre tiles coloured by the slip of each wheel (braking yellow → orange → red → bright red flashing, wheelspin light blue → blue-violet → purple → magenta flashing, grey = grip; stages from 6 / 12 / 25 / 50 % slip or the game's lock flag), ABS / TC setting between the tyres (white, OFF, grey – without, hidden when the game has none). Fields `wheel_slip`, `wheel_lock` (ACE `slipRatio` + tyre `lock`, ACR `slipRatio`, DR2 wheel speeds, demo simulated; iRacing none). Home tile, settings, startup line |
-| cloud, after this handover | **BUTTONS page removed** (owner): `buttons.html`, `js/buttons.js`, its styles, the home tile and settings entry, the LED strip and RPM bar widgets and formats only it used, `groups` in `/api/info`; `core/actions.py` is now a flat `ACTIONS` table of the 21 actions the dash boxes use (camera, view, indicators, hazards, horn, shifting, pause and replay actions and their keys are gone; the demo car always shifts itself) |
-| `2a636cc` + this one | **BOOST page** `/boost` (phone): round gauge in the gear page's frame style, red needle, yellow arc, BAR under the hub and the value with one decimal below it in the SPEED number style. NO TURBO (ACE / ACR car without a turbo), VACUUM below 0 (iRacing manifold pressure), NO DATA + chip in DR2. Fields `turbo`, `boost_bar`, `boost_min_bar`, `boost_max_bar` (`kunos.boost`, iRacing `ManifoldPress`); demo car with a turbo; O T U C V in the segment font; home tile, settings entry, startup line |
-| `5d1d565` | Rev lights: scale from 88 % of the game's shift point up to it; red pair and dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag** (owner: a simple rule by flags, nothing per car) |
-| `b651239` | Gear page: SPEED box below the gear frame (same width and style, no unit) |
-| `bdfcab0` | Pages reload themselves after an update; rev lights never flash |
-| `deb1037` | Gear frame turns red at the shift point; tyre colours along a scale; ACE engine map counts from 1 |
-| `4af985c`, `5f1f644` | TYRES card like the ACE HUD (pressures outside, tiles by tyre temperature, brake bar by brake temperature); ACE card PERFORMANCE |
-| `2bff8f3`, `15bbf44` | TYRES and DRIVE MODE cards; left indicator off Comma (the owner's voice chat mute key); home link in the startup window, own home-screen icon name |
+| this one | **Live debugging tools**: `tools/live.py` (watch presets, record, check: GRIP sign and stages, ABS / TC onset slip, shift rpm per gear, boost, every field) and `tools/ace_probe.py --raw` (raw slip, lock, TC / ABS flags and every turbo value); `tests/test_live.py`; this handover for the local session |
+| `8e8cd1f` | **GRIP page** `/grip` (phone): four tyre tiles coloured by the slip of each wheel (braking yellow → orange → red → bright red flashing, wheelspin light blue → blue-violet → purple → magenta flashing, grey = grip; stages from 6 / 12 / 25 / 50 % slip or the game's lock flag), ABS / TC setting between the tyres (white, OFF, grey – without, hidden when the game has none). Fields `wheel_slip`, `wheel_lock` (ACE `slipRatio` + tyre `lock`, ACR `slipRatio`, DR2 wheel speeds, demo simulated; iRacing none). Home tile, settings, startup line |
+| `7aafb12` | **BUTTONS page removed** (owner): page, script, styles, home tile, settings entry, the LED strip and RPM bar widgets, `groups` in `/api/info`; `core/actions.py` is a flat `ACTIONS` table of the 21 actions the dash boxes use (camera, view, indicators, hazards, horn, shifting, pause and replay actions and their keys are gone; the demo car always shifts itself) |
+
+Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`), rev lights by the game's flags (`5d1d565`), SPEED box (`b651239`), pages reload themselves (`bdfcab0`), TYRES / PERFORMANCE / DRIVE MODE cards (`2bff8f3` … `deb1037`).
 
 ## Where things stand
 
@@ -45,21 +87,22 @@ python core/server.py --check
 | GEAR + REV rev lights and red screen | verified in ACE (Porsche 992 GT3 R, Toyota GR86): shift signal and limiter flag come from the game |
 | Analysis page | verified with ACE (lap times within 0.006 s of the game's) |
 | AI trainer | works with Claude; answers with the rewritten prompt (up to 9 tips) not judged yet |
-| TYRES / PERFORMANCE cards | built, **not checked in the game** (pressure unit, colour scales, Num3 / Num6) |
+| GRIP page | works with the demo car; **not checked in any game** (slip sign, lock flag, stage limits) |
 | BOOST page | works with the demo car and shows NO TURBO in the GR86; **not checked in an ACE turbo car** |
+| TYRES / PERFORMANCE cards | built, **not checked in the game** (pressure unit, colour scales, Num3 / Num6) |
 | Assetto Corsa Rally, iRacing, DiRT Rally 2.0 | **never run against the games** |
 
 ## Open, in the owner's order of interest
 
-1. **BOOST in an ACE turbo car** (local only): which of graphics `turbo_boost`, `turbo_boost_level`, `turbo_boost_perc` or physics `turboBoost` is the boost, its unit (bar assumed) and `max_turbo_boost`. Candidates: BMW M4 GT3, Ferrari 296 GT3, McLaren 720S GT3 Evo. iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
-2. **GRIP in ACE** (local only): drive with ABS off and on, TC off and on. Check the sign of `slipRatio` (hard braking = front tiles yellow to red, not blue), whether the tyre `lock` flag is ever set, and where the stages should start (`STAGES` in `ui/js/grip.js`: 6 / 12 / 25 / 50 %). `/state` shows `wheel_slip` and `wheel_lock` live.
-3. AI trainer quality with the new facts and prompt (local, with ACE): read the facts in `data/trainer.jsonl` with each answer before changing the prompt.
-4. First drives in ACR, iRacing, DR2 (local; the open questions are in each game's NOTES: ACR stage start / end, iRacing map direction, DR2 UDP).
-5. TYRES / PERFORMANCE cards in ACE (local).
+1. GRIP in ACE (test plan 1).
+2. BOOST in an ACE turbo car (test plan 2). iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
+3. AI trainer quality with the new facts and prompt (test plan 3).
+4. First drives in ACR, iRacing, DR2 (test plan 4).
+5. TYRES / PERFORMANCE cards in ACE (test plan 5).
 6. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
 7. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
 8. A LICENSE file for the public repository (the owner's decision; MIT suggested).
-9. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, more games ([ASSISTS.md](ASSISTS.md)). Work that a cloud session can do fully: these, docs, tests, the demo car, pages and styles (with mockups).
+9. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, GRIP limits learned per car, more games ([ASSISTS.md](ASSISTS.md)).
 
 ## Findings from the real data (ACE 0.9.1)
 
@@ -71,8 +114,9 @@ python core/server.py --check
 ## How it works (where to look)
 
 - **Connectors** `games/<id>/connector.py` translate a game into `core/telemetry.py` `FIELDS`; `game.toml` (window, keys), `dash.toml` (dash box cards). Kunos' physics page and `boost()` in `core/kunos.py`.
-- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`; styles `ui/styles/<page>/<style>.css`.
+- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`, `ui/js/grip.js`; styles `ui/styles/<page>/<style>.css`.
 - **Recorder** `core/recorder.py`, **AI trainer** `core/trainer.py`; file formats in [SPEC.md](SPEC.md#analysis).
+- **Tools** `tools/live.py` (live values of every game, recordings, checks), `tools/ace_probe.py` (ACE values straight from the shared memory, `--analysis`, `--raw`), `tools/analysis_check.py` (recorded laps).
 
 ## Known limitations (tell the owner if they come up)
 
@@ -98,4 +142,4 @@ python core/server.py --check
 - **Commit and push only when the owner says so**; commit to `main`, end commit messages with the Co-Authored-By line. The only other branch is one work-in-progress branch for a prototype the owner has not approved yet.
 - For visual changes: **show PNG mockups first**, then build. For bigger features a short interview first (3–4 multiple-choice questions).
 - Keep README, SPEC, the game notes, TRAINER and tests in step with every change; no personal data in commits; no emoji in the UI. **Never ask for or handle the owner's API key.**
-- When a change needs the game to verify, build it, test it with the demo car and unit tests, and add the in-game check to "Open" above for the local session.
+- Check against the game with the tools above before changing code, and write what the game really sends into its NOTES (field table and "To check" list). Before the session ends, write a handover for the next session (cloud or local) in this file.

@@ -8,6 +8,9 @@ Run:  python tools/ace_probe.py
                                              map position, steering, session) and every occupied
                                              car_coordinates slot with its driver id, to see which
                                              slot is the player
+      python tools/ace_probe.py --raw        the raw ACE values behind GRIP and BOOST: physics slipRatio and
+                                             wheelSlip, the graphics tyre slip / lock, the TC / ABS flags of both
+                                             pages, and every turbo value (which one is the boost, in what unit)
 """
 import importlib.util
 import sys
@@ -43,8 +46,23 @@ def slots(connector) -> str:
     return "  ".join(out)
 
 
+def raw(connector) -> str:
+    """The raw values behind GRIP and BOOST, straight from the shared memory (not what the connector made of them)."""
+    ph = ace.Physics.from_buffer_copy(connector.blocks[0].read()[:ace.sizeof(ace.Physics)])
+    gr = ace.Graphics.from_buffer_copy(connector.blocks[1].read()[:ace.sizeof(ace.Graphics)])
+    tyres = (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)
+    four = lambda values: " ".join(f"{v:+.3f}" for v in values)  # noqa: E731
+    return (f"    slipRatio {four(ph.slipRatio)} | wheelSlip {four(ph.wheelSlip)} | tyre slip {four(t.slip for t in tyres)}"
+            f" | lock {' '.join(str(int(t.lock)) for t in tyres)}\n"
+            f"    tcInAction {ph.tcInAction} absInAction {ph.absInAction} tc {ph.tc:.3f} abs {ph.abs:.3f}"
+            f" | gr tc_active {int(gr.tc_active)} abs_active {int(gr.abs_active)}\n"
+            f"    turbo_boost {gr.turbo_boost:.3f} turbo_boost_level {gr.turbo_boost_level:.3f} turbo_boost_perc {gr.turbo_boost_perc:.3f}"
+            f" electronics.turbo_level {gr.electronics.turbo_level:.3f} max_turbo_boost {gr.max_turbo_boost:.3f} | physics turboBoost {ph.turboBoost:.3f}")
+
+
 def main() -> None:
     analysis = "--analysis" in sys.argv
+    raw_values = "--raw" in sys.argv
     show = ANALYSIS if analysis else SHOW
     cfg = config.load()
     connector = ace.Connector({"id": "ace"}, cfg)
@@ -58,6 +76,8 @@ def main() -> None:
                 print("\n" + "  ".join(f"{name}={values.get(name)}" for name in show), flush=True)
                 if analysis:
                     print("    " + slots(connector), flush=True)
+                if raw_values:
+                    print(raw(connector), flush=True)
             time.sleep(0.2)
     except KeyboardInterrupt:
         connector.close()

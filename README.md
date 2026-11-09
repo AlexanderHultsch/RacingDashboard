@@ -85,7 +85,7 @@ tc_up = "Num6"
 pit_limiter = "J"
 ```
 
-A button without a key is greyed out. `tools/ace_probe.py` prints the live values the bridge reads from ACE, which is useful for checking the connector in the game.
+A button without a key is greyed out. `tools/live.py` watches, records and checks the live values of any game from the running bridge (`python tools/live.py grip`, `--record 60`); `tools/ace_probe.py` prints the values straight from ACE's shared memory (`--raw` for the slip, lock, TC / ABS and turbo values).
 
 ## Repository
 
@@ -124,6 +124,7 @@ data/                     recorded laps and baselines (JSON Lines; local, ignore
 docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS.md, HANDOVER.md, notes per game (ACE/, ACR/, DR2/, IRACING/)
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
-tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields
+tools/live.py             live values of every game from the running bridge: watch presets, record to logs/, check a recording
+tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields, --raw for slip and turbo
 tools/analysis_check.py   checks the recorded laps and baselines in data/ (rate, gaps, lap / section times, ranges)
 ```
