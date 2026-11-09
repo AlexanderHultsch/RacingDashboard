@@ -20,6 +20,8 @@ The names in the first column are written exactly as ACE shows them. All proposa
 | ESC Cycle + | STABILITY + | `NumDecimal` |
 | Engine Map Cycle − | ENGINE MAP − | `NumMinus` |
 | Engine Map Cycle + | ENGINE MAP + | `NumPlus` |
+| Performance Mode Cycle − | DRIVE MODE − | `Num3` |
+| Performance Mode Cycle + | DRIVE MODE + | `Num6` |
 | Brake Bias Rear | BRAKE BIAS REAR | `NumDivide` |
 | Brake Bias Front | BRAKE BIAS FRONT | `NumMultiply` |
 | Pit Limiter Toggle | PIT LIMITER | `P` |
@@ -37,7 +39,7 @@ On the numpad each setting is a pair, − on the left and + on the right: TC on 
 
 | ACE control (tab Car) | Dashboard button | Key |
 | --- | --- | --- |
-| Left Direction Indicator | IND LEFT | `Comma` |
+| Left Direction Indicator | IND LEFT | `M` (not `,`: kept free for a voice chat mute key) |
 | Right Direction Indicator | IND RIGHT | `Period` |
 | Hazard Lights | HAZARDS | `Slash` |
 | Horn | HORN (held) | `Backslash` (keyboard field; your controller button RSB can stay) |

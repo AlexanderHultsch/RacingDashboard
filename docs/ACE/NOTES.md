@@ -49,6 +49,8 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 | `track_length_m` | static `track_length_m` | |
 | `pos_x`, `pos_y` | graphics `car_coordinates[i]` x and z | the player's slot: the entry of `car_ids` that matches `player_car_id`, else slot 0; seen from above (x right, z down on the map; the map may come out mirrored, check it) |
 | `steer` | physics `steerAngle` | assumed −1..1 (clamped) |
+| `tyre_temp_c`, `tyre_psi` | graphics `tyre_lf / rf / lr / rr` `tyre_temperature_c`, `tyre_pressure` (else physics `tyreCoreTemperature`, `wheelsPressure`) | **not checked in the game yet** (November 2026): a pressure below 6 is taken as bar and shown in psi; the colour thresholds on the card (70 / 100 C) are a first guess, the game's normalised temperatures (`tyre_normalized_temperature_*`) are not used yet |
+| `drive_mode`, `drive_mode_name` | graphics `electronics.active_performance_mode` with its min / max / is_modifiable, `performance_mode_name` | BMW M4 CSL read in the game: 0, range 0..2, modifiable, name `SPORT+`; the name stays from the last car on cars without modes, so it is only sent with a mode. − / + not checked in the game yet |
 | `session_id` | static `event_id`, `session_id`, `session`, `session_name` | a change starts a new analysis run |
 | `air_c`, `road_c`, `tyre_compound`, `time_of_day` | physics `airTemp`, `roadTemp`, graphics `tyre_lf.tyre_compound_front`, graphics time of day | ambient line once per lap |
 
@@ -63,7 +65,7 @@ Reading uses `OpenFileMappingW` (`core/winmem.py`): unlike Python's `mmap` it fa
 - [ ] Keys: bind them as in [KEYS.md](KEYS.md) (ACE has no keyboard defaults for the car tab), then check each DASH card.
 - [ ] Lap times, delta, position.
 - [ ] Analysis fields (not verified at all): `npos` runs 0..1 and wraps at the line; `track_length_m` is filled; the `car_ids` / `player_car_id` match finds the player (else the dot and lines show another car); `steerAngle` is −1..1; the map is not mirrored; `session_id` stays the same while driving and changes with a new session. `/state` shows `lap_pos`, `pos_x`, `pos_y`, `steer`, `session_id`.
-- [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), tyre data.
+- [ ] Not used yet: `flag` / `global_flag` (the enum numbers are not published), brake temperatures, the normalised tyre temperatures.
 
 `python tools/ace_probe.py` prints these values live; `--analysis` prints the analysis fields and every occupied car slot with its driver id (the `*` slot is the one used as the player).
 

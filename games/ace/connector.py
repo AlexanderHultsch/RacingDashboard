@@ -200,7 +200,24 @@ def setting(gr, field: str):
 
 # universal name -> ACE electronics field (current value, range and "car has it")
 STEPPED = {"tc_level": "tc_level", "tc_cut_level": "tc_cut_level", "abs_level": "abs_level", "esc_level": "esc_level",
-           "engine_map": "engine_map_level", "diff_power": "diff_power_level", "diff_coast": "diff_coast_level"}
+           "engine_map": "engine_map_level", "diff_power": "diff_power_level", "diff_coast": "diff_coast_level",
+           "drive_mode": "active_performance_mode"}
+
+
+def tyres(ph, gr) -> tuple[list | None, list | None]:
+    """Tyre temperatures (C) and pressures (psi), front left, front right, rear left, rear right: from the
+    graphics tyre blocks, else the physics page. A pressure below 6 is taken as bar and shown in psi.
+    Not checked in the game yet (docs/ACE/NOTES.md)."""
+    blocks = (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)
+    temps = [b.tyre_temperature_c for b in blocks]
+    if not any(t > 0 for t in temps):
+        temps = list(ph.tyreCoreTemperature)
+    psi = [b.tyre_pressure for b in blocks]
+    if not any(p > 0 for p in psi):
+        psi = list(ph.wheelsPressure)
+    temps = [round(t, 1) if 0 < t < 400 else None for t in temps]
+    psi = [round(p * 14.5038 if p < 6 else p, 1) if 0 < p < 100 else None for p in psi]
+    return (temps if any(temps) else None), (psi if any(psi) else None)
 
 
 # Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
@@ -256,6 +273,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         rpm_pct = ph.rpms / rpm_max
     best = lap_time(gr.best_laptime_ms)
     xy = player_xy(gr)
+    tyre_values = tyres(ph, gr)
     return {
         "status": STATUS.get(gr.status, "live"),
         "car": text(gr.car_model),
@@ -285,6 +303,11 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "diff_coast": steps["diff_coast"][0],
         "diff_power_pct": share(gr.diff_power_raw_value),
         "diff_coast_pct": share(gr.diff_coast_raw_value),
+        # the mode name stays from the last car on cars without modes: only with a mode
+        "drive_mode": steps["drive_mode"][0],
+        "drive_mode_name": (text(gr.performance_mode_name) or None) if steps["drive_mode"][0] is not None else None,
+        "tyre_temp_c": tyre_values[0],
+        "tyre_psi": tyre_values[1],
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
         # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
         "gear_mode": None,

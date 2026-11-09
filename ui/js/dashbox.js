@@ -12,6 +12,9 @@
  *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
  *   push     a big button without a state; confirm_ms: hold that long before it fires; a "hold" action is
  *            pressed as long as the finger is on it
+ *   tyres    four tyres as the car sees them (front left / right, rear left / right): temperature in C
+ *            and pressure in psi, coloured cold (blue) / ok (green) / hot (red) by the card's cold / hot
+ *   mode     a drive / performance mode: the game's name for it, one dot per mode, - / + buttons
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
  * when it is pressed (until the new value arrives) and whenever its value changes in the game, so a
@@ -419,7 +422,81 @@
     return card;
   }
 
-  const TYPES = { stepper, bias, pair, toggle, fuel, lamps, cycle, ignition, value, push };
+  function tyres(def) {
+    const card = baseCard(def, "tyres");
+    card.querySelector(".rng").textContent = def.pressure ? "\u00b0C \u00b7 PSI" : "\u00b0C";
+    const body = el("div", "tyres-body");
+    const tile = () => el("div", "tyre", "<b><span></span><sup>\u00b0</sup></b><small></small>");
+    const tiles = [tile(), tile(), tile(), tile()];             // front left, front right, rear left, rear right
+    body.append(tiles[0], el("div", "car-axis"), tiles[1], tiles[2], tiles[3]);
+    const legend = el("div", "tyres-legend", "<span><i class='c'></i>COLD</span><span><i class='o'></i>OK</span><span><i class='h'></i>HOT</span>");
+    card.insertBefore(body, card.querySelector(".hint"));
+    card.insertBefore(legend, card.querySelector(".hint"));
+    const cold = Number(def.cold || 70), hot = Number(def.hot || 100);
+    card.update = (f, error) => {
+      const temps = f[def.field], psi = def.pressure ? f[def.pressure] : null;
+      const missing = !Array.isArray(temps) || temps.every(isNone);
+      setState(card, error, missing);
+      tiles.forEach((t, i) => {
+        const v = error || missing ? null : temps[i];
+        const p = error || !Array.isArray(psi) ? null : psi[i];
+        const cls = "tyre " + (isNone(v) ? "" : v < cold ? "cold" : v > hot ? "hot" : "ok");
+        if (t.className !== cls.trim()) t.className = cls.trim();
+        const text = isNone(v) ? "\u2013" : String(Math.round(v));
+        const span = t.querySelector("span");
+        if (span.textContent !== text) span.textContent = text;
+        const sub = isNone(p) ? "" : p.toFixed(1) + " psi";
+        const small = t.querySelector("small");
+        if (small.textContent !== sub) small.textContent = sub;
+      });
+    };
+    return card;
+  }
+
+  function mode(def) {
+    const card = baseCard(def, "stepper mode");
+    const name = el("div", "mode-name");
+    const pips = el("div", "pips");
+    const btns = el("div", "btns");
+    const down = actionButton("\u2212", def.down, def.enabled[def.down], card, false);
+    const up = actionButton("+", def.up, def.enabled[def.up], card, false);
+    btns.append(down, up);
+    card.insertBefore(btns, card.querySelector(".hint"));
+    card.insertBefore(pips, btns);
+    card.insertBefore(name, pips);
+    let rangeKey = "";
+    card.update = (f, error) => {
+      const v = f[def.field];
+      const fixed = !isNone(v) && (f.fixed || []).includes(def.field);
+      const range = fixed ? null : (f.limits || {})[def.field];
+      const missing = isNone(v);
+      setState(card, error, missing);
+      card.settle(v);
+      const low = range ? range[0] : 0;
+      const label = error || missing ? "\u2013" : (def.name && f[def.name]) || "MODE " + (v - low + 1);
+      if (name.textContent !== label) {
+        name.textContent = label;
+        name.style.fontSize = label.length > 11 ? "20px" : label.length > 7 ? "26px" : "";   // long names still fit
+      }
+      const key = fixed ? "fixed" : range ? range.join("-") : "";
+      if (key !== rangeKey) {                    // modes count from 1, whatever the game counts from
+        rangeKey = key;
+        card.querySelector(".rng").textContent = fixed ? "FIXED" : range ? `1\u2013${range[1] - range[0] + 1}` : "";
+        pips.innerHTML = "";
+        if (range && range[1] - range[0] < 12) for (let i = range[0]; i <= range[1]; i++) pips.appendChild(el("i"));
+      }
+      const lit = error || missing || !range ? 0 : v - low + 1;
+      [...pips.children].forEach((pip, i) => pip.classList.toggle("on", i < lit));
+      setButtons(card, !error && !missing && !fixed);
+      if (range && !error && !missing) {
+        if (v <= range[0]) down.disabled = true;
+        if (v >= range[1]) up.disabled = true;
+      }
+    };
+    return card;
+  }
+
+  const TYPES = { stepper, bias, pair, toggle, fuel, lamps, cycle, ignition, value, push, tyres, mode };
 
   RD.dashbox = function (grid) {
     RD.loadInfo().then((info) => {

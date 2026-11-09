@@ -18,6 +18,9 @@
 #                    (optional second button, e.g. headlight flash; a "hold" action is held while pressed)
 # type = "ignition"  ignition and starter: field (ignition on), running (engine running),
 #                    action (ignition, held while pressed: a short touch is a tap), starter (held while pressed)
+# type = "tyres"     tyre temperatures and pressures, front left / right, rear left / right: field (temperatures C),
+#                    pressure (psi), cold / hot (C: below cold blue, above hot red, between green)
+# type = "mode"      a drive / performance mode: field (the step), name (the game's name for it), down / up
 # active             (stepper) a field that is true while the system works: the digits light amber
 # label              card title;  hint: small text at the bottom of the card
 #
@@ -121,3 +124,19 @@ label = "WARNINGS"
 fields = ["warn_brake", "warn_engine", "warn_oil", "warn_coolant"]
 icons = ["brake", "engine", "oil", "coolant"]
 labels = ["BRAKE", "ENGINE", "OIL", "TEMP"]
+
+[[control]]
+type = "tyres"
+label = "TYRES"
+field = "tyre_temp_c"
+pressure = "tyre_psi"
+cold = 70
+hot = 100
+
+[[control]]
+type = "mode"
+label = "DRIVE MODE"
+field = "drive_mode"
+name = "drive_mode_name"
+down = "drive_mode_down"
+up = "drive_mode_up"

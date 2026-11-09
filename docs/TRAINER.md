@@ -1,6 +1,6 @@
 # AI trainer – agreed definition
 
-Agreed with the owner in an interview (November 2026). **Built** (November 2026): `core/trainer.py`, `ui/js/analysis.js` (button, TRAINER tab), `ui/js/rd.js` (settings), tests in `tests/test_trainer.py`. Works with Claude on the owner's PC (see [First real answers](#first-real-answers-november-2026)); ChatGPT, Gemini and Ollama are written from the providers' documentation and never called for real yet. This replaces the earlier rule "no coaching, no tips" on the analysis page: tips come only from the trainer, and only when the driver taps it.
+Agreed with the owner in an interview (November 2026). **Built** (November 2026): `core/trainer.py`, `ui/js/analysis.js` (button, TRAINER tab), `ui/js/rd.js` (settings), tests in `tests/test_trainer.py`. Works with Claude on the owner's PC (see [First real answers](#first-real-answers-november-2026)); ChatGPT, Gemini and Ollama are written from the providers' documentation and never called for real; the owner uses Claude only, so **testing them is not planned** (open point, November 2026). This replaces the earlier rule "no coaching, no tips" on the analysis page: tips come only from the trainer, and only when the driver taps it.
 
 ## What it does
 

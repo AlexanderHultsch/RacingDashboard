@@ -42,7 +42,11 @@ FIELDS = {
     "diff_power": None,      # differential power (on throttle) setting, None = not adjustable
     "diff_coast": None,      # differential coast (off throttle) setting
     "diff_power_pct": None,  # differential locking on throttle as a share 0..1 (the value, not a setting step)
-    "diff_coast_pct": None,  # differential locking off throttle, 0..1
+    "diff_coast_pct": None,
+    "drive_mode": None,      # performance / drive mode as a step (ACE: active_performance_mode), None = not on this car
+    "drive_mode_name": None, # the game's name of the active mode, e.g. "SPORT+"
+    "tyre_temp_c": None,     # tyre temperatures [front left, front right, rear left, rear right] in C
+    "tyre_psi": None,        # tyre pressures, same order, in psi  # differential locking off throttle, 0..1
     # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
     "warn_brake": None,      # brake warning (!): handbrake on, brake system
     "warn_engine": None,     # check engine: ignition on with the engine off, engine trouble

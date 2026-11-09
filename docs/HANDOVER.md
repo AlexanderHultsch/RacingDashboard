@@ -91,8 +91,8 @@ Enable UDP once ([DR2/NOTES.md](DR2/NOTES.md)), drive a stage: values, stage / c
 1. AI trainer quality with the new facts and prompt (test plan 1).
 2. First drives in ACR, iRacing, DR2 (test plan 2–4).
 3. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
-4. ChatGPT / Gemini / Ollama in the trainer: written from the providers' docs, never called for real (Gemini's `x-goog-api-key` header and `GET /v1beta/models/<model>` unconfirmed).
-5. Two DASH cards paused by the owner: TYRES and DRIVE MODE (ACE). Mockup `mockups\dash-tyres-drive-mode.png` (local). Ask before picking it up again.
+4. ChatGPT / Gemini / Ollama in the trainer: written from the providers' docs, never called for real (Gemini's `x-goog-api-key` header and `GET /v1beta/models/<model>` unconfirmed). **Not planned to be confirmed**: the owner uses Claude only (owner, 10 November 2026). Leave the code; do not spend time on it unless the owner asks.
+5. **TYRES and DRIVE MODE cards** (ACE and demo, built 10 November 2026 as in the mockup `mockups\dash-tyres-drive-mode.png`): **not checked in the game yet**. Check in ACE: tyre temperatures and pressures plausible (pressure unit: psi expected, a value below 6 is taken as bar), colours (cold < 70 C, hot > 100 C, first guess, `cold` / `hot` in `games/ace/dash.toml`), the mode name on a car with modes (BMW M4 CSL: SPORT+), NOT ON THIS CAR on one without; bind **Performance Mode Cycle − / +** to `Num3` / `Num6` in ACE and try − / +.
 6. A LICENSE file for the public repository (the owner's decision; MIT suggested).
 
 ## How it works (where to look)

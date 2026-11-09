@@ -25,6 +25,8 @@ GROUPS = [
         {"action": "bias_front", "label": "BB FRONT", "type": "tap", "field": "brake_bias"},
         {"action": "map_down", "label": "MAP -", "type": "tap", "field": "engine_map"},
         {"action": "map_up", "label": "MAP +", "type": "tap", "field": "engine_map"},
+        {"action": "drive_mode_down", "label": "MODE -", "type": "tap", "field": "drive_mode"},
+        {"action": "drive_mode_up", "label": "MODE +", "type": "tap", "field": "drive_mode"},
     ]},
     {"name": "CAR", "buttons": [
         {"action": "pit_limiter", "label": "PIT LIMITER", "type": "tap", "field": "pit_limiter"},

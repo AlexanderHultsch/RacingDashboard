@@ -101,6 +101,30 @@ class Parse(unittest.TestCase):
         self.assertEqual((values["diff_power_pct"], values["diff_coast_pct"]), (0.25, 0.55))
         self.assertIsNone(telemetry.check(values))
 
+    def test_tyres_and_drive_mode(self):
+        ph, gr, st = self.build()
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertIsNone(values["tyre_temp_c"])                     # nothing sent: no tyre values
+        self.assertIsNone(values["drive_mode"])
+        for block, temp, pressure in ((gr.tyre_lf, 86.0, 27.4), (gr.tyre_rf, 104.0, 28.6),
+                                      (gr.tyre_lr, 61.0, 25.9), (gr.tyre_rr, 79.0, 26.8)):
+            block.tyre_temperature_c, block.tyre_pressure = temp, pressure
+        # BMW M4 CSL as read in the game: performance mode 0, range 0..2, modifiable, named SPORT+
+        gr.electronics.active_performance_mode, gr.electronics_max_limit.active_performance_mode = 0, 2
+        gr.electronics_is_modifiable.active_performance_mode = 1
+        gr.performance_mode_name = b"SPORT+"
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["tyre_temp_c"], [86.0, 104.0, 61.0, 79.0])
+        self.assertEqual(values["tyre_psi"], [27.4, 28.6, 25.9, 26.8])
+        self.assertEqual((values["drive_mode"], values["drive_mode_name"]), (0, "SPORT+"))
+        self.assertEqual(values["limits"]["drive_mode"], [0, 2])
+        gr.tyre_lf.tyre_pressure = 1.89                              # bar: shown in psi
+        self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["tyre_psi"][0], 27.4)
+        gr.electronics_max_limit.active_performance_mode, gr.electronics_is_modifiable.active_performance_mode = 0, 0
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))         # a car without modes: the old name is ignored
+        self.assertEqual((values["drive_mode"], values["drive_mode_name"]), (None, None))
+        self.assertIsNone(telemetry.check(values))
+
     def test_lights_and_wipers_unreported_until_seen(self):
         reported = set()
         values = {"lights": 0, "wipers": 0}
