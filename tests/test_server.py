@@ -67,7 +67,7 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/buttons", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
+        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
                      "/analysis", "/js/analysis.js", "/styles/analysis/standard.css"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
@@ -110,7 +110,7 @@ class Bridge(unittest.TestCase):
         self.assertEqual(state["game"], "demo")
         self.assertIsNone(state["error"])
         info = json.loads(get("/api/info")[2])
-        self.assertEqual([g["name"] for g in info["groups"]], ["AIDS", "CAR", "VIEW", "PIT"])
+        self.assertNotIn("groups", info)                                # the BUTTONS page is gone
         self.assertIn("ace", [g["id"] for g in info["games"]])
         self.assertEqual([c["label"] for c in info["dash"]],
                          ["TC", "TC CUT", "ABS", "STABILITY", "ENGINE MAP", "BRAKE BIAS", "FUEL", "DIFF", "PIT LIMITER",
@@ -126,9 +126,10 @@ class Bridge(unittest.TestCase):
         self.assertEqual(post("/api/command", {"action": "tc_up"}), (200, {"ok": True}))
         time.sleep(0.1)
         self.assertEqual(json.loads(get("/state")[2])["tc_level"], before + 1)
-        self.assertEqual(post("/api/command", {"action": "horn", "state": "down"})[0], 200)
-        self.assertEqual(post("/api/command", {"action": "horn", "state": "up"})[0], 200)
-        self.assertEqual(post("/api/command", {"action": "horn", "state": "tap"})[0], 409)
+        self.assertEqual(post("/api/command", {"action": "starter", "state": "down"})[0], 200)
+        self.assertEqual(post("/api/command", {"action": "starter", "state": "up"})[0], 200)
+        self.assertEqual(post("/api/command", {"action": "starter", "state": "tap"})[0], 409)
+        self.assertEqual(post("/api/command", {"action": "horn"})[0], 409)                # a BUTTONS page action, gone
         self.assertEqual(post("/api/command", {"action": "self_destruct"})[0], 409)
 
     def test_stream(self):
@@ -175,9 +176,7 @@ class Latch(unittest.TestCase):
             server.release_all()                                           # game switch / shutdown
             self.assertEqual(sent, [("down", "U"), ("up", "U"), ("down", "U"), ("up", "U")])
             self.assertEqual(server.latched, set())
-            groups = server.actions.layout(game["keys"], set(), game["kinds"])
-            wipers = next(b for g in groups for b in g["buttons"] if b["action"] == "wipers")
-            self.assertEqual(wipers["type"], "latch")
+            self.assertEqual(server.kind(game, "wipers"), "latch")
         finally:
             (server.active, server.connector, server.keys.available, server.keys.down, server.keys.up,
              server.keys.focus, server.keys.tap) = saved

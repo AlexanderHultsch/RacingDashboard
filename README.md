@@ -7,11 +7,10 @@ A universal dashboard for PC racing games on your phone and tablet. A small Pyth
 - **ANALYSIS** (`/analysis`), for a tablet in landscape: where the time goes. The bridge records every lap; the page shows the track map cut into 250 m sections on the left and graphs of one section on the right (speed, throttle, brake, steering, gear, time delta), each with three lines: **green** your best, **blue** the last lap, **red** the lap now. Always visible: the delta of the lap and of the section against your best ever and the last lap, and a strip with the delta of every section. Tap any section, while driving or afterwards. New best laps and sections wait in the REVIEW tab to SAVE or SKIP, one by one or all at once (nothing is saved without a tap, one backup kept for UNDO); the GRAPHS tab is for the deep dive. Details: [docs/ANALYSIS.md](docs/ANALYSIS.md).
   - **AI trainer**: an AI TRAINER button on the map sends the facts of the whole lap (overview) or of the zoomed section to an AI of your choice (Claude, ChatGPT, Gemini or a local Ollama model, set up in the settings with your own API key, kept on the PC) and shows up to 9 tips in a TRAINER tab: what to change, where, and how much time it is worth. The tips judge the driving against the fundamentals of fast driving (braking, brake release, apex, throttle, line, gear) and against your own best. Only on a tap; greyed out without a working connection. Details: [docs/TRAINER.md](docs/TRAINER.md).
 - **BOOST** (`/boost`), for a phone, portrait or landscape: the turbo boost as a round gauge in a frame like GEAR + REV's, a red needle, a yellow arc up to the value, BAR under the hub and the value with one decimal below it in yellow 14-segment digits (like the speed on GEAR + REV); the gauge ends at the car's maximum boost. **NO TURBO** for a car without a turbo (ACE, ACR); in iRacing the manifold pressure, so below 0 the arc turns blue and the page says **VACUUM** (every car shows something); **NO DATA** in DiRT Rally 2.0, which sends no boost.
-- **BUTTONS** (`/buttons`), for a tablet: a telemetry strip and four tabs of buttons sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
 
-**Games:** Assetto Corsa EVO, Assetto Corsa Rally, iRacing and DiRT Rally 2.0 (all PC), and a **Demo** game, a simulated car for trying the pages without a game. Every game gets every page: gear and rev lights, its own dash box, the analysis page with the AI trainer, and the buttons. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
+**Games:** Assetto Corsa EVO, Assetto Corsa Rally, iRacing and DiRT Rally 2.0 (all PC), and a **Demo** game, a simulated car for trying the pages without a game. Every game gets every page: gear and rev lights, its own dash box, the analysis page with the AI trainer, and the boost gauge. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
 
 **Status:** in daily use with Assetto Corsa EVO (0.9.1) on an iPad and an iPhone: bridge, all pages, the dash box, the analysis page and the AI trainer. ACE has no keyboard defaults for the car controls, so bind the keys once in the game, see [ACE keys](#ace-keys). DiRT Rally 2.0, Assetto Corsa Rally and iRacing are built from their telemetry documentation and the code of other tools that read them, and tested with simulated data only (November 2026): see their notes in `docs/` for what to check on the first drive.
 
@@ -64,7 +63,7 @@ The gear button at the top right of every page (same size and place on every pag
 
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
-| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS, BUTTONS or BOOST |
+| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS or BOOST |
 | GAME | all devices | the connector: Assetto Corsa EVO, Assetto Corsa Rally, DiRT Rally 2.0, iRacing or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
@@ -75,7 +74,7 @@ The gear button at the top right of every page (same size and place on every pag
 
 ## ACE keys
 
-The buttons are keypresses (scan codes, like a real keyboard). ACE has to be the active window on the PC; the bridge brings it to the front if needed.
+The dash box buttons are keypresses (scan codes, like a real keyboard). ACE has to be the active window on the PC; the bridge brings it to the front if needed.
 
 ACE has no keyboard defaults for the car controls, so bind the keys once in ACE under **Options → Controls → Car**. [docs/ACE/KEYS.md](docs/ACE/KEYS.md) lists every ACE control by its exact name with the proposed key (numpad for TC / ABS / ESC / map / brake bias and lights, PageUp / PageDown for flash and starter, letters P / U / I for pit limiter, wipers and ignition; Insert, Home, Delete and End do not work in ACE), what is not needed, and what to check after binding. The same keys are set in `games/ace/game.toml`. If you bind other keys, put yours in `config/config.toml`:
 
@@ -93,9 +92,9 @@ A button without a key is greyed out. `tools/ace_probe.py` prints the live value
 install.bat               the installer (runs tools/install.ps1)
 start_dashboard.bat       starts the bridge
 core/                     the bridge, the same for every game
-  server.py               entry point: reads the connector, web server, live stream, buttons
+  server.py               entry point: reads the connector, web server, live stream, keypresses
   telemetry.py            the universal data model every connector fills, and the Connector base class
-  actions.py              the universal button set (groups AIDS, CAR, VIEW, PIT)
+  actions.py              the universal actions the dash box cards send (TC, ABS, lights, ...)
   keys.py                 keypresses (SendInput, scan codes), brings the game window to the front
   winmem.py               Windows shared memory reader for shared-memory games
   kunos.py                the physics page shared by Kunos' games (ACE, Assetto Corsa Rally)
@@ -109,9 +108,9 @@ games/                    one folder per game
   iracing/                iRacing: connector.py (irsdk shared memory, session YAML), game.toml, dash.toml
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
-  index.html, gear.html, dash.html, analysis.html, buttons.html, boost.html    the pages
+  index.html, gear.html, dash.html, analysis.html, boost.html    the pages
   icon.ico, racing-dashboard-icon.png icons for the Windows shortcut and the home screen (own name: other dashboards on the same address keep their icon)
-  js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
+  js/rd.js                            live data, widgets, styles, settings
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   js/dashbox.js                       the dash box cards, built from the game's dash map
   js/analysis.js                      the analysis page: map, section strip, graphs, offers, AI trainer tab

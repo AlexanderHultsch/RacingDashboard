@@ -39,25 +39,6 @@ flash = "PageUp"                  # Flashing Lights (held)
 wipers = "U"                      # Wiper Cycle + (not Delete: ACE showed ".")
 ignition = "I"                    # Toggle Ignition (not End: ACE did not take it)
 starter = "PageDown"              # Starter (held)
-indicator_left = "M"              # Left Direction Indicator (not Comma: kept free for a voice chat mute key)
-indicator_right = "Period"        # Right Direction Indicator
-hazards = "Slash"                 # Hazard Lights
-horn = "Backslash"                # Horn
-display = "NumEnter"              # Display Page Cycle +
-# Other tabs, not checked in ACE yet: guesses from the original Assetto Corsa ("AC") or proposals ("set").
-camera = "F1"                     # AC
-hud = "LCtrl+LShift+U"            # set
-mirror = "F8"                     # AC (virtual mirror)
-look_left = "Q"                   # AC
-look_back = "LCtrl+LShift+K"      # set
-look_right = "W"                  # AC
-leaderboard = "F7"                # AC
-pause = "Esc"
-auto_shifter = "LCtrl+L"          # AC
-shift_down = "Z"                  # AC
-shift_up = "X"                    # AC
-neutral = ""
-save_replay = ""
 
 # How a button sends its key, where ACE differs from the usual type in core/actions.py:
 # "tap" one keypress, "hold" held while the finger is on the button, "latch" one tap presses the key

@@ -75,12 +75,10 @@ The bridge also writes an `ace | raw | ...` line to the log whenever one of the 
 
 ## Controlling: keypresses
 
-ACE has no input API; the buttons are keypresses (`core/keys.py`, scan codes) to the ACE window (`AssettoCorsaEVO.exe`, title "Assetto Corsa EVO").
+ACE has no input API; the dash box buttons are keypresses (`core/keys.py`, scan codes) to the ACE window (`AssettoCorsaEVO.exe`, title "Assetto Corsa EVO").
 
 ACE has no keyboard defaults for the car controls (checked in the game, Nov 2026: Options → Controls → Car is empty). [KEYS.md](KEYS.md) has the proposed key for each ACE control; `game.toml` uses the same keys.
 
-- Car tab (TC, TC CUT, ABS, ESC, engine map, brake bias, pit limiter, lights, flash, wipers, ignition, starter, indicators, hazards, horn, display page): plain keys from KEYS.md, bound once in ACE.
-- Other tabs, not checked yet: camera `F1`, mirror `F8`, leaderboard `F7`, look left / right `Q` / `W`, shift `Z` / `X`, auto shifter `LCtrl+L` (original AC defaults), HUD and look back as `LCtrl+LShift+<letter>` proposals.
-- `NEUTRAL` and `SAVE REPLAY` have no key yet (greyed out).
+- Car tab (TC, TC CUT, ABS, ESC, engine map, performance mode, brake bias, pit limiter, lights, flash, wipers, ignition, starter): plain keys from KEYS.md, bound once in ACE.
 
 If ACE ignores the keys: raise `[input] tap_ms` (e.g. 150), and check that ACE is the active window (windowed or borderless helps). A virtual joystick (vJoy) is the fallback if keypresses do not work for some actions.

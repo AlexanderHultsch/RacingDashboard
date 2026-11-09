@@ -1,4 +1,4 @@
-/* Racing Dashboard base: colours, page lock, LED strip, RPM bar, toolbar, settings, buttons.
+/* Racing Dashboard base: colours, page lock, rev lights, toolbar, settings.
    Page styles (ui/styles/<page>/<style>.css) build on these tokens and classes. */
 
 :root {
@@ -53,30 +53,6 @@ button {
   touch-action: manipulation;
 }
 
-/* ------------------------------------------------------------ LED shift strip */
-
-/* The LEDs are round and as tall as the strip: give .rd-leds a height. */
-.rd-leds {
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-}
-.rd-leds i {
-  flex: none;
-  height: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #1b2027;
-  box-shadow: inset 0 0 0 1px #262d36;
-}
-.rd-leds i.on.g { background: var(--green); box-shadow: 0 0 12px var(--green); }
-.rd-leds i.on.y { background: var(--yellow); box-shadow: 0 0 12px var(--yellow); }
-.rd-leds i.on.r { background: var(--red); box-shadow: 0 0 12px var(--red); }
-.rd-leds.shift i, .rd-leds.shift i.on { background: var(--blue); box-shadow: 0 0 16px var(--blue); animation: rd-flash 0.16s steps(1) infinite; }
-.rd-leds.limiter i, .rd-leds.limiter i.on { background: var(--red); box-shadow: 0 0 16px var(--red); animation: rd-flash 0.1s steps(1) infinite; }
-
-@keyframes rd-flash { 50% { opacity: 0.15; } }
-
 /* ------------------------------------------------------------ rev lights (fields) */
 
 /* Give .rd-revlights a height; the fields share the width. Unlit fields show a dim version of their colour. */
@@ -97,37 +73,6 @@ button {
 .rd-revlights i.on.y { box-shadow: 0 0 3vmin var(--yellow); }
 .rd-revlights i.on.r { box-shadow: 0 0 3vmin var(--red); }
 /* the rev lights never flash (owner, November 2026): at the shift point and on the limiter all stay lit */
-
-/* ------------------------------------------------------------ RPM bar */
-
-.rd-rpmbar {
-  --rpm: 0;
-  --shift: 0.95;
-  position: relative;
-  overflow: hidden;
-  background: #161a20;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-.rd-rpmbar .fill {
-  position: absolute;
-  inset: 0;
-  /* the gradient stays fixed over the whole bar; the clip shows the part up to the rpm */
-  clip-path: inset(0 calc((1 - var(--rpm)) * 100%) 0 0);
-  background: linear-gradient(90deg, #1aa857, var(--green) 55%, var(--yellow) 80%, var(--red));
-}
-.rd-rpmbar.high .fill { filter: brightness(1.15); }
-.rd-rpmbar.shift .fill { background: var(--blue); animation: rd-flash 0.16s steps(1) infinite; }
-.rd-rpmbar .mark {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--shift) * 100%);
-  width: 3px;
-  margin-left: -1px;
-  background: var(--text);
-  opacity: 0.7;
-}
 
 /* ------------------------------------------------------------ no data */
 
@@ -260,37 +205,3 @@ button {
 .rd-info dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 15px; }
 .rd-info dt { color: var(--dim); letter-spacing: 0.06em; }
 .rd-info dd { margin: 0; overflow-wrap: anywhere; }
-
-/* ------------------------------------------------------------ game buttons */
-
-.rd-btn {
-  position: relative;
-  min-height: var(--touch);
-  min-width: var(--touch);
-  border-radius: 12px;
-  background: var(--panel-2);
-  box-shadow: inset 0 0 0 1px var(--line), 0 2px 0 #050608;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-align: center;
-}
-.rd-btn .val { font-size: 0.8em; color: var(--dim); font-weight: 700; }
-.rd-btn.on { box-shadow: inset 0 0 0 2px var(--green), 0 2px 0 #050608; }
-.rd-btn.on .val { color: var(--green); }
-.rd-btn.pressed, .rd-btn:active { background: #2c333d; transform: translateY(1px); }
-.rd-btn.hold::after {
-  content: "HOLD";
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 9px;
-  color: var(--dim);
-  letter-spacing: 0.1em;
-}
-.rd-btn:disabled { opacity: 0.3; box-shadow: inset 0 0 0 1px var(--line); }
-.rd-btn:disabled .val::after { content: "NO KEY"; }

@@ -21,12 +21,13 @@ python -m unittest discover tests
 python core/server.py --check
 ```
 
-`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/buttons`, `/boost`; `/state` is the live frame, `/api/info` the dash map and buttons. An open page reloads itself when files in `ui/` change (frame field `ui`).
+`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change (frame field `ui`).
 
 ## What the local session did (10 November 2026, newest first)
 
 | Commit | What |
 | --- | --- |
+| cloud, after this handover | **BUTTONS page removed** (owner): `buttons.html`, `js/buttons.js`, its styles, the home tile and settings entry, the LED strip and RPM bar widgets and formats only it used, `groups` in `/api/info`; `core/actions.py` is now a flat `ACTIONS` table of the 21 actions the dash boxes use (camera, view, indicators, hazards, horn, shifting, pause and replay actions and their keys are gone; the demo car always shifts itself) |
 | `2a636cc` + this one | **BOOST page** `/boost` (phone): round gauge in the gear page's frame style, red needle, yellow arc, BAR under the hub and the value with one decimal below it in the SPEED number style. NO TURBO (ACE / ACR car without a turbo), VACUUM below 0 (iRacing manifold pressure), NO DATA + chip in DR2. Fields `turbo`, `boost_bar`, `boost_min_bar`, `boost_max_bar` (`kunos.boost`, iRacing `ManifoldPress`); demo car with a turbo; O T U C V in the segment font; home tile, settings entry, startup line |
 | `5d1d565` | Rev lights: scale from 88 % of the game's shift point up to it; red pair and dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag** (owner: a simple rule by flags, nothing per car) |
 | `b651239` | Gear page: SPEED box below the gear frame (same width and style, no unit) |
@@ -39,7 +40,7 @@ python core/server.py --check
 
 | Part | State |
 | --- | --- |
-| Bridge, GEAR + REV, DASH, BUTTONS, home | in daily use with ACE |
+| Bridge, GEAR + REV, DASH, home | in daily use with ACE |
 | GEAR + REV rev lights and red screen | verified in ACE (Porsche 992 GT3 R, Toyota GR86): shift signal and limiter flag come from the game |
 | Analysis page | verified with ACE (lap times within 0.006 s of the game's) |
 | AI trainer | works with Claude; answers with the rewritten prompt (up to 9 tips) not judged yet |
@@ -82,6 +83,7 @@ python core/server.py --check
 - Universal UI, one folder per game; UI in `ui/` (plain HTML / CSS / JS); Python standard library only. Every game gets every page; a page a game cannot fill says so (BOOST in DR2: NO DATA).
 - GEAR + REV: yellow 14-segment gear in a light grey frame close to the screen edges, GEAR in the top line; 8 rev lights blue-green-yellow-red-red-yellow-green-blue from the outside in, from 88 % of the game's shift point up to it; the red pair and the dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag — a simple rule by flags, no rule per car**; the lights never flash; no rpm number; SPEED small in a second frame below (no unit); E for errors with a chip; always the gear number (P only for park); gears above 9 show E.
 - BOOST (phone): a gauge, not a number or bar; BAR under the hub, the value with one decimal below the gauge in the SPEED number style; NO TURBO for ACE cars without a turbo, VACUUM in iRacing, DR2 NO DATA; own link `/boost`, listed in the startup window.
+- No BUTTONS page (removed by the owner, 10 November 2026): the dash box is the only page that sends keys.
 - Settings button: same size and place on every page, top right. Home page `/Racing_Dashboard` (the PC also serves flight sim dashboards on the same address and port). On a tablet in landscape every page starts 26 px lower (`--top-gap`).
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; warning lamps as colours only. TYRES like the ACE HUD (no legend, no compound, brake bar full height, colour only). ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE (not DRIVE MODE), no key on Comma (voice chat mute).
 - ANALYSIS ([ANALYSIS.md](ANALYSIS.md)): map left with BACK and the cursor; tabs REVIEW first, GRAPHS, TRAINER; green best, blue last, red now; every new best offered, never saved without a tap; a pause stops the lap time; no pro / reference laps.

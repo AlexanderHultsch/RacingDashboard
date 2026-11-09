@@ -2,9 +2,9 @@
  *
  * - RD.connect()       live telemetry from the bridge (Server-Sent Events at the chosen rate)
  * - data-rd="field"    any element with this attribute shows that telemetry field,
- *   data-fmt="name"    formatted with RD.formats[name] (gear, speed, rpm, lap, delta, ...)
+ *   data-fmt="name"    formatted with RD.formats[name] (gear, speed, lap, ...)
  * - data-rd-on="field" toggles the class "on" while the field is truthy
- * - RD.widgets         rev lights (.rd-revlights), LED shift strip (.rd-leds), RPM bar (.rd-rpmbar);
+ * - RD.widgets         rev lights (.rd-revlights);
  *                      js/seg14.js adds 14-segment displays (.rd-seg, .rd-seg-text)
  * - RD.styles          the visual styles of a page, cycled with the style button
  * - RD.settings        the settings overlay (game, update rate, units, screen, AI trainer, info)
@@ -58,21 +58,15 @@
       const text = RD.formats.gear(v, f);
       return /^\d+$/.test(text) && Number(text) > 9 ? "E" : text;
     },
-    rpm: (v) => (v ? String(Math.round(v)) : "0"),
     speed: (v) => String(Math.round((v || 0) * (RD.units() === "mph" ? 0.621371 : 1))),
     speedunit: () => (RD.units() === "mph" ? "MPH" : "KM/H"),
-    level: (v) => (v === null || v === undefined ? "-" : String(v)),
     bias: (v) => (v === null || v === undefined ? "-" : (v * 100).toFixed(1)),
     fuel: (v) => (v === null || v === undefined ? "-" : v.toFixed(1)),
-    onoff: (v) => (v ? "ON" : "OFF"),
     lap: (ms) => {
       if (!ms && ms !== 0) return "-:--.---";
       const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
       return m + ":" + pad(s, 2) + "." + pad(Math.floor(ms % 1000), 3);
     },
-    delta: (ms) => (ms === null || ms === undefined ? "-.---" : (ms < 0 ? "-" : "+") + (Math.abs(ms) / 1000).toFixed(3)),
-    position: (v, f) => (v ? "P" + v + (f.cars ? "/" + f.cars : "") : "P-"),
-    fuellaps: (v, f) => (f.fuel_l && f.fuel_per_lap_l ? (f.fuel_l / f.fuel_per_lap_l).toFixed(1) : "-"),
   };
 
   RD.units = () => store.get("units", "kmh");
@@ -207,56 +201,6 @@
     return shiftPoints[f.gear] || Math.max(0, ...Object.values(shiftPoints)) || 0.95;
   };
 
-  /* LED strip: <div class="rd-leds" data-count="15" data-range="0.25"></div>
-     The LEDs light up over the last `range` of rpm before the shift point:
-     green, then yellow, then red; at the shift point the strip flashes (class "shift"). */
-  RD.widgets.leds = function (el) {
-    const count = Number(el.dataset.count || 15);
-    const range = Number(el.dataset.range || 0.25);
-    const leds = [];
-    for (let i = 0; i < count; i++) {
-      const led = document.createElement("i");
-      led.className = i < count * 0.4 ? "g" : i < count * 0.75 ? "y" : "r";
-      el.appendChild(led);
-      leds.push(led);
-    }
-    let lastLit = -1, lastState = "";
-    widgets.push((f) => {
-      const shift = RD.shiftPoint(f);
-      const start = shift - range;
-      const share = Math.min(1, Math.max(0, (f.rpm_pct - start) / range));
-      const lit = RD.errorOf(f) ? 0 : Math.round(share * count);
-      const state = f.limiter ? "limiter" : f.shift_up ? "shift" : "";
-      if (lit !== lastLit) {
-        leds.forEach((led, i) => led.classList.toggle("on", i < lit));
-        lastLit = lit;
-      }
-      if (state !== lastState) {
-        el.classList.toggle("shift", state === "shift");
-        el.classList.toggle("limiter", state === "limiter");
-        lastState = state;
-      }
-    });
-  };
-
-  /* RPM bar: <div class="rd-rpmbar"><i class="fill"></i><i class="mark"></i></div>
-     Sets --rpm (0..1 of the redline) and --shift (the shift point) on the element; zone classes
-     "high" and "shift" colour the fill. */
-  RD.widgets.rpmbar = function (el) {
-    let last = "";
-    widgets.push((f) => {
-      const shift = RD.shiftPoint(f);
-      const pct = Math.min(1, Math.max(0, f.rpm_pct || 0));
-      const key = pct.toFixed(3) + shift.toFixed(3) + f.shift_up + f.limiter;
-      if (key === last) return;
-      last = key;
-      el.style.setProperty("--rpm", pct.toFixed(4));
-      el.style.setProperty("--shift", shift.toFixed(4));
-      el.classList.toggle("high", pct >= shift - 0.1);
-      el.classList.toggle("shift", !!f.shift_up || !!f.limiter);
-    });
-  };
-
   /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12"></div>
      One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
      from the outside in; "left": one after another from the left. The scale ends at the game's shift point
@@ -305,8 +249,6 @@
   /* Widgets set up by RD.start: [selector, init]. Other scripts (js/seg14.js) add their own. */
   RD.widgetInits = [
     [".rd-revlights", RD.widgets.revlights],
-    [".rd-leds", RD.widgets.leds],
-    [".rd-rpmbar", RD.widgets.rpmbar],
   ];
 
   /* ------------------------------------------------------------ styles */
@@ -490,7 +432,7 @@
       el.innerHTML = "<header><h2>SETTINGS</h2><button class='rd-back'>BACK</button></header><div class='rd-set-body'></div>";
       el.querySelector(".rd-back").addEventListener("click", () => this.close());
       const body = el.querySelector(".rd-set-body");
-      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["buttons", "BUTTONS"], ["boost", "BOOST"]];
+      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["boost", "BOOST"]];
       body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? RD.HOME : "/" + p; }));
       if (info) {
         body.appendChild(choice("GAME (ALL DEVICES)", info.games.map((g) => [g.id, g.name.toUpperCase()]), info.game, (id) => {
@@ -525,7 +467,7 @@
         ["FRAMES / S", String(RD.fps)],
         ["OPEN ON ANOTHER DEVICE", info ? info.address : "-"],
       ];
-      if (info && !info.keys_available) lines.push(["BUTTONS", "keypresses need the bridge on Windows"]);
+      if (info && !info.keys_available) lines.push(["KEYPRESSES", "need the bridge on Windows"]);
       for (const [k, v] of lines) {
         const dt = document.createElement("dt"); dt.textContent = k;
         const dd = document.createElement("dd"); dd.textContent = v;

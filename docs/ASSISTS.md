@@ -51,7 +51,7 @@ Game versions: Assetto Corsa EVO 0.9.1, Assetto Corsa Rally 0.6, BeamNG.drive 0.
 - **Changeable while driving:** AC EVO (most complete, binding names known), iRacing (rich but per car), Project CARS 2 (in-car menu "ICM" plus keys; names not confirmed), BeamNG (mode toggles, differential / 4WD, gearbox mode).
 - **Menu only:** Forza Motorsport 6, DiRT Rally 2.0, Wreckfest 2, and mostly AC Rally. A tablet cannot change their assists while driving; at most it can show them if the game reports them.
 - **Relative buttons:** ranges differ per game and per car (iRacing GT3: TC 12 = off; AC EVO: up to 14 TC cut steps), so the universal buttons should send **+ / −** (and toggles), not absolute values.
-- **Missing in the universal button set today** (`core/actions.py`): TC2 / TC cut ±, ESC ±, performance / drive mode, ERS mode, DRS / push-to-pass, launch control, differential, brake migration, engine braking, anti-roll bar, ESC/TC mode toggle and gearbox mode toggle (BeamNG).
+- **Missing in the universal actions today** (`core/actions.py`): ERS mode, DRS / push-to-pass, launch control, differential, brake migration, engine braking, anti-roll bar, ESC/TC mode toggle and gearbox mode toggle (BeamNG).
 
 ## Not confirmed
 

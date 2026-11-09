@@ -51,7 +51,6 @@ ACR's keyboard defaults are not documented, so every key is a proposal to bind o
 | CycleWipers | WIPERS | `U` |
 | StartStopEngine | ENGINE | `I` |
 | Respawn | RECOVER (held 1 s) | `R` |
-| Pause | PAUSE | `Esc` |
 
 ## Dash box
 

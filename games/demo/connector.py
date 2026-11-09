@@ -95,7 +95,7 @@ def form_at(form: list[float], pos: float) -> float:
 MODES = ("COMFORT", "SPORT", "SPORT+")     # the demo car's drive modes
 
 class Connector(telemetry.Connector):
-    HANDLES = tuple(actions.BY_NAME)
+    HANDLES = tuple(actions.ACTIONS)
 
     def __init__(self, game, cfg):
         super().__init__(game, cfg)
@@ -116,7 +116,7 @@ class Connector(telemetry.Connector):
         self.coolant = 35.0                      # starts cold: blue lamp until about 50 C
         self.state = {"tc_level": 3, "tc_cut_level": 2, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
                       "drive_mode": 1,
-                      "lights": 0, "wipers": 0, "ignition": True, "engine_running": True, "auto_shifter": True}
+                      "lights": 0, "wipers": 0, "ignition": True, "engine_running": True}
 
     def tyres(self, brake: float = 0.0) -> dict:
         """Tyres that warm up while driving: fronts hotter than rears, the left side a little more."""
@@ -142,8 +142,6 @@ class Connector(telemetry.Connector):
         if action in steps and s.get(steps[action][0]) is not None:
             name, step, low, high = steps[action]
             s[name] = round(min(high, max(low, s[name] + step)), 3)
-        elif action == "auto_shifter":
-            s["auto_shifter"] = not s["auto_shifter"]      # off: SHIFT + / - shift the demo car
         elif action in ("pit_limiter", "ignition"):
             s[action] = not s[action]
             if action == "ignition" and not s["ignition"]:
@@ -154,12 +152,6 @@ class Connector(telemetry.Connector):
             s["lights"] = (s["lights"] + 1) % 3
         elif action == "wipers":
             s["wipers"] = (s["wipers"] + 1) % 4
-        elif action == "shift_up" and not s["auto_shifter"]:
-            self.shift(min(GEARS, self.gear + 1))
-        elif action == "shift_down" and not s["auto_shifter"]:
-            self.shift(max(-1, self.gear - 1))
-        elif action == "neutral":
-            self.shift(0)
         return True
 
     def shift(self, gear: int) -> None:
@@ -211,7 +203,7 @@ class Connector(telemetry.Connector):
             rpm = RPM_IDLE + random.uniform(-20, 20)
         else:
             rpm = 0
-        if s["auto_shifter"] and running and now >= self.shift_until:
+        if running and now >= self.shift_until:
             if self.gear < GEARS and rpm >= RPM_MAX * SHIFT_PCT and gas > 0:
                 self.shift(self.gear + 1)
             elif self.gear > 1 and self.rpm_for(self.gear - 1) < RPM_MAX * 0.7 and brake > 0:

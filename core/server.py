@@ -63,17 +63,17 @@ KINDS = ("tap", "hold", "latch")
 
 def kind(game: dict, action: str) -> str:
     """How a button sends its key in this game: [kinds] of game.toml, else the type in core/actions.py."""
-    return game.get("kinds", {}).get(action) or actions.BY_NAME[action]["type"]
+    return game.get("kinds", {}).get(action) or actions.ACTIONS[action]
 
 
 def check_keys(game: dict) -> None:
     """Drop invalid or unknown keys and kinds with a log line, so the rest of the game still works."""
     for action, value in list(game.setdefault("kinds", {}).items()):
-        if action not in actions.BY_NAME or value not in KINDS:
+        if action not in actions.ACTIONS or value not in KINDS:
             log.line("keys", game["id"], f"kind {action} = '{value}' ignored (actions in core/actions.py, kinds {', '.join(KINDS)})")
             del game["kinds"][action]
     for action, combo in list(game["keys"].items()):
-        if action not in actions.BY_NAME:
+        if action not in actions.ACTIONS:
             log.line("keys", game["id"], f"unknown action '{action}' ignored")
             del game["keys"][action]
             continue
@@ -121,7 +121,7 @@ def check_dash(game: dict) -> None:
             unknown += [icon for icon in control.get("icons", []) if icon not in LAMP_ICONS]
             if control["type"] == "value" and control.get("fmt", "int") not in ("lap", "pct", "speed", "int"):
                 unknown.append(f"fmt {control.get('fmt')}")
-            unknown += [control[key] for key in kind["actions"] if control.get(key) and control[key] not in actions.BY_NAME]
+            unknown += [control[key] for key in kind["actions"] if control.get(key) and control[key] not in actions.ACTIONS]
             if unknown:
                 problem = f"unknown {', '.join(unknown)}"
         if problem:
@@ -249,7 +249,7 @@ def hold_watchdog() -> None:
 def command(body: dict) -> tuple[bool, str]:
     action = body.get("action")
     state = body.get("state", "tap")
-    if action not in actions.BY_NAME:
+    if action not in actions.ACTIONS:
         return False, "unknown action"
     how = kind(active, action)
     if state not in (("down", "up") if how == "hold" else ("tap",)):
@@ -302,7 +302,6 @@ def info() -> dict:
         "game": active["id"],
         "game_name": active["game"]["name"],
         "games": [{"id": g["id"], "name": g["game"]["name"]} for g in games.values()],
-        "groups": actions.layout(active["keys"], handled, active.get("kinds", {})),
         "dash": dash_layout(active, handled),
         "address": f"{address}/{HOME}",
         "hz_choices": [hz for hz in HZ_CHOICES if hz <= cfg["telemetry"]["read_hz"]],

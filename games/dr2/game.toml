@@ -24,4 +24,3 @@ port = 20777
 lights = "H"
 wipers = "W"
 recover = "F2"
-pause = "Esc"

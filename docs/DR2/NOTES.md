@@ -44,7 +44,7 @@ Not in the packet (or always 0 in DiRT Rally 2.0): the real car and stage names,
 
 ## Controlling: keypresses
 
-ABS, TC and stability control can only be changed in the assist menu (see [ASSISTS.md](../ASSISTS.md)). While driving the dashboard sends: LIGHTS (`H`), WIPERS (`W`), RECOVER (`F2`, back on the road, costs time), PAUSE (`Esc`). These are commonly listed keyboard defaults and not verified: check them under Options > Controls > Keyboard and change them in `[games.dr2.keys]` of `config/config.toml`.
+ABS, TC and stability control can only be changed in the assist menu (see [ASSISTS.md](../ASSISTS.md)). While driving the dashboard sends: LIGHTS (`H`), WIPERS (`W`), RECOVER (`F2`, back on the road, costs time). These are commonly listed keyboard defaults and not verified: check them under Options > Controls > Keyboard and change them in `[games.dr2.keys]` of `config/config.toml`.
 
 ## Dash box
 
