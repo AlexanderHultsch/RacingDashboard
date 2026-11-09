@@ -16,7 +16,8 @@
  *            the pressure in psi above / below, the brake as a bar beside each tyre; tile and bar coloured along a
  *            scale (scale / brake_scale: [blue, green from, green to, red], yellow and orange in between); with the
  *            game's own scores (core_score / surface_score, 1 = fine .. 2 = too hot) the tile is coloured by the core
- *            score and a frame around it by the surface score, like the ACE HUD
+ *            score and a frame around it by the surface score, like the ACE HUD; the brake bar by brake_score
+ *            (0 = cold blue .. 1 = working green)
  *   mode     a drive / performance mode: the game's name for it, one dot per mode, - / + buttons
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
@@ -453,8 +454,9 @@
 
   /* the game's own temperature judgement (ACE: 1 = fine up to 2 = too hot) as green - yellow - orange - red, like
      the ACE HUD: the tile by the core, the frame by the surface */
-  function scoreColour(s) {
-    const stops = [[1.0, [25, 180, 91]], [1.5, [230, 198, 25]], [1.75, [240, 138, 28]], [2.0, [229, 65, 47]]];
+  function scoreColour(s, cold) {
+    const stops = (cold ? [[0, [26, 120, 232]], [0.5, [26, 167, 232]]] : [])    // brakes: 0 = cold (blue) .. 1 = working
+      .concat([[1.0, [25, 180, 91]], [1.5, [230, 198, 25]], [1.75, [240, 138, 28]], [2.0, [229, 65, 47]]]);
     if (s <= stops[0][0]) return stops[0][1];
     for (let i = 1; i < stops.length; i++) {
       if (s <= stops[i][0]) {
@@ -483,6 +485,7 @@
     card.update = (f, error) => {
       const temps = f[def.field], press = def.pressure ? f[def.pressure] : null, brakes = def.brakes ? f[def.brakes] : null;
       const core = def.core_score ? f[def.core_score] : null, surface = def.surface_score ? f[def.surface_score] : null;
+      const brakeScores = def.brake_score ? f[def.brake_score] : null;
       const missing = !Array.isArray(temps) || temps.every(isNone);
       setState(card, error, missing);
       for (let i = 0; i < 4; i++) {
@@ -495,7 +498,8 @@
         const pt = isNone(p) ? "" : p.toFixed(1);
         if (P[i].textContent !== pt) P[i].textContent = pt;
         const bv = error || !Array.isArray(brakes) ? null : brakes[i];
-        paint(B[i], bv, brakeScale, false);                                   // the bar is the brake: its colour is the temperature
+        const bs = error || isNone(bv) || !Array.isArray(brakeScores) ? null : brakeScores[i];
+        paint(B[i], bv, brakeScale, false, isNone(bs) ? undefined : scoreColour(bs, true));   // the game's score, else the scale
         const ss = error || missing || !Array.isArray(surface) ? null : surface[i];
         const frame = isNone(ss) ? "" : `rgb(${scoreColour(ss).join(",")})`;
         if (T[i]._frame !== frame) { T[i]._frame = frame; T[i].style.borderColor = frame; }

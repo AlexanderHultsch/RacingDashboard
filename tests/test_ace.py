@@ -138,6 +138,9 @@ class Parse(unittest.TestCase):
         gr.tyre_lf.brake_temperature_c, gr.tyre_rf.brake_temperature_c = 420.4, 415.0
         gr.tyre_lr.brake_temperature_c, gr.tyre_rr.brake_temperature_c = 180.0, 176.6
         self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["brake_temp_c"], [420, 415, 180, 177])
+        self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["brake_score"], [0.0, 0.0, 0.0, 0.0])   # cold: a real 0
+        gr.tyre_lf.brake_normalized_temperature, gr.tyre_lr.brake_normalized_temperature = 1.0, 0.117   # 420 C, 179 C
+        self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["brake_score"], [1.0, 0.0, 0.12, 0.0])
         self.assertEqual((values["drive_mode"], values["drive_mode_name"]), (0, "SPORT+"))
         self.assertEqual(values["limits"]["drive_mode"], [0, 2])
         gr.tyre_lf.tyre_pressure = 1.89                              # bar: shown in psi

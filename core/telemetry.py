@@ -49,6 +49,7 @@ FIELDS = {
     "tyre_psi": None,        # tyre pressures, same order, in psi
     "tyre_core_score": None,     # the game's judgement of each tyre temperature (core), same order: 1 = fine, 2 = too hot
     "tyre_surface_score": None,  # the same for the tread surface (the hottest of inner / middle / outer)
+    "brake_score": None,         # the game's judgement of each brake temperature: 0 = cold, 1 = at working temperature
     "brake_temp_c": None,    # brake temperatures, same order, in C
     # grip page: no range check on purpose (an odd slip value must not stop the other pages with E)
     "wheel_slip": None,      # slip ratio of each wheel, same order: 0 = rolling with the car, negative = slower than

@@ -135,6 +135,7 @@ pressure = "tyre_psi"
 core_score = "tyre_core_score"
 surface_score = "tyre_surface_score"
 brakes = "brake_temp_c"
+brake_score = "brake_score"
 scale = [50, 80, 100, 130]
 brake_scale = [100, 300, 650, 900]
 

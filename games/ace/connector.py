@@ -241,7 +241,11 @@ def temperature_scores(gr) -> dict:
     surface = [max(b.tyre_normalized_temperature_left, b.tyre_normalized_temperature_center,
                    b.tyre_normalized_temperature_right) for b in blocks]
     score = lambda values: [round(min(2.0, max(0.0, v)), 2) for v in values] if any(v > 0 for v in values) else None
-    return {"tyre_core_score": score(core), "tyre_surface_score": score(surface)}
+    # brakes: brake_normalized_temperature, 0 up to ~150 C, rising evenly to 1.0 at 400 C, still 1.0 at 515 C (Camaro
+    # ZL1); sent whenever the game sends brake temperatures (cold brakes are a real 0)
+    brakes = [round(min(2.0, max(0.0, b.brake_normalized_temperature)), 2) for b in blocks]
+    hot = any(b.brake_temperature_c > 0 for b in blocks)
+    return {"tyre_core_score": score(core), "tyre_surface_score": score(surface), "brake_score": brakes if hot else None}
 
 
 # Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
