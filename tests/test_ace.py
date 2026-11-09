@@ -33,13 +33,12 @@ class Parse(unittest.TestCase):
         ph, gr, st = ace.Physics(), ace.Graphics(), ace.Static()
         ph.packetId, ph.gear, ph.rpms, ph.currentMaxRpm, ph.speedKmh = 7, 4, 7200, 8000, 187.46
         ph.gas, ph.brakeBias, ph.pitLimiterOn = 1.0, 0.565, 0
-        gr.status, gr.rpm_percent, gr.is_change_up_rpm, gr.max_gears = 2, 0.9, True, 6
+        gr.status, gr.rpm_percent, gr.is_change_up_rpm = 2, 0.9, True
         gr.electronics.tc_level, gr.electronics_is_modifiable.tc_level = 3, 1
         gr.electronics.abs_level, gr.electronics_is_modifiable.abs_level = 2, 0
         gr.instrumentation.main_light_stage = 1
         gr.fuel_liter_current_quantity, gr.max_fuel, gr.fuel_liter_per_lap = 41.2, 100.0, 2.9
-        gr.current_lap_time_ms, gr.last_laptime_ms, gr.best_laptime_ms = 65432, 101234, 0
-        gr.total_lap_count, gr.current_pos, gr.total_drivers = 3, 5, 20
+        gr.current_lap_time_ms, gr.last_laptime_ms = 65432, 101234
         gr.car_model = b"Porsche 992 GT3 R"
         st.track = b"Monza"
         return ph, gr, st
@@ -59,8 +58,6 @@ class Parse(unittest.TestCase):
         self.assertEqual(values["lights"], 1)
         self.assertEqual(values["fuel_l"], 41.2)
         self.assertEqual(values["last_ms"], 101234)
-        self.assertIsNone(values["best_ms"])
-        self.assertIsNone(values["delta_ms"])
         self.assertEqual(values["car"], "Porsche 992 GT3 R")
         self.assertEqual(values["track"], "Monza")
         self.assertEqual(values["status"], "live")
@@ -197,15 +194,6 @@ class Parse(unittest.TestCase):
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertIsNone(values["gear_mode"])
         self.assertEqual(values["gear"], 3)
-
-    def test_raw_change_log(self):
-        ph, gr, st = self.build()
-        before = ace.watched(gr)
-        self.assertIn("main_light_stage=1", ace.changes(None, before))
-        gr.instrumentation.main_light_stage, gr.instrumentation.wiper_level = 2, 1
-        gr.instrumentation_max_limit.wiper_level = 3
-        self.assertEqual(ace.changes(before, ace.watched(gr)),
-                         "main_light_stage 1->2 wiper_level 0->1 wiper_level_range 0..0->0..3")
 
     def test_reverse_neutral_and_percent_guard(self):
         ph, gr, st = self.build()

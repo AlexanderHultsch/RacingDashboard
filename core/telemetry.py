@@ -14,7 +14,6 @@ FIELDS = {
     "track": "",             # track name as the game reports it
     # engine and gearbox
     "gear": 0,               # -1 = R, 0 = N, 1.. = forward gears
-    "max_gears": 0,          # number of forward gears, 0 = unknown
     "gear_mode": None,       # automatic gearbox / electric selector: None (manual or unknown), "P" park,
                              # "D" drive, "S" sport, "B" regen, "L" low, "M" manual mode. The pages show the
                              # gear number whatever the mode (owner's decision) and P only for park
@@ -22,13 +21,11 @@ FIELDS = {
     "rpm_max": 0,            # redline / limiter, 1/min, 0 = unknown
     "rpm_pct": 0.0,          # rpm as share of rpm_max, 0..1
     "shift_up": False,       # the game says: shift up now
-    "shift_down": False,     # the game says: shift down now
     "limiter": False,        # rev limiter hit
     # motion and pedals
     "speed_kmh": 0.0,
     "gas": 0.0,              # 0..1
     "brake": 0.0,            # 0..1
-    "clutch": 0.0,           # 0..1
     # driving aids and car systems
     "tc_level": None,        # driver setting, None = not available
     "tc_active": False,      # TC is cutting right now
@@ -80,13 +77,8 @@ FIELDS = {
     "fuel_max_l": None,
     "fuel_per_lap_l": None,
     # timing (milliseconds; None = no time yet)
-    "lap": 0,                # completed laps
-    "position": 0,
-    "cars": 0,
     "lap_ms": None,
     "last_ms": None,
-    "best_ms": None,
-    "delta_ms": None,        # to best lap, negative = faster
     "lap_valid": True,
     "lap_progress": None,    # share of the lap / stage driven, 0..1
     # analysis page (core/recorder.py)
@@ -118,13 +110,13 @@ ERRORS = {
 # Possible ranges of the numeric fields; a value outside means the data is not what we expect
 # (a changed shared memory layout after a game update, a wrong game selected, a connector bug).
 RANGES = {
-    "gear": (-1, 20), "max_gears": (0, 20),
+    "gear": (-1, 20),
     "rpm": (0, 25000), "rpm_max": (0, 25000), "rpm_pct": (0.0, 1.5),
-    "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05), "clutch": (-0.05, 1.05),
+    "speed_kmh": (0.0, 600.0), "gas": (-0.05, 1.05), "brake": (-0.05, 1.05),
     "brake_bias": (0.0, 1.0), "fuel_l": (0.0, 1000.0), "fuel_max_l": (0.0, 1000.0),
     "diff_power_pct": (0.0, 1.0), "diff_coast_pct": (0.0, 1.0),
     "lap_progress": (0.0, 1.05), "lap_pos": (0.0, 1.0001), "steer": (-1.5, 1.5),
-    "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000), "best_ms": (0, 86_400_000),
+    "lap_ms": (0, 86_400_000), "last_ms": (0, 86_400_000),
 }
 REQUIRED = ("gear", "rpm", "rpm_pct")    # what the gear page needs; must be present and numeric
 GEAR_MODES = (None, "P", "D", "S", "B", "L", "M")

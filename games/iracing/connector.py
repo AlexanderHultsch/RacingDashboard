@@ -37,7 +37,7 @@ VAR_HEADER = struct.Struct("<3i?3x32s64s32s")   # type, offset, count, countAsTi
 TYPES = {0: ("c", 1), 1: ("?", 1), 2: ("i", 4), 3: ("I", 4), 4: ("f", 4), 5: ("d", 8)}
 
 # EngineWarnings bits (irsdk_EngineWarnings)
-WATER_TEMP, FUEL_PRESSURE, OIL_PRESSURE, STALLED, PIT_LIMITER, REV_LIMITER, OIL_TEMP = 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40
+WATER_TEMP, OIL_PRESSURE, STALLED, PIT_LIMITER, REV_LIMITER, OIL_TEMP = 0x01, 0x04, 0x08, 0x10, 0x20, 0x40
 OFF_TRACK = 0           # PlayerTrackSurface: -1 not in world, 0 off track, 1 pit stall, 2 approaching pits, 3 on track
 
 
@@ -230,8 +230,7 @@ def parse(image: Image, row: bytes) -> dict:
     gear = int(v("Gear", 0) or 0)
     gears = s.get("gears") or 0
     bits = int(v("EngineWarnings", 0) or 0)
-    best, last, now = v("LapBestLapTime"), v("LapLastLapTime"), v("LapCurrentLapTime")
-    clutch = v("Clutch")
+    last, now = v("LapLastLapTime"), v("LapCurrentLapTime")
     steer, steer_max = v("SteeringWheelAngle"), v("SteeringWheelAngleMax")
     running = not bits & STALLED
     status = "replay" if v("IsReplayPlaying") else "live" if v("IsOnTrack") else "off"
@@ -241,7 +240,6 @@ def parse(image: Image, row: bytes) -> dict:
         "car": s.get("car", ""),
         "track": s.get("track", ""),
         "gear": max(-1, min(gear, 20)),
-        "max_gears": gears,
         "rpm": round(max(0.0, rpm)),
         "rpm_max": round(redline),
         "rpm_pct": round(min(1.2, rpm / redline), 4) if redline else 0.0,
@@ -250,7 +248,6 @@ def parse(image: Image, row: bytes) -> dict:
         "speed_kmh": round(max(0.0, float(v("Speed", 0.0) or 0.0) * 3.6), 1),
         "gas": round(float(v("Throttle", 0.0) or 0.0), 3),
         "brake": round(float(v("Brake", 0.0) or 0.0), 3),
-        "clutch": round(1.0 - clutch, 3) if clutch is not None else 0.0,     # iRacing: 1 = engaged (pedal up)
         "tc_level": level(v("dcTractionControl")),
         "tc_cut_level": level(v("dcTractionControl2")),
         "abs_level": level(v("dcABS")),
@@ -266,12 +263,8 @@ def parse(image: Image, row: bytes) -> dict:
         **warnings(bits, running),
         "fuel_l": round(v("FuelLevel"), 2) if v("FuelLevel") is not None else None,
         "fuel_max_l": s.get("fuel_max"),
-        "lap": max(0, int(v("LapCompleted", 0) or 0)),
-        "position": int(v("PlayerCarPosition", 0) or 0),
         "lap_ms": int(now * 1000) if now and now > 0 else None,
         "last_ms": int(last * 1000) if last and last > 0 else None,
-        "best_ms": int(best * 1000) if best and best > 0 else None,
-        "delta_ms": int(v("LapDeltaToBestLap") * 1000) if v("LapDeltaToBestLap_OK") else None,
         # iRacing has no live "lap invalid" flag: four wheels off the track invalidates the lap
         "lap_valid": v("PlayerTrackSurface", 3) != OFF_TRACK,
         "lap_progress": None,

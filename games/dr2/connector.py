@@ -30,8 +30,7 @@ CONFIG = Path("My Games") / "DiRT Rally 2.0" / "hardware_settings" / "hardware_s
 # byte offsets of the fields the dashboard reads (the whole layout: docs/DR2/NOTES.md)
 LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
 WHEEL_SPEEDS = (108, 112, 100, 104)    # m/s; the packet's order is rear left, rear right, front left, front right
-THROTTLE, STEER, BRAKE, CLUTCH, GEAR = 116, 120, 124, 128, 132
-LAP, RPM, POSITION = 144, 148, 156
+THROTTLE, STEER, BRAKE, GEAR, RPM = 116, 120, 124, 132, 148
 TRACK_LENGTH, LAST_LAP = 244, 248
 MAX_RPM, IDLE_RPM, MAX_GEARS = 252, 256, 260
 
@@ -88,7 +87,6 @@ def parse(data: bytes) -> dict:
         "track": track,
         "car": car,
         "gear": gear,
-        "max_gears": max_gears if 0 < max_gears <= 20 else 0,
         "rpm": round(max(0.0, rpm)),
         "rpm_max": round(rpm_max) if rpm_max > 0 else 0,
         "rpm_pct": round(rpm_pct, 4),
@@ -97,9 +95,6 @@ def parse(data: bytes) -> dict:
         "speed_kmh": round(max(0.0, (f32(data, SPEED) or 0.0) * 3.6), 1),
         "gas": round(f32(data, THROTTLE) or 0.0, 3),
         "brake": round(f32(data, BRAKE) or 0.0, 3),
-        "clutch": round(f32(data, CLUTCH) or 0.0, 3),
-        "lap": int(f32(data, LAP) or 0),
-        "position": int(f32(data, POSITION) or 0),
         "lap_ms": int(lap_time * 1000) if lap_time and lap_time > 0 else None,
         "last_ms": int(last * 1000) if last and last > 0 else None,
         "lap_progress": round(min(1.0, max(0.0, distance / length)), 4) if length > 0 else None,

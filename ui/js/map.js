@@ -105,7 +105,7 @@
 
     const inside = (x, y) => view && x > view.x && x < view.x + view.w && y > view.y && y < view.y + view.h;
 
-    function draw(carX, carY) {
+    function draw() {
       const d = pathData();
       edge.setAttribute("d", d);
       track.setAttribute("d", d);

@@ -26,7 +26,7 @@ def packet(**values) -> bytes:
     """A 264-byte extradata=3 packet with the given fields (byte offset -> value)."""
     floats = [0.0] * 66
     fields = {"lap_time": 4, "lap_distance": 8, "speed": 28, "throttle": 116, "brake": 124, "gear": 132,
-              "rpm": 148, "position": 156, "length": 244, "last": 248, "max_rpm": 252, "idle_rpm": 256, "max_gears": 260,
+              "rpm": 148, "length": 244, "last": 248, "max_rpm": 252, "idle_rpm": 256, "max_gears": 260,
               "wheel_rl": 100, "wheel_rr": 104, "wheel_fl": 108, "wheel_fr": 112}
     for name, value in values.items():
         floats[fields[name] // 4] = value
@@ -36,7 +36,7 @@ def packet(**values) -> bytes:
 class Parse(unittest.TestCase):
     def test_values(self):
         v = dr2.parse(packet(lap_time=83.456, lap_distance=2500, length=10000, speed=25.0, throttle=0.8,
-                             gear=3.0, rpm=6200, max_rpm=8000, max_gears=6, position=4, last=0))
+                             gear=3.0, rpm=6200, max_rpm=8000, max_gears=6, last=0))
         self.assertEqual(v["gear"], 3)
         self.assertEqual((v["rpm"], v["rpm_max"]), (6200, 8000))
         self.assertFalse(v["shift_up"])
@@ -47,7 +47,6 @@ class Parse(unittest.TestCase):
         self.assertEqual(v["lap_ms"], 83456)
         self.assertEqual(v["lap_progress"], 0.25)
         self.assertIsNone(v["last_ms"])
-        self.assertEqual(v["max_gears"], 6)
         self.assertTrue(set(v) <= set(telemetry.FIELDS))
         self.assertIsNone(telemetry.check(dict(telemetry.blank(), **v, connected=True)))
 

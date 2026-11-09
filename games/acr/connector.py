@@ -10,8 +10,8 @@ AC1 and ACC publish the same block names, so the connector reads them only while
 
 Kunos publishes no ACR documentation: the field notes come from tools that read ACR (SimHub, MarvinsAIRA,
 acr-overlay, ZTMZ Pacenote, live-telemetry-evo, nobonobo/ac-telemetry). ACR leaves status, laps, damage,
-lights and wipers empty; temperatures are in Kelvin; the clutch is 1 when the pedal is up. In the pause
-menu the physics page is blanked (or frozen): the connector reports a pause.
+lights and wipers empty; temperatures are in Kelvin. In the pause menu the physics page is blanked (or
+frozen): the connector reports a pause.
 Field notes and what is not verified yet: docs/ACR/NOTES.md.
 """
 import re
@@ -119,7 +119,6 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "car": text(st.carModel),
         "track": text(st.track),
         "gear": gear,
-        "max_gears": 0,
         "rpm": rpm,
         "rpm_max": rpm_max,
         "rpm_pct": round(max(0.0, rpm_pct), 4),
@@ -128,7 +127,6 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "speed_kmh": round(max(0.0, ph.speedKmh), 1),
         "gas": round(ph.gas, 3),
         "brake": round(ph.brake, 3),
-        "clutch": round(1.0 - ph.clutch, 3) if 0 <= ph.clutch <= 1 else 0.0,     # ACR: 1 = pedal up
         "tc_level": gr.TC if 0 <= gr.TC <= 20 else None,
         "tc_active": ph.tc > 0,
         "abs_level": gr.ABS if 0 <= gr.ABS <= 20 else None,

@@ -1,12 +1,12 @@
-# Handover – for a cloud session
+# Handover
 
-For the next Claude session **in the cloud** (no Windows, no games, no iPad / iPhone). Written at the end of the local session on the owner's Windows PC, 9 November 2026 (evening). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session, in the cloud (no Windows, no games, no iPad / iPhone) or on the owner's Windows PC. Written by the local session on 9 November 2026 (evening) and updated by the cloud cleanup session after it. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
 ## What a cloud session can and cannot do
 
 | Can | Cannot |
 | --- | --- |
-| Read and change all code and docs, run `python -m unittest discover tests` (86 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
+| Read and change all code and docs, run `python -m unittest discover tests` (85 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
 | Run the bridge with the **demo game** (`python core/server.py`, GAME → DEMO): a simulated car with every field (turbo, wheel slip, tyre and brake scores, some damage) and laps for the analysis and map pages | Send keypresses (`core/keys.py` is Windows only; the bridge reports "not available") |
 | Render pages with a headless browser for **PNG mockups** (the owner wants them before every visual change) | Check anything against real game data: say so, and leave a test step for the local session in this file |
 | Commit and push to `main` when the owner says so | See the owner's laps (`data/`), AI key (`config/trainer.json`), recordings (`logs/`) or mockups (`mockups/`): local, not in git |
@@ -23,11 +23,13 @@ python core/server.py --check
 
 `--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after a change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields).
 
-## What the local session did today (9 November 2026, newest first)
+## What the last sessions did (newest first)
 
 | Commit | What |
 | --- | --- |
-| this one | Encoding test fixed (it matched its own docstring once tracked), this handover |
+| cloud cleanup | **Cleanup, no change to what the pages show.** Removed: eight telemetry fields nothing read since the BUTTONS page went (`max_gears`, `shift_down`, `clutch`, `lap`, `position`, `cars`, `best_ms`, `delta_ms`) from the model, the five connectors, tests and docs; the ACE connector's `ace | raw` change log (it parsed the graphics page a second time on every read; its question, the light / wiper stages, is answered: ACE does not publish them); `tools/ace_probe.py` (ACE-only, its questions are answered; `tools/live.py` covers every game); in `rd.js` the body classes no style used (`rd-stale`, `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`), the `data-rd-on` binding, `RD.checks`, the `bias` / `fuel` formats, the rev lights' `data-early` option and state classes, the `RD.start` options. Docs brought in line (README, SPEC, the game notes with a checked / still-to-check list for ACE, KEYS.md); the dash map check now also knows the tyre card's score keys |
+| local, 9 November | the rows below |
+| `06b1135` | Encoding test fixed (it matched its own docstring once tracked), the handover |
 | `89fdf10` | **Broken characters**: a PowerShell edit had put a stray A-circumflex before every `°` in `ui/js/rd.js` (tyre tiles showed it after the temperature); restored, byte-order marks removed from seven files, new `tests/test_encoding.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** |
 | `156b6a6` | **MAP** draws the track itself from the live position (1000 pieces by `lap_pos`, kept per track in the browser, seeded from the analysis outline); first lap at least track length / 3.2 wide so a straight does not fill the screen; fitted once 95 % is known |
 | `61455d0` | **DAMAGE** page (car from above like the ACE HUD: body = overall damage, bands for nose / flanks / tail with thin dividing lines, a small shock absorber per wheel) and **MAP** page; fields `damage_body`, `damage_suspension` (ACE `car_damage[9]`, checked with front, rear, left and right hits) |
@@ -79,7 +81,7 @@ python core/server.py --check
 - **Connectors** `games/<id>/connector.py` translate a game into `core/telemetry.py` `FIELDS`; `game.toml` (window, keys), `dash.toml` (dash box cards). Kunos' physics page and `boost()` in `core/kunos.py`.
 - **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, the tyre view `RD.tyreView`, page arrows `RD.CYCLE`, settings, styles), `ui/js/seg14.js` (14-segment SVG), one script per page (`dashbox.js`, `analysis.js`, `boost.js`, `grip.js`, `tyres.js`, `damage.js`, `map.js`, `startup.js`); styles `ui/styles/<page>/<style>.css`. A page that needs a game's action or field names takes them from its dash map in `/api/info` (STARTUP, TYRES, GRIP).
 - **Recorder** `core/recorder.py`, **AI trainer** `core/trainer.py`; file formats in [SPEC.md](SPEC.md#analysis).
-- **Tools** (local only): `tools/live.py` (watch, record, check any game), `tools/ace_probe.py` (`--raw`, `--analysis`), `tools/analysis_check.py`. Finding an unknown game value: record the raw shared memory once a second while the owner does one thing (a burnout, a crash, a reset to the pits) and list the fields that change with it; that found the tyre scores and the damage and ruled out wear.
+- **Tools** (local only): `tools/live.py` (watch, record, check any game from the running bridge) and `tools/analysis_check.py` (the recorded laps); both are still needed for the first drives in ACR, iRacing and DR2. Finding an unknown game value: write a throw-away script that records the raw shared memory once a second while the owner does one thing (a burnout, a crash, a reset to the pits) and list the fields that change with it; that found the tyre scores and the damage and ruled out wear.
 
 ## Known limitations (tell the owner if they come up)
 

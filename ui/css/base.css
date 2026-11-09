@@ -14,7 +14,6 @@
   --blue: #2f7dff;
   --amber: #ff9f1a;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
   --touch: 56px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-r: env(safe-area-inset-right, 0px);

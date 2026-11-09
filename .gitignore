@@ -13,11 +13,6 @@ __pycache__/
 .venv/
 venv/
 
-# Test kit npm files
-tools/node_modules/
-tools/package.json
-tools/package-lock.json
-
 # Editors / OS
 .vscode/
 .idea/

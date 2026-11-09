@@ -109,9 +109,7 @@ class Connector(telemetry.Connector):
         self.shift_until = 0.0
         self.boost = 0.0
         self.lap_start = self.last
-        self.lap = 0
         self.last_ms = None
-        self.best_ms = None
         self.fuel = 42.0
         self.coolant = 35.0                      # starts cold: blue lamp until about 50 C
         self.state = {"tc_level": 3, "tc_cut_level": 2, "abs_level": 2, "brake_bias": 0.565, "engine_map": 1, "pit_limiter": False,
@@ -237,9 +235,7 @@ class Connector(telemetry.Connector):
             self.line_phase = random.random()
             self.form = lap_form()
             lap_ms = int((now - self.lap_start) * 1000)
-            self.lap += 1
             self.last_ms = lap_ms
-            self.best_ms = min(self.best_ms or lap_ms, lap_ms)
             self.lap_start = now
         if running:
             self.fuel = max(0.0, self.fuel - dt * (0.002 + 0.0009 * gas * self.speed / 100))
@@ -248,17 +244,14 @@ class Connector(telemetry.Connector):
         # the turbo builds up with throttle and rpm and needs a moment (lag)
         spool = BOOST_MAX * gas * min(1.0, max(0.0, (rpm_pct - 0.35) / 0.35)) if running else 0.0
         self.boost += (spool - self.boost) * min(1.0, dt * 3.0)
-        delta = None
-        if self.best_ms:
-            delta = int(lap_ms - self.best_ms * self.pos)
         slip = gas > 0.9 and self.speed < 160 and s["tc_level"] > 0      # corner exits: TC cuts
         return {
             "connected": True, "status": "live", "car": "Demo GT", "track": "Demo Ring",
-            "gear": self.gear, "max_gears": GEARS,
+            "gear": self.gear,
             "rpm": int(rpm), "rpm_max": RPM_MAX, "rpm_pct": round(rpm_pct, 4),
             "shift_up": self.gear < GEARS and self.gear > 0 and rpm_pct >= SHIFT_PCT - 0.02,
-            "shift_down": False, "limiter": rpm >= RPM_MAX - 1,
-            "speed_kmh": round(self.speed, 1), "gas": gas, "brake": brake, "clutch": 1.0 if now < self.shift_until else 0.0,
+            "limiter": rpm >= RPM_MAX - 1,
+            "speed_kmh": round(self.speed, 1), "gas": gas, "brake": brake,
             "tc_level": s["tc_level"], "tc_cut_level": s["tc_cut_level"], "tc_active": slip and random.random() < 0.5,
             "abs_level": s["abs_level"], "abs_active": brake > 0.9 and s["abs_level"] > 0 and random.random() < 0.4,
             "brake_bias": s["brake_bias"], "engine_map": s["engine_map"], "pit_limiter": s["pit_limiter"],
@@ -274,8 +267,7 @@ class Connector(telemetry.Connector):
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],
             "fuel_l": round(self.fuel, 2), "fuel_max_l": FUEL_MAX, "fuel_per_lap_l": 2.6,
-            "lap": self.lap, "position": 3, "cars": 18,
-            "lap_ms": lap_ms, "last_ms": self.last_ms, "best_ms": self.best_ms, "delta_ms": delta, "lap_valid": True,
+            "lap_ms": lap_ms, "last_ms": self.last_ms, "lap_valid": True,
             **self.where(),
         }
 

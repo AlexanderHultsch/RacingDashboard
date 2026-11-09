@@ -213,7 +213,7 @@ def from_one(step: tuple) -> tuple:
 def tyres(ph, gr) -> tuple[list | None, list | None, list | None]:
     """Tyre temperatures (C), pressures (psi) and brake temperatures (C), front left, front right, rear left,
     rear right: from the graphics tyre blocks, else the physics page. A pressure below 6 is taken as bar and
-    shown in psi. Not checked in the game yet (docs/ACE/NOTES.md)."""
+    shown in psi (ACE sent psi in the game: 26 to 28 in the Camaro ZL1, docs/ACE/NOTES.md)."""
     blocks = (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)
     temps = [b.tyre_temperature_c for b in blocks]
     if not any(t > 0 for t in temps):
@@ -286,7 +286,8 @@ def warnings(ph, gr) -> dict:
 
 def player_xy(gr) -> tuple[float | None, float | None]:
     """The player's car position on the map (x, z of car_coordinates; y is the height). The slot whose
-    driver id matches player_car_id; slot 0 if none matches (single player). Not verified in the game."""
+    driver id matches player_car_id; slot 0 if none matches (single player). Checked alone on track (the map at
+    Brands Hatch), not with other cars."""
     slot = 0
     for i in range(60):
         if gr.car_ids[i][0] == gr.player_car_id_a and gr.car_ids[i][1] == gr.player_car_id_b and (gr.player_car_id_a or gr.player_car_id_b):
@@ -310,7 +311,6 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         rpm_pct /= 100
     if rpm_pct <= 0 and rpm_max:
         rpm_pct = ph.rpms / rpm_max
-    best = lap_time(gr.best_laptime_ms)
     xy = player_xy(gr)
     tyre_values = tyres(ph, gr)
     slip = slips(ph)
@@ -319,17 +319,14 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "car": text(gr.car_model),
         "track": text(st.track),
         "gear": ph.gear - 1,                # ACE: 0 = R, 1 = N, 2 = 1st
-        "max_gears": int(gr.max_gears),
         "rpm": max(0, ph.rpms),
         "rpm_max": rpm_max,
         "rpm_pct": round(min(max(rpm_pct, 0.0), 1.2), 4),
         "shift_up": bool(gr.is_change_up_rpm),
-        "shift_down": bool(gr.is_change_down_rpm),
         "limiter": bool(gr.is_rpm_limiter_on),
         "speed_kmh": round(max(0.0, ph.speedKmh), 1),
         "gas": round(ph.gas, 3),
         "brake": round(ph.brake, 3),
-        "clutch": round(ph.clutch, 3),
         "tc_level": steps["tc_level"][0],
         "tc_cut_level": steps["tc_cut_level"][0],
         "tc_active": bool(gr.tc_active or ph.tcInAction),
@@ -371,13 +368,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "fuel_l": round(gr.fuel_liter_current_quantity, 2),
         "fuel_max_l": round(gr.max_fuel, 1) if gr.max_fuel > 0 else None,
         "fuel_per_lap_l": round(gr.fuel_liter_per_lap or gr.fuel_per_lap, 2) or None,
-        "lap": max(0, gr.total_lap_count),
-        "position": int(gr.current_pos),
-        "cars": int(gr.total_drivers),
         "lap_ms": lap_time(gr.current_lap_time_ms),
         "last_ms": lap_time(gr.last_laptime_ms),
-        "best_ms": best,
-        "delta_ms": gr.delta_time_ms if best else None,
         "lap_valid": bool(gr.is_valid_lap),
         # analysis page
         "lap_pos": round(min(max(gr.npos, 0.0), 1.0), 6),
@@ -403,30 +395,6 @@ def unreported(values: dict, reported: set) -> None:
             values[name] = None
 
 
-INSTRUMENTATION = ("main_light_stage", "special_light_stage", "cockpit_light_stage", "wiper_level", "rain_lights",
-                   "direction_light_left", "direction_light_right", "flashing_lights", "warning_lights",
-                   "selected_display_index", "are_headlights_visible")
-ASSISTS = ("auto_gear", "auto_blip", "auto_clutch", "auto_clutch_on_start", "manual_ignition_e_start",
-           "auto_pit_limiter", "standing_start_assist")
-
-
-def watched(gr) -> dict:
-    """Rarely changing raw values, logged on change to check their meaning in the game
-    (lights / wipers stages and their range on this car, the assists order)."""
-    inst, low, high = gr.instrumentation, gr.instrumentation_min_limit, gr.instrumentation_max_limit
-    out = {name: int(getattr(inst, name)) for name in INSTRUMENTATION}
-    for name in ("main_light_stage", "wiper_level"):
-        out[name + "_range"] = f"{int(getattr(low, name))}..{int(getattr(high, name))}"
-    out.update((name, int(gr.assists_state.flags[i])) for i, name in enumerate(ASSISTS))
-    return out
-
-
-def changes(before: dict | None, after: dict) -> str:
-    if before is None:
-        return " ".join(f"{name}={value}" for name, value in after.items())
-    return " ".join(f"{name} {before[name]}->{value}" for name, value in after.items() if before[name] != value)
-
-
 class Connector(telemetry.Connector):
     def __init__(self, game, cfg):
         super().__init__(game, cfg)
@@ -437,7 +405,6 @@ class Connector(telemetry.Connector):
         self.last_change = 0.0
         self.stale_s = cfg["telemetry"]["stale_s"]
         self.version = None
-        self.watched = None
         self.reported = set()     # lights / wipers once the game sent a stage above 0
 
     def attach(self) -> bool:
@@ -469,10 +436,6 @@ class Connector(telemetry.Connector):
         physics, graphics, static = (block.read() for block in self.blocks)
         values = parse(physics, graphics, static)
         unreported(values, self.reported)
-        raw = watched(Graphics.from_buffer_copy(graphics[:sizeof(Graphics)]))
-        if raw != self.watched:
-            log.line("ace", "raw", changes(self.watched, raw))
-            self.watched = raw
         now = time.monotonic()
         packet = (physics[:4], graphics[:4])
         if packet != self.last_packet:

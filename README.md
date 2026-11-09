@@ -89,7 +89,7 @@ tc_up = "Num6"
 pit_limiter = "J"
 ```
 
-A button without a key is greyed out. `tools/live.py` watches, records and checks the live values of any game from the running bridge (`python tools/live.py grip`, `--record 60`); `tools/ace_probe.py` prints the values straight from ACE's shared memory (`--raw` for the slip, lock, TC / ABS and turbo values).
+A button without a key is greyed out. To see what the bridge reads from a game, `tools/live.py` watches, records and checks the live values of any game (`python tools/live.py grip`, `--record 60`).
 
 ## Repository
 
@@ -111,11 +111,11 @@ games/                    one folder per game
   acr/                    Assetto Corsa Rally: connector.py (shared memory, ACC layout), game.toml, dash.toml
   dr2/                    DiRT Rally 2.0: connector.py (UDP telemetry), game.toml (window, keys, port), dash.toml
   iracing/                iRacing: connector.py (irsdk shared memory, session YAML), game.toml, dash.toml
-  demo/                   simulated car: connector.py, game.toml
+  demo/                   simulated car: connector.py, game.toml, dash.toml
 ui/                       the web pages
   index.html, gear.html, dash.html, analysis.html, boost.html, grip.html, tyres.html, damage.html, map.html, startup.html    the pages
   icon.ico, racing-dashboard-icon.png icons for the Windows shortcut and the home screen (own name: other dashboards on the same address keep their icon)
-  js/rd.js                            live data, widgets, styles, settings
+  js/rd.js                            live data, rev lights, the tyre view, page arrows, styles, settings
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   js/dashbox.js                       the dash box cards, built from the game's dash map
   js/analysis.js                      the analysis page: map, section strip, graphs, offers, AI trainer tab
@@ -133,6 +133,5 @@ docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/live.py             live values of every game from the running bridge: watch presets, record to logs/, check a recording
-tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields, --raw for slip and turbo
 tools/analysis_check.py   checks the recorded laps and baselines in data/ (rate, gaps, lap / section times, ranges)
 ```

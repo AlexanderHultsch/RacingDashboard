@@ -54,7 +54,6 @@ class Parse(unittest.TestCase):
         v = acr.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual((v["gear"], v["rpm"], v["rpm_max"]), (3, 6200, 7800))     # ACC 4 = 3rd; max from physics
         self.assertEqual(v["speed_kmh"], 112.3)
-        self.assertEqual(v["clutch"], 0.0)                     # ACR 1.0 = pedal up
         self.assertEqual((v["car"], v["track"]), ("Lancia Delta HF Integrale", "Afon Bidno"))
         self.assertEqual(v["lap_ms"], 62345)
         self.assertEqual((v["lap_pos"], v["track_length_m"]), (0.25, 10000.0))

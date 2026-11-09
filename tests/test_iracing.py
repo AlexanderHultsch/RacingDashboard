@@ -54,13 +54,12 @@ DriverInfo:
 # name: (type, value); types: 1 bool, 2 int, 3 bitField, 4 float, 5 double
 VARS = {
     "SessionTime": (5, 100.0), "SessionNum": (2, 0), "Gear": (2, 4), "RPM": (4, 9300.0), "Speed": (4, 50.0),
-    "Throttle": (4, 1.0), "Brake": (4, 0.0), "Clutch": (4, 1.0), "SteeringWheelAngle": (4, 1.0),
-    "SteeringWheelAngleMax": (4, 4.0), "LapDistPct": (4, 0.25), "LapCompleted": (2, 3),
-    "LapCurrentLapTime": (4, 23.5), "LapLastLapTime": (4, 92.25), "LapBestLapTime": (4, 0.0),
-    "LapDeltaToBestLap": (4, 0.0), "LapDeltaToBestLap_OK": (1, False), "FuelLevel": (4, 41.5),
+    "Throttle": (4, 1.0), "Brake": (4, 0.0), "SteeringWheelAngle": (4, 1.0),
+    "SteeringWheelAngleMax": (4, 4.0), "LapDistPct": (4, 0.25),
+    "LapCurrentLapTime": (4, 23.5), "LapLastLapTime": (4, 92.25), "FuelLevel": (4, 41.5),
     "dcTractionControl": (4, 3.0), "dcABS": (4, 5.0), "dcBrakeBias": (4, 54.5), "BrakeABSactive": (1, True),
     "EngineWarnings": (3, 0x10 | 0x04), "IsOnTrack": (1, True), "IsReplayPlaying": (1, False),
-    "PlayerTrackSurface": (2, 3), "PlayerCarPosition": (2, 2), "AirTemp": (4, 21.0), "TrackTempCrew": (4, 30.0),
+    "PlayerTrackSurface": (2, 3), "AirTemp": (4, 21.0), "TrackTempCrew": (4, 30.0),
     "SessionTimeOfDay": (4, 50400.0), "ManifoldPress": (4, 0.4), "VelocityX": (4, 50.0), "VelocityY": (4, 0.0), "YawNorth": (4, 0.0),
 }
 CODES = {1: "?", 2: "i", 3: "I", 4: "f", 5: "d"}
@@ -126,17 +125,16 @@ class Parse(unittest.TestCase):
         img, tick, row = read()
         self.assertEqual(tick, 7)
         v = ir.parse(img, row)
-        self.assertEqual((v["gear"], v["max_gears"], v["rpm"], v["rpm_max"]), (4, 6, 9300, 9500))
+        self.assertEqual((v["gear"], v["rpm"], v["rpm_max"]), (4, 9300, 9500))
         self.assertTrue(v["shift_up"])                                 # above DriverCarSLShiftRPM
         self.assertEqual(v["speed_kmh"], 180.0)
-        self.assertEqual(v["clutch"], 0.0)                             # iRacing 1.0 = pedal up
         self.assertEqual((v["tc_level"], v["abs_level"], v["brake_bias"]), (3, 5, 0.545))
         self.assertIsNone(v["tc_cut_level"])                           # not on this car
         self.assertTrue(v["abs_active"] and v["pit_limiter"])
         self.assertEqual(v["warn_oil"], "alert")
         self.assertEqual(v["steer"], 0.25)
         self.assertEqual((v["lap_pos"], v["track_length_m"]), (0.25, 4330.0))
-        self.assertEqual((v["lap_ms"], v["last_ms"], v["best_ms"], v["delta_ms"]), (23500, 92250, None, None))
+        self.assertEqual((v["lap_ms"], v["last_ms"]), (23500, 92250))
         self.assertEqual(v["time_of_day"], "14:00")
         self.assertEqual(v["status"], "live")
         self.assertTrue(v["lap_valid"])

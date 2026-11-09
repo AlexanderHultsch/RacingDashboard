@@ -21,11 +21,11 @@ The connector takes the buffer with the highest `tickCount`, copies it, and acce
 | --- | --- | --- |
 | `status` | `IsReplayPlaying`, `IsOnTrack` | replay; live while the player is in the car on track; else `off` (garage, menus: NOT ON TRACK). Header bit 0 off = GAME NOT RUNNING |
 | `car`, `track` | YAML `DriverInfo:Drivers[CarIdx = DriverCarIdx]:CarScreenName`; `WeekendInfo:TrackDisplayName` (+ ` - TrackConfigName`) | |
-| `gear`, `max_gears` | `Gear`; YAML `DriverCarGearNumForward` | −1 R, 0 N |
+| `gear` | `Gear` | −1 R, 0 N; YAML `DriverCarGearNumForward` (the number of gears) stops the shift light in top gear |
 | `rpm`, `rpm_max`, `rpm_pct` | `RPM`; YAML `DriverCarRedLine` | |
 | `shift_up` | YAML `DriverCarSLShiftRPM` | the car's own shift light point |
 | `limiter`, `pit_limiter` | `EngineWarnings` bits 0x20, 0x10 | |
-| `speed_kmh`, `gas`, `brake`, `clutch` | `Speed` (m/s), `Throttle`, `Brake`, `Clutch` | iRacing's clutch is 1 = engaged (pedal up): the dashboard shows `1 − Clutch` |
+| `speed_kmh`, `gas`, `brake` | `Speed` (m/s), `Throttle`, `Brake` | |
 | `tc_level`, `tc_cut_level`, `abs_level` | `dcTractionControl`, `dcTractionControl2`, `dcABS` | only on cars that have them; ranges per car (not reported: no level dots) |
 | `abs_active` | `BrakeABSactive` | iRacing reports no "TC is cutting now" flag |
 | `wheel_slip` | – | iRacing's live data has no slip or speed per wheel: the GRIP page shows only the ABS / TC settings and says "IRACING SENDS NO WHEEL SLIP" |
@@ -33,8 +33,7 @@ The connector takes the buffer with the highest `tickCount`, copies it, and acce
 | `engine_map` | `dcThrottleShape`, else `dcFuelMixture` | iRacing has no `dcEngineMap`; which knob a car's MAP is differs per car. **To check** |
 | `engine_running`, `warn_*` | `EngineWarnings` | 0x08 stalled → engine yellow; 0x04 oil pressure → oil red, 0x40 oil temperature → oil yellow; 0x01 water temperature → coolant yellow; brake not reported |
 | `fuel_l`, `fuel_max_l` | `FuelLevel`; YAML `DriverCarFuelMaxLtr` | |
-| `lap`, `position` | `LapCompleted`, `PlayerCarPosition` | |
-| `lap_ms`, `last_ms`, `best_ms`, `delta_ms` | `LapCurrentLapTime`, `LapLastLapTime`, `LapBestLapTime`, `LapDeltaToBestLap` (when `LapDeltaToBestLap_OK`) | seconds → ms |
+| `lap_ms`, `last_ms` | `LapCurrentLapTime`, `LapLastLapTime` | seconds → ms |
 | `lap_valid` | `PlayerTrackSurface` | iRacing has no live "lap invalid" flag: off track (0, four wheels off) invalidates the lap for the analysis page |
 | `lap_pos`, `lap_progress` | `LapDistPct` | |
 | `track_length_m` | YAML `TrackLengthOfficial`, else `TrackLength` | "4.33 km" |

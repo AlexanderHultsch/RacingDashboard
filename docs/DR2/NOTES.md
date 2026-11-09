@@ -22,11 +22,10 @@ The game sends a packet of little-endian 32-bit floats per frame while driving (
 | `rpm`, `rpm_max`, `rpm_pct` | 148, 252 | some builds send the rate as rpm / 10: a max below 2000 is scaled by 10 |
 | `shift_up`, `limiter` | – | the game sends no shift signal: shift light from 94 % of max rpm (not in top gear), limiter from 99 % |
 | `speed_kmh` | 28 | m/s × 3.6 |
-| `gas`, `brake`, `clutch` | 116, 124, 128 | 0..1 |
+| `gas`, `brake` | 116, 124 | 0..1 |
 | `lap_ms`, `last_ms` | 4, 248 | stage time, seconds |
 | `lap_progress` | 8 / 244 | distance driven / stage length |
-| `lap`, `position` | 144, 156 | |
-| `max_gears` | 260 | |
+| – | 260 | the number of gears: used for the shift light (none in top gear), the reverse gear and the car's name |
 | `lap_pos`, `track_length_m` | 8 / 244, 244 | analysis: one stage = one lap; the stage starts standing and ends when the car stays at the end |
 | `pos_x`, `pos_y` | 16, 24 | world x and z, metres (the map may come out mirrored) |
 | `steer` | 120 | −1..1 |

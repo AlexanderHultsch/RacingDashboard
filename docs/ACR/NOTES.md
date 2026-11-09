@@ -8,7 +8,7 @@ ACR does **not** use the Assetto Corsa EVO layout. It publishes the classic Kuno
 
 AC1 and ACC publish the **same block names**, so the connector attaches only while `acr.exe` runs (`winmem.process_running`); otherwise it would read another game's data with the wrong layout.
 
-ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, brake bias, fuel, temperatures in **Kelvin**, the clutch with 1 = pedal up, current max rpm at byte 588), graphics (the stage clock **as text** `mm:ss.fff`, the distance along the stage, the player's world position in slot 0, TC and ABS levels) and static (car, stage name in the game's language, stage length `trackSplineLength`). Status, session, laps, flags, damage, handbrake, lights and wipers stay empty. In the pause menu the physics page is blanked (or frozen) while its packet counter runs on; on the results screen the graphics page freezes.
+ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, brake bias, fuel, temperatures in **Kelvin**, current max rpm at byte 588), graphics (the stage clock **as text** `mm:ss.fff`, the distance along the stage, the player's world position in slot 0, TC and ABS levels) and static (car, stage name in the game's language, stage length `trackSplineLength`). Status, session, laps, flags, damage, handbrake, lights and wipers stay empty. In the pause menu the physics page is blanked (or frozen) while its packet counter runs on; on the results screen the graphics page freezes.
 
 ### Field mapping
 
@@ -19,7 +19,7 @@ ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, b
 | `gear` | physics `gear` − 1 | ACC: 0 = R, 1 = N, 2 = 1st |
 | `rpm`, `rpm_max`, `rpm_pct` | physics `rpms`; static `maxRpm`, else physics `currentMaxRpm` | |
 | `shift_up`, `limiter` | – | ACR sends no shift signal: from 94 % / 99 % of max rpm |
-| `speed_kmh`, `gas`, `brake`, `clutch` | physics | clutch shown as `1 − clutch` |
+| `speed_kmh`, `gas`, `brake` | physics | |
 | `tc_level`, `abs_level` | graphics `TC`, `ABS` | adjustable on newer cars only |
 | `tc_active`, `abs_active` | physics `tc`, `abs` (above 0) | **to check** (sources disagree) |
 | `brake_bias` | physics `brakeBias` | front share |

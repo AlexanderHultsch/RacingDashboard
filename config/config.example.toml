@@ -18,7 +18,7 @@ stale_s = 2.0
 [input]
 # How long a tap holds the key, in milliseconds. Raise it (120, 150) if the game misses taps.
 tap_ms = 80
-# A held button (HORN, LOOK LEFT ...) is released after this many seconds if the device never sends "up".
+# A held button (FLASH, STARTER ...) is released after this many seconds if the device never sends "up".
 hold_max_s = 10.0
 
 [analysis]

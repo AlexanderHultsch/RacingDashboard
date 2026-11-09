@@ -3,22 +3,21 @@
  * - RD.connect()       live telemetry from the bridge (Server-Sent Events at the chosen rate)
  * - data-rd="field"    any element with this attribute shows that telemetry field,
  *   data-fmt="name"    formatted with RD.formats[name] (gear, speed, lap, ...)
- * - data-rd-on="field" toggles the class "on" while the field is truthy
  * - RD.widgets         rev lights (.rd-revlights);
  *                      js/seg14.js adds 14-segment displays (.rd-seg, .rd-seg-text)
  * - RD.styles          the visual styles of a page, cycled with the style button
  * - RD.settings        the settings overlay (game, update rate, units, screen, AI trainer, info)
- * - RD.command()       sends a button to the game
+ * - RD.command()       sends an action (core/actions.py) to the game
  *
  * A page needs: <body data-page="gear" data-styles="segment"> (one or more styles, comma-separated) and
  * <link id="rd-style" rel="stylesheet">. Everything else is optional.
- * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-maxrev (the game's
- * limiter signal), rd-redzone (the red rev lights are lit), rd-pit, rd-tc, rd-abs.
+ * Body classes set while driving: rd-error (any error), rd-notice (the chip shows an error or a hint), rd-maxrev (the
+ * game's limiter signal), rd-redzone (the red rev lights are lit).
  *
  * Errors: RD.errorOf(frame) returns the error text or null: no connection to the PC, data the page
- * cannot read, an error the bridge reports (frame.error: game not running, no new data, unexpected
- * values ...), or a page check (RD.checks, e.g. a gear above 9 on a one-digit display). While there is
- * an error the gear shows E, the rev lights stay off and the .rd-nodata chip shows "E · <text>".
+ * cannot read, or an error the bridge reports (frame.error: game not running, no new data, unexpected
+ * values ...). While there is an error the gear shows E, the rev lights stay off and the .rd-nodata chip
+ * shows "E · <text>". RD.notices are hints a page adds for the chip while the data is fine.
  */
 (function () {
   "use strict";
@@ -34,7 +33,7 @@
 
   const RD = {
     frame: {},          // the latest telemetry frame
-    info: null,         // /api/info: games, buttons, address
+    info: null,         // /api/info: games, the dash map, address
     listeners: [],      // functions called with each rendered frame
     store,
   };
@@ -60,8 +59,6 @@
     },
     speed: (v) => String(Math.round((v || 0) * (RD.units() === "mph" ? 0.621371 : 1))),
     speedunit: () => (RD.units() === "mph" ? "MPH" : "KM/H"),
-    bias: (v) => (v === null || v === undefined ? "-" : (v * 100).toFixed(1)),
-    fuel: (v) => (v === null || v === undefined ? "-" : v.toFixed(1)),
     lap: (ms) => {
       if (!ms && ms !== 0) return "-:--.---";
       const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
@@ -118,9 +115,8 @@
     if (lost !== RD.lost) { RD.lost = lost; schedule(); }
   }, 500);
 
-  /* Error text for a frame, or null. Pages add their own checks to RD.checks: (frame) => text | null.
-     RD.notices are hints for the chip only (the data is fine, e.g. a gear the display cannot show). */
-  RD.checks = [];
+  /* RD.errorOf: the error text for a frame, or null. RD.notices are hints for the chip only, added by a page
+     as (frame) => text | null (the data is fine, e.g. a gear the display cannot show). */
   RD.notices = [];
   RD.noticeOf = function (f) {
     for (const notice of RD.notices) {
@@ -134,10 +130,6 @@
     if (RD.badData) return "DATA FROM THE PC NOT READABLE";
     if (f.error) return f.error_text || String(f.error).toUpperCase();
     if (!f.connected) return "NO DATA FROM THE GAME";
-    for (const check of RD.checks) {
-      const text = check(f);
-      if (text) return text;
-    }
     return null;
   };
   document.addEventListener("visibilitychange", () => { if (!document.hidden) RD.connect(); });
@@ -146,11 +138,11 @@
 
   const bound = [];
 
-  RD.bind = function (root) {
-    (root || document).querySelectorAll("[data-rd], [data-rd-on]").forEach((el) => {
-      bound.push({ el, field: el.dataset.rd, on: el.dataset.rdOn, fmt: RD.formats[el.dataset.fmt || "text"] || RD.formats.text, last: undefined, lastOn: undefined });
+  function bind() {
+    document.querySelectorAll("[data-rd]").forEach((el) => {
+      bound.push({ el, field: el.dataset.rd, fmt: RD.formats[el.dataset.fmt || "text"] || RD.formats.text, last: undefined });
     });
-  };
+  }
 
   let lastError;
   function render() {
@@ -159,28 +151,16 @@
     const body = document.body.classList;
     const error = RD.errorOf(f);
     const chipText = error || RD.noticeOf(f);
-    body.toggle("rd-stale", RD.lost || !f.connected);
     body.toggle("rd-error", !!error);
     body.toggle("rd-notice", !!chipText);
     if (chipText !== lastError) {
       document.querySelectorAll(".rd-nodata").forEach((chip) => { chip.textContent = chipText ? "E \u00b7 " + chipText : ""; });
       lastError = chipText;
     }
-    body.toggle("rd-shift", !!f.shift_up);
-    body.toggle("rd-limiter", !!f.limiter);
     body.toggle("rd-maxrev", !error && !!f.limiter);             // the game's own rev limiter signal only
-    body.toggle("rd-pit", !!f.pit_limiter);
-    body.toggle("rd-tc", !!f.tc_active);
-    body.toggle("rd-abs", !!f.abs_active);
     for (const b of bound) {
-      if (b.field) {
-        const text = b.fmt(f[b.field], f);
-        if (text !== b.last) { b.el.textContent = text; b.last = text; }
-      }
-      if (b.on) {
-        const on = !!f[b.on];
-        if (on !== b.lastOn) { b.el.classList.toggle("on", on); b.lastOn = on; }
-      }
+      const text = b.fmt(f[b.field], f);
+      if (text !== b.last) { b.el.textContent = text; b.last = text; }
     }
     for (const w of widgets) w(f);
     for (const fn of RD.listeners) fn(f);
@@ -204,15 +184,13 @@
   /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12"></div>
      One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
      from the outside in; "left": one after another from the left. The scale ends at the game's shift point
-     (learned from its shift signal) and is `range` wide (0.12: from 88 % of it); optional data-early moves the
-     end below the shift point (not used: a fixed offset did not fit every car); the innermost pair (the red one) only at the game's shift signal
-     (or at the learned shift point), so it means "shift now". The fields never flash: at the shift signal and
-     on the limiter all are lit (classes "shift" / "limiter" for styles). Unlit fields stay dim (CSS). */
+     (learned from its shift signal) and is `range` wide (0.12: from 88 % of it); the innermost pair (the red
+     one) only at the game's shift signal (or at the learned shift point), so it means "shift now". The fields
+     never flash: at the shift signal and on the limiter all are lit. Unlit fields stay dim (CSS). */
   RD.widgets.revlights = function (el) {
     const colors = (el.dataset.colors || "b g y r r y g b").trim().split(/\s+/);
     const outside = (el.dataset.fill || "outside") === "outside";
     const range = Number(el.dataset.range || 0.12);
-    const early = Number(el.dataset.early || 0);
     const n = colors.length;
     const fields = colors.map((color) => {
       const field = document.createElement("i");
@@ -222,26 +200,19 @@
     });
     const step = fields.map((_, i) => (outside ? Math.min(i, n - 1 - i) : i));   // the step at which a field lights
     const steps = Math.max(...step) + 1;
-    let lastLit = -1, lastState = "";
+    let lastLit = -1;
     widgets.push((f) => {
-      const shift = RD.shiftPoint(f);
-      const end = shift * (1 - early), start = end - shift * range;
+      const end = RD.shiftPoint(f), start = end * (1 - range);
       const share = ((f.rpm_pct || 0) - start) / (end - start || 1);
       const error = RD.errorOf(f);
       let lit = error ? 0 : Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6)));
-      const state = error ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
-      if (state) lit = steps;
+      if (!error && (f.limiter || f.shift_up)) lit = steps;
       else if (lit === steps && share < 1) lit = steps - 1;          // the last pair waits for the end of the scale
       if (lit !== lastLit) {
         fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
         // the red fields are lit (at the end of the scale or the game's shift signal): the gear page turns its screen red
         document.body.classList.toggle("rd-redzone", fields.some((field, i) => colors[i] === "r" && step[i] < lit));
         lastLit = lit;
-      }
-      if (state !== lastState) {
-        el.classList.toggle("shift", state === "shift");
-        el.classList.toggle("limiter", state === "limiter");
-        lastState = state;
       }
     });
   };
@@ -571,13 +542,12 @@
 
   /* ------------------------------------------------------------ start */
 
-  RD.start = function (options) {
-    options = options || {};
+  RD.start = function () {
     RD.styles.init();
     for (const [selector, init] of RD.widgetInits) document.querySelectorAll(selector).forEach((el) => init(el));
-    RD.bind();
-    if (options.toolbar !== false) RD.toolbar();
-    document.body.classList.add("rd-stale", "rd-error");
+    bind();
+    RD.toolbar();
+    document.body.classList.add("rd-error");
     render();
     RD.connect();
     if (store.get("awake", false)) {

@@ -10,7 +10,7 @@
   "use strict";
 
   let gameName = "", hasCard = true;
-  RD.notices.push((f) => (hasCard ? null : (gameName || "THIS GAME") + " SENDS NO TYRE DATA"));
+  RD.notices.push(() => (hasCard ? null : (gameName || "THIS GAME") + " SENDS NO TYRE DATA"));
 
   RD.widgetInits.push([".rd-tyres", (el) => {
     let view = null;

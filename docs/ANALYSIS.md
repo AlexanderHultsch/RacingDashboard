@@ -53,7 +53,7 @@ In practice you may turn around and drive a section again. The rule:
 
 ## Data the connectors must add
 
-Universal fields: lap position (0..1), track length, x / y position, steering (−1..1), session identity (to detect a new run), ambient values. Assetto Corsa EVO: `npos`, `track_length_m`, the player's entry in `car_coordinates`, `steerAngle`, air / road temperature, grip, time of day, tyre compound; to verify on the PC first (`tools/ace_probe.py`). DiRT Rally 2.0: lap distance / track length, position x / z from the packet (bytes 16 and 24), steering (byte 120).
+Universal fields: lap position (0..1), track length, x / y position, steering (−1..1), session identity (to detect a new run), ambient values. Assetto Corsa EVO: `npos`, `track_length_m`, the player's entry in `car_coordinates`, `steerAngle`, air / road temperature, grip, time of day, tyre compound (checked at Brands Hatch, [ACE/NOTES.md](ACE/NOTES.md)). DiRT Rally 2.0: lap distance / track length, position x / z from the packet (bytes 16 and 24), steering (byte 120).
 
 ## Performance
 

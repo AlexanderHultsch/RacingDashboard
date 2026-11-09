@@ -61,7 +61,7 @@
 
   let gameName = "", noDamage = false;
   RD.loadInfo().then((info) => { gameName = (info.game_name || "").toUpperCase(); }).catch(() => {});
-  RD.notices.push((f) => (noDamage ? (gameName || "THIS GAME") + " SENDS NO DAMAGE" : null));
+  RD.notices.push(() => (noDamage ? (gameName || "THIS GAME") + " SENDS NO DAMAGE" : null));
 
   RD.widgetInits.push([".rd-damage", (el) => {
     el.innerHTML = SVG;

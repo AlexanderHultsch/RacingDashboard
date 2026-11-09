@@ -23,7 +23,7 @@ Principles:
 | Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST, GRIP, TYRES, DAMAGE, MAP and STARTUP (phone); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
-| Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
+| Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and never flash; the screen flashes only on the game's limiter signal |
 | Units | km/h by default, mph per device |
 | Code | Public GitHub repo `AlexanderHultsch/RacingDashboard`, main branch |
 
@@ -57,11 +57,11 @@ Phone / tablet pages (ui/)
 | --- | --- |
 | `connected`, `status` | fresh data from the game; `off` / `live` / `pause` / `replay` |
 | `car`, `track` | names as the game reports them |
-| `gear`, `max_gears` | −1 = R, 0 = N, 1.. forward; number of forward gears |
+| `gear` | −1 = R, 0 = N, 1.. forward |
 | `gear_mode` | selector of an automatic gearbox or an electric car: `None` (manual or unknown), `P` park, `D` drive, `S` sport, `B` regen, `L` low, `M` manual mode. The pages show the gear number whatever the mode and P only for park |
 | `rpm`, `rpm_max`, `rpm_pct` | engine speed, redline, rpm as a share of the redline (0..1) |
-| `shift_up`, `shift_down`, `limiter` | the game's shift signals and the rev limiter |
-| `speed_kmh`, `gas`, `brake`, `clutch` | km/h; pedals 0..1 |
+| `shift_up`, `limiter` | the game's shift signal and the rev limiter |
+| `speed_kmh`, `gas`, `brake` | km/h; pedals 0..1 |
 | `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | driver settings, `None` if the car has none |
 | `diff_power_pct`, `diff_coast_pct` | differential locking on / off throttle as a share 0..1 (the value, not a setting step), `None` = not reported |
 | `drive_mode`, `drive_mode_name` | drive / performance mode as a step (range in `limits`) and the game's name for it (e.g. `SPORT+`), `None` = not on this car |
@@ -78,19 +78,18 @@ Phone / tablet pages (ui/)
 | `brake_bias` | front share 0..1 |
 | `pit_limiter`, `ignition`, `engine_running`, `lights`, `wipers` | car systems (lights / wipers are stages, 0 = off) |
 | `fuel_l`, `fuel_max_l`, `fuel_per_lap_l` | litres |
-| `lap`, `position`, `cars` | completed laps, position, number of cars |
 | `lap_progress` | share of the lap / stage driven, 0..1 |
 | `lap_pos`, `track_length_m` | position on the lap along the track, 0..1 (the game's normalised position, not the driven distance), and the track / stage length in metres: the analysis sections |
 | `pos_x`, `pos_y` | car position on the map in metres (game world seen from above) |
 | `steer` | steering −1 (full left) .. 1 (full right) |
 | `session_id` | changes when a new game session starts (a new analysis run) |
 | `air_c`, `road_c`, `tyre_compound`, `time_of_day` | ambient values, written once per lap |
-| `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
+| `lap_ms`, `last_ms`, `lap_valid` | the time of the lap now and of the last lap in ms (`None` = no time); false once the game calls the lap invalid |
 | `boost_bar`, `boost_min_bar`, `boost_max_bar` | boost page: boost above the air pressure in bar (negative = vacuum, 0 for a car without a turbo: no check whether a car has one, `None` = the game sends none), the lowest value the game sends (iRacing −1, else 0) and the car's maximum boost (`None` = unknown). No range check: an odd boost value must not stop the other pages with E. ACE: graphics `turbo_boost` in bar (physics `turboBoost` as a fallback); `max_turbo_boost` is not used (0 in the M4 GT3 Evo, 157.4 in the Camaro ZL1), ACR: physics `turboBoost` and static `maxTurboBoost` (`kunos.boost`); iRacing: `ManifoldPress` − 1.013 bar; DR2: none |
 | `wheel_slip`, `wheel_lock` | grip page: the slip ratio of each wheel [front left, front right, rear left, rear right] (0 = rolling with the car, negative = slower: braking, −1 = stopped; positive = faster: wheelspin; capped −1..3; `None` = the game sends none) and the game's own lock flag per wheel (`None` = the game has none). No range check. ACE: physics `slipRatio` (`kunos.slips`, `None` while all 0) and graphics `tyre_*.lock`; ACR: physics `slipRatio`, no lock flag; DR2: the wheel speeds against the car's speed (at least 3 m/s); iRacing: none (no slip per wheel in the live data); demo: simulated |
 | `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
 
-Each frame also carries `game` (the active game id).
+Each frame also carries `game` (the active game id) and `ui` (the newest change time of the page files, [section 6](#6-the-pages)). Fields no page, recorder or dash map reads were removed in November 2026 (number of gears, shift-down signal, clutch, completed laps, position, number of cars, best lap and delta): add a field again together with the page that shows it.
 
 ### Errors
 
@@ -104,11 +103,11 @@ The pages show **E** instead of the gear when the data cannot be trusted, and a 
 | `no_data` | NO NEW DATA FROM THE GAME | the game is running but its data does not change for `stale_s` (pause, menu, loading, setup screen) |
 | `not_driving` | NOT ON TRACK | the game reports no live session (`status` `off`) |
 
-The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION TO THE PC (no message for 2.5 s: Wi-Fi, PC asleep, bridge closed) and DATA FROM THE PC NOT READABLE. While there is an error the rev lights stay off. `RD.checks` takes further page checks; `RD.notices` only fill the chip: on GEAR + REV a gear above 9 shows E with "GEAR 10: THE DISPLAY SHOWS ONE DIGIT" while the rev lights keep working (the data itself is fine). The ACE connector logs the game and shared memory version when it attaches, so a layout change after a game update shows in the log.
+The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION TO THE PC (no message for 2.5 s: Wi-Fi, PC asleep, bridge closed) and DATA FROM THE PC NOT READABLE. While there is an error the rev lights stay off. `RD.notices` are hints a page adds for the chip while the data is fine: on GEAR + REV a gear above 9 shows E with "GEAR 10: THE DISPLAY SHOWS ONE DIGIT" while the rev lights keep working (the data itself is fine). The ACE connector logs the game and shared memory version when it attaches, so a layout change after a game update shows in the log.
 
 ## 4. Buttons
 
-`core/actions.py` (`ACTIONS`) is the universal set of actions the dash box cards send, the same for every game, each with its usual type: TC − / +, TC CUT − / +, ABS − / +, ESC − / +, brake bias rear / front, engine map − / +, drive mode − / +, pit limiter, lights, flash (hold), wipers, ignition (hold), starter (hold), recover. The buttons are on the DASH page ([section 6](#dash-dash-box)); the former BUTTONS page (camera, view, indicators, horn, shifting, pause) was removed on 10 November 2026.
+`core/actions.py` (`ACTIONS`) is the universal set of actions the dash box cards send, the same for every game, each with its usual type: TC − / +, TC CUT − / +, ABS − / +, ESC − / +, brake bias rear / front, engine map − / +, drive mode − / +, pit limiter, lights, flash (hold), wipers, ignition (hold), starter (hold), recover. The buttons are on the DASH page ([section 6](#dash-dash-box)) and the STARTUP page; the former BUTTONS page (camera, view, indicators, horn, shifting, pause) was removed on 10 November 2026.
 
 - A **tap** button sends one keypress per touch (held `[input] tap_ms`, default 80 ms). A **hold** button presses the key on touch and releases it when the finger lifts; the watchdog releases it after `hold_max_s` (10 s) if the release never arrives.
 - A game can change how a button sends its key in `[kinds]` of its `game.toml` (`tap`, `hold`, or `latch`: one tap presses the key and keeps it down, the next tap lets it go, with no time limit; for games that act only while a key is held, e.g. ACE wipers). The bridge reports the latched actions in the frame (`latched`); the pages show such a button ON while its key is down. `[games.<id>.kinds]` in `config/config.toml` overrides single kinds; unknown actions or kinds are logged and ignored.
@@ -141,8 +140,8 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 `ui/` holds the pages and their building blocks. Every page loads `css/base.css` and `js/rd.js` and calls `RD.start()`.
 
 - **Page updates.** Every frame carries `ui`, the newest change time of the files in `ui/`; an open page reloads itself when it changes (after an update and a restart of the bridge), so a phone or tablet left open always runs the current pages.
-- **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `gearseg`, `speed`, `speedunit`, `bias`, `fuel`, `lap`, `text`; `RD.formats`). `data-rd-on="field"` toggles the class `on` while the field is true. Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
-- **Body classes** for styles: `rd-stale` (no data for 2.5 s or not connected; a "NO DATA" chip shows), `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`.
+- **Binding.** An element with `data-rd="field"` shows that field, formatted by `data-fmt` (`gear`, `gearseg`, `speed`, `speedunit`, `lap`, `text`; `RD.formats`). Rendering runs once per animation frame with the latest frame and only touches elements whose text changed.
+- **Body classes** for styles: `rd-error` (any error), `rd-notice` (the chip shows an error or a hint), `rd-maxrev` (the game's limiter signal) and `rd-redzone` (the red rev lights are lit).
 - **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. The scale ends at the game's shift point (learned from its shift signal per gear) and is `range` wide (0.12: from 88 % of it), in pairs from the outside in (or from the left); unlit fields stay dim. (A scale moved 3 % below the shift point was tried and dropped: it did not fit every car.) The innermost (red) pair lights only at the game's `shift_up` (or at the learned shift point); at the shift signal and on the `limiter` all fields are lit, **steady: the rev lights never flash** (owner, November 2026); the red fields lit set the body class `rd-redzone`. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `E` = a f e d g1 g2; gearbox letters `P` = a b f e g1 g2, `D` = a b c d i l, `S` = a f g1 g2 c d (the standard S, like a 5), `B` = a b c d g2 i l, `L` = f e d, `M` = f e b c h j. Format `gear`: E on errors; P when `gear_mode` is P; else R, N or the number (always the number with an automatic gearbox or electric drive, the owner's decision; the other letters stay in the glyph table). Format `gearseg` also shows E for a number above 9. Widgets register in `RD.widgetInits`.
 - **Styles.** `<body data-page="gear" data-styles="segment">` (one or more styles, comma-separated) and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
 - **Toolbar and settings.** Top right, the same size and place on every page (`base.css`: 6 px + the top gap from the top, 10 px from the right; DASH and ANALYSIS keep that corner of their header free, the GEAR + REV rev lights leave 54 px at both ends): the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). `--top-gap` (`base.css`) is 26 px in landscape on a tablet (height 600 px or more: the iPad screen fades at its top edge) and 0 otherwise; pages and the settings overlay start that much lower. The settings overlay has 16 px padding on every side plus the top gap. The settings are listed in the [README](../README.md#settings).
@@ -236,10 +235,10 @@ Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*` wi
 
 ## 10. Tests
 
-`python -m unittest discover tests` (84 tests): the data checks of the core; the ACE struct layout and translation against synthetic shared memory; the Assetto Corsa Rally ACC layout, clock text, Kelvin and pause detection; the boost values of ACE, ACR and iRacing; the wheel slip of ACE (with the lock flag), ACR and DR2; the iRacing memory image (header, variables, the newest buffer), the session YAML, the translation and the dead-reckoned map position; the DiRT Rally 2.0 packet translation, stage and car names and a UDP round trip; a bridge smoke test with the demo game (pages, the home link, path safety, state, info, commands, latch keys, stream rate, the analysis and trainer API, the API key never in a reply); the recorder with a simulated car (sections, lap and section times, the game's lap time, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data, driving aids); the AI trainer with simulated providers (facts, the request, answer checks, settings, keys, the rolling history); the live tool's GRIP stages and recording check. With the bridge running, `python tools/live.py` watches, records and checks the live values of any game (docs/HANDOVER.md); on Windows with ACE running, `python tools/ace_probe.py` prints the values straight from the shared memory (`--raw`: slip, lock, TC / ABS, turbo) and `python tools/analysis_check.py` checks the recorded laps.
+`python -m unittest discover tests` (85 tests): the data checks of the core; the ACE struct layout and translation against synthetic shared memory; the Assetto Corsa Rally ACC layout, clock text, Kelvin and pause detection; the boost values of ACE, ACR and iRacing; the wheel slip of ACE (with the lock flag), ACR and DR2; the iRacing memory image (header, variables, the newest buffer), the session YAML, the translation and the dead-reckoned map position; the DiRT Rally 2.0 packet translation, stage and car names and a UDP round trip; a bridge smoke test with the demo game (pages, the home link, path safety, state, info, commands, latch keys, stream rate, the analysis and trainer API, the API key never in a reply); the recorder with a simulated car (sections, lap and section times, the game's lap time, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data, driving aids); the AI trainer with simulated providers (facts, the request, answer checks, settings, keys, the rolling history); the live tool's GRIP stages and recording check; the text files' encoding (UTF-8 without a byte-order mark, no broken characters). Two tools help on the PC with a game running: `python tools/live.py` watches, records and checks the live values of any game from the running bridge (presets `basic`, `grip`, `boost`, `revs`, `aids`, `tyres`, `car`, `analysis`; `--record 60` writes `logs/live-<game>-<date_time>.jsonl` and checks it), and `python tools/analysis_check.py` checks the laps the recorder wrote.
 
 ## 11. Future development and out of scope
 
-Ideas: more games; more pages and styles (e.g. a round rev counter, a timing page); flags; brake temperatures and damage; external displays such as an ESP32 reading `/state`; a virtual joystick (vJoy) as an alternative to keypresses, for buttons that should work while the game is not the active window.
+Ideas: more games; more pages and styles (e.g. a round rev counter, a timing page); flags; external displays such as an ESP32 reading `/state`; a virtual joystick (vJoy) as an alternative to keypresses, for buttons that should work while the game is not the active window.
 
 Out of scope: multiplayer cheating aids, security beyond the local network, hardware.
