@@ -502,7 +502,7 @@ def banner(port: int) -> None:
     line = "=" * 64
     print(f"\n{line}\n  Racing Dashboard is running  ({active['game']['name']})\n")
     print("  On your phone or tablet (same Wi-Fi), open in the browser:\n")
-    print(f"      {address}/{HOME}\n")
+    print(f"      Home         {address}/{HOME}   <- save this one on the phone / tablet")
     print(f"      Gear + Rev   {address}/gear")
     print(f"      Dash         {address}/dash")
     print(f"      Analysis     {address}/analysis\n")

@@ -109,7 +109,7 @@ games/                    one folder per game
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
   index.html, gear.html, dash.html, analysis.html, buttons.html    the pages
-  icon.ico, apple-touch-icon.png      icons for the Windows shortcut and the home screen
+  icon.ico, racing-dashboard-icon.png icons for the Windows shortcut and the home screen (own name: other dashboards on the same address keep their icon)
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   js/dashbox.js                       the dash box cards, built from the game's dash map

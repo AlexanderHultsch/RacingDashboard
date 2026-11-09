@@ -47,7 +47,7 @@ Phone / tablet pages (ui/)
 
 - **Threads.** One reader thread calls the connector at `read_hz` (60) and stores the frame; the web server answers each request in its own thread; each open page holds one `/stream` connection that sends the latest frame at the rate the page asked for (only when it changed, plus a heartbeat every second). A watchdog thread releases held keys whose release never arrived.
 - **Game switch.** The GAME setting closes the old connector and loads the new one; held keys are released first. The choice is saved in `config/settings.json`.
-- **Local network only.** The server listens on `[dashboard] host` / `port` (default `0.0.0.0:8080`) and prints the address at start. The home page is `/Racing_Dashboard` (also `/`; any page or file can be reached under `/Racing_Dashboard/` too), the link to save on the tablet: the name keeps it apart from other dashboards on the same address and port.
+- **Local network only.** The server listens on `[dashboard] host` / `port` (default `0.0.0.0:8080`) and prints the address at start. The home page is `/Racing_Dashboard` (also `/`; any page or file can be reached under `/Racing_Dashboard/` too), the link to save on the tablet: the name keeps it apart from other dashboards on the same address and port. The home-screen icon is `ui/racing-dashboard-icon.png` (180 × 180, linked from every page), not the usual `/apple-touch-icon.png`, so a home-screen shortcut of another dashboard on the same address (e.g. a flight simulator one) keeps its own icon; the shortcut's name is `Racing_Dashboard` (`apple-mobile-web-app-title` of the home page).
 
 ## 3. The universal telemetry model
 
