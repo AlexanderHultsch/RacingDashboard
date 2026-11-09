@@ -1,34 +1,87 @@
-# Handover
+# Handover – local session on the Windows PC
 
-For the next Claude session, in the cloud (no Windows, no games, no iPad / iPhone) or on the owner's Windows PC. Written by the local session on 9 November 2026 (evening) and updated by the cloud cleanup session after it. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written at the end of the cloud cleanup session after the local session of 9 November 2026. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
-## What a cloud session can and cannot do
-
-| Can | Cannot |
-| --- | --- |
-| Read and change all code and docs, run `python -m unittest discover tests` (85 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
-| Run the bridge with the **demo game** (`python core/server.py`, GAME → DEMO): a simulated car with every field (turbo, wheel slip, tyre and brake scores, some damage) and laps for the analysis and map pages | Send keypresses (`core/keys.py` is Windows only; the bridge reports "not available") |
-| Render pages with a headless browser for **PNG mockups** (the owner wants them before every visual change) | Check anything against real game data: say so, and leave a test step for the local session in this file |
-| Commit and push to `main` when the owner says so | See the owner's laps (`data/`), AI key (`config/trainer.json`), recordings (`logs/`) or mockups (`mockups/`): local, not in git |
-
-Headless rendering that worked (Edge on Windows, the same idea with Chromium): put each page in an `<iframe>` inside one composite HTML file (844 × 390 landscape, 390 × 844 portrait, scaled with `transform`), and screenshot the composite with `--headless=new --virtual-time-budget=5000 --screenshot`. Loading a page directly hangs on its live stream (EventSource); inside an iframe it renders. CSS transitions are caught half way in such a render, so a mockup can show washed-out colours where the real page does not. A second bridge for mockups: start the demo game on its own port with `server.recorder = recorder.Recorder(<a scratch folder>, 30, 250.0, log=server.log.line)` so the analysis and map pages have data, and never write into `data/`.
+**The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then work on the open items with the owner.
 
 ## Start
 
 ```
 git pull
 python -m unittest discover tests
-python core/server.py --check
+python core\server.py --check
+python core\server.py
 ```
 
-`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after a change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields).
+All 85 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
 
-## What the last sessions did (newest first)
+`tools\ace_probe.py` is gone (see below): use `tools\live.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** (that broke the `°` in `rd.js` once; `tests/test_encoding.py` catches it).
+
+## What the cloud cleanup session changed (`46c453a`)
+
+Nothing the pages show should be different. It was tested with the unit tests and the demo car only, so the game has to confirm it.
+
+| Removed | Why | What could show up in the game if it was wrong |
+| --- | --- | --- |
+| Eight telemetry fields: `max_gears`, `shift_down`, `clutch`, `lap`, `position`, `cars`, `best_ms`, `delta_ms` (model, all five connectors, tests, docs) | nothing read them since the BUTTONS page went | a page or card that shows "-" or nothing where it had a value; an error in `logs\racing-dashboard.log` |
+| The ACE connector's `ace \| raw` change log (`watched`, `changes`) | a debug log; it parsed the graphics page a second time on every read; ACE does not publish the light / wiper stages it was written to find | nothing: the log just no longer has `ace \| raw` lines |
+| `tools\ace_probe.py` | ACE only, its questions are answered; `tools\live.py` covers every game | – |
+| In `ui/js/rd.js`: the body classes `rd-stale`, `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`, the `data-rd-on` binding, `RD.checks`, the `bias` / `fuel` formats, the rev lights' `data-early` option and their `shift` / `limiter` classes, the `RD.start` options | no style or page used them | **rev lights**: they must still fill from 88 % of the shift point, the red pair at the game's shift signal, the screen dark red then, bright red flashing on the limiter |
+
+Also: the dash map check now knows the tyre card's score keys (`core_score`, `surface_score`, `brake_score`); a misspelt field name there is logged and the card left out. The ACE notes have a "checked in the game" and a "still to check" list; `docs/ACE/KEYS.md` no longer points to the removed log lines.
+
+## Live debugging: pull the data while the owner drives
+
+Keep the bridge running in one window and use a second one. The tools only read.
+
+| Command | What it shows |
+| --- | --- |
+| `python tools\live.py` | the basic values five times a second, from the bridge's `/state` (every game) |
+| `python tools\live.py grip` | a preset: `basic`, `grip`, `boost`, `revs`, `aids`, `tyres`, `car`, `analysis` |
+| `python tools\live.py car --changes` | a line only when a value changes (lights, wipers, levels, lamps) |
+| `python tools\live.py --fields rpm,boost_bar,gas` | any fields |
+| `python tools\live.py --once` | the whole frame once as JSON |
+| `python tools\live.py --record 90` | records every frame for 90 s to `logs\live-<game>-<date_time>.jsonl` and checks it: slip sign and GRIP stages, the slip where ABS / TC start, shift rpm and limiter per gear, boost range, min .. max of every field; "!!" marks a problem |
+| `python tools\live.py --check last` | the check again for the newest recording |
+| `python tools\analysis_check.py --last 1` | the laps the analysis recorder wrote |
+
+One question per recording ("three hard stops with ABS off"). To find an unknown game value, write a throw-away script that records the raw shared memory once a second while the owner does one thing (a burnout, a crash, a reset to the pits) and list the fields that change with it; that found the tyre scores and the damage and ruled out wear. Do not commit such scripts.
+
+## Test plan, in this order
+
+### 1. After the cleanup: ten minutes with ACE (do this first)
+
+1. `git pull`, restart the bridge, reload nothing by hand (the pages reload themselves). The log must show `ace | shared memory | game ..., layout ...` and no `read error`.
+2. **GEAR + REV** on the iPhone: the gear, the speed, the rev lights up to the shift point, the red screen at the shift signal, the flashing on the limiter. In the pause menu the gear shows E with the chip NO NEW DATA FROM THE GAME.
+3. **DASH** on the iPad: every card has its value; TC − / + changes the car and the card; TC / ABS turn amber while they work; the TYRES card has colours; FUEL shows litres and laps left.
+4. **The phone pages** with the arrows: BOOST, GRIP, TYRES, DAMAGE, MAP, STARTUP each show what they showed before.
+5. **ANALYSIS**: drive two laps; the lap time appears and matches the game's; `python tools\analysis_check.py --last 1` has no "!!". The AI TRAINER button answers.
+6. `python tools\live.py --record 60` during a lap: the check prints without "!!" (it lists every field: none of the eight removed ones should be missed by anything).
+
+If something is off, compare with the commit before the cleanup (`git diff 06b1135 46c453a -- <file>`) and fix forward.
+
+### 2. The open items with ACE
+
+- **A new DASH card**: the owner said "introduce one completely new" card but never said what it should show. Ask; then mockups first.
+- **MAP on a track the page has not seen yet**: first lap not zoomed and filling in; after a lap fitted and still.
+- **DAMAGE on the iPhone after a crash** (front, rear, both sides; a suspension hit).
+- **GRIP**: the owner's feel for the calm colours and the 4 / 7 / 15 / 40 % stages; one recording with ABS and TC on (only 5–6 starts were seen): `python tools\live.py --record 120`, read "slip when it starts" under ABS / TC.
+- **AI trainer**: three clean laps, save the bests, ask for the whole track and one section; read the facts sent with each answer (`data\trainer.jsonl`, field `data`) before changing the prompt (`core/trainer.py`, [TRAINER.md](TRAINER.md)).
+- **Still to check in ACE** ([ACE/NOTES.md](ACE/NOTES.md)): the `status` numbers for pause and replay, `session_id` across sessions, the player's slot with other cars on track, PERFORMANCE − / + (Num3 / Num6).
+
+### 3. First drives in Assetto Corsa Rally, iRacing, DiRT Rally 2.0 (never run against the games)
+
+For each: GAME → the game, then `python tools\live.py` (do the values follow the car?), `python tools\live.py grip` (slip: ACR `slipRatio`, DR2 wheel speeds; iRacing has none and GRIP says so), `python tools\live.py --record 120` over one stage or a few laps, then `python tools\analysis_check.py --last 1`. The questions per game are in its NOTES:
+
+- **ACR**: attaches only while `acr.exe` runs (log `acr | shared memory | attached ...`); the stage start and end on the analysis page; the slip sign; pause detection; bind the proposed keys. ACR damage and tyre scores are not read yet (it uses the same Kunos physics page as ACE).
+- **iRacing**: the process name `iRacingSim64DX11.exe` for the keys; brake bias and engine map per car; the map direction (`VelocityY` sign) and the steering sign; `ManifoldPress` taken as absolute bar (boost = value − 1.013): unconfirmed.
+- **DR2**: switch UDP on in the XML once ([DR2/NOTES.md](DR2/NOTES.md)); wheel speeds in m/s (part throttle on a straight must leave GRIP grey); stage start and end.
+
+## What the sessions before did (newest first)
 
 | Commit | What |
 | --- | --- |
-| cloud cleanup | **Cleanup, no change to what the pages show.** Removed: eight telemetry fields nothing read since the BUTTONS page went (`max_gears`, `shift_down`, `clutch`, `lap`, `position`, `cars`, `best_ms`, `delta_ms`) from the model, the five connectors, tests and docs; the ACE connector's `ace | raw` change log (it parsed the graphics page a second time on every read; its question, the light / wiper stages, is answered: ACE does not publish them); `tools/ace_probe.py` (ACE-only, its questions are answered; `tools/live.py` covers every game); in `rd.js` the body classes no style used (`rd-stale`, `rd-shift`, `rd-limiter`, `rd-pit`, `rd-tc`, `rd-abs`), the `data-rd-on` binding, `RD.checks`, the `bias` / `fuel` formats, the rev lights' `data-early` option and state classes, the `RD.start` options. Docs brought in line (README, SPEC, the game notes with a checked / still-to-check list for ACE, KEYS.md); the dash map check now also knows the tyre card's score keys |
-| local, 9 November | the rows below |
+| `46c453a` | the cloud cleanup (above) |
 | `06b1135` | Encoding test fixed (it matched its own docstring once tracked), the handover |
 | `89fdf10` | **Broken characters**: a PowerShell edit had put a stray A-circumflex before every `°` in `ui/js/rd.js` (tyre tiles showed it after the temperature); restored, byte-order marks removed from seven files, new `tests/test_encoding.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** |
 | `156b6a6` | **MAP** draws the track itself from the live position (1000 pieces by `lap_pos`, kept per track in the browser, seeded from the analysis outline); first lap at least track length / 3.2 wide so a straight does not fill the screen; fitted once 95 % is known |
@@ -58,16 +111,17 @@ python core/server.py --check
 
 ## Open, in the owner's order of interest
 
-1. **A new DASH card**: the owner said "introduce one completely new" card but never said what it should show. Ask.
-2. MAP on a track the page has not seen yet (first lap: no zoom, fills in; after a lap: fitted and still) – local.
-3. DAMAGE on the iPhone after a crash – local.
-4. GRIP: the owner's feel for the calm colours and the 4 / 7 / 15 / 40 % stages; a recording with ABS and TC on (only 5–6 starts seen) – local.
-5. AI trainer quality with the new facts and prompt – local, with ACE.
-6. First drives in ACR, iRacing, DR2 (the open questions are in each game's NOTES; ACR damage and tyre scores are not read yet, ACR uses the same Kunos physics page) – local.
-7. iRacing `ManifoldPress` taken as absolute bar (boost = value − 1.013): unconfirmed.
-8. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
-9. A LICENSE file for the public repository (the owner's decision; MIT suggested).
-10. Ideas: lap picker after the session, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, MAP turned 90° in portrait for wide tracks (offered, not asked for), more games ([ASSISTS.md](ASSISTS.md)). Work a cloud session can do fully: these, docs, tests, the demo car, pages and styles (with mockups).
+1. The cleanup check in ACE (test plan 1).
+2. A new DASH card: ask the owner what it should show.
+3. MAP on a new track, DAMAGE after a crash, GRIP feel and a recording with ABS / TC on, AI trainer quality (test plan 2).
+4. First drives in ACR, iRacing, DR2 (test plan 3).
+5. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
+6. A LICENSE file for the public repository (the owner's decision; MIT suggested).
+7. Ideas: lap picker after the session, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, MAP turned 90° in portrait for wide tracks (offered, not asked for), more games ([ASSISTS.md](ASSISTS.md)).
+
+## Mockups on the PC
+
+Headless rendering that worked (Edge on Windows, the same idea with Chromium): put each page in an `<iframe>` inside one composite HTML file (844 × 390 landscape, 390 × 844 portrait, scaled with `transform`), and screenshot the composite with `--headless=new --virtual-time-budget=5000 --screenshot`. Loading a page directly hangs on its live stream (EventSource); inside an iframe it renders. CSS transitions are caught half way in such a render, so a mockup can show washed-out colours where the real page does not. A second bridge for mockups: start the demo game on its own port with `server.recorder = recorder.Recorder(<a scratch folder>, 30, 250.0, log=server.log.line)` so the analysis and map pages have data, and never write into `data/`.
 
 ## Findings from the real data (ACE 0.9.1)
 
@@ -81,7 +135,7 @@ python core/server.py --check
 - **Connectors** `games/<id>/connector.py` translate a game into `core/telemetry.py` `FIELDS`; `game.toml` (window, keys), `dash.toml` (dash box cards). Kunos' physics page and `boost()` in `core/kunos.py`.
 - **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, the tyre view `RD.tyreView`, page arrows `RD.CYCLE`, settings, styles), `ui/js/seg14.js` (14-segment SVG), one script per page (`dashbox.js`, `analysis.js`, `boost.js`, `grip.js`, `tyres.js`, `damage.js`, `map.js`, `startup.js`); styles `ui/styles/<page>/<style>.css`. A page that needs a game's action or field names takes them from its dash map in `/api/info` (STARTUP, TYRES, GRIP).
 - **Recorder** `core/recorder.py`, **AI trainer** `core/trainer.py`; file formats in [SPEC.md](SPEC.md#analysis).
-- **Tools** (local only): `tools/live.py` (watch, record, check any game from the running bridge) and `tools/analysis_check.py` (the recorded laps); both are still needed for the first drives in ACR, iRacing and DR2. Finding an unknown game value: write a throw-away script that records the raw shared memory once a second while the owner does one thing (a burnout, a crash, a reset to the pits) and list the fields that change with it; that found the tyre scores and the damage and ruled out wear.
+- **Tools** `tools/live.py` (watch, record, check any game from the running bridge) and `tools/analysis_check.py` (the recorded laps): see "Live debugging" above; both are still needed for the first drives in ACR, iRacing and DR2.
 
 ## Known limitations (tell the owner if they come up)
 
@@ -112,4 +166,4 @@ python core/server.py --check
 - **Commit and push only when the owner says so**; commit to `main`, end commit messages with the Co-Authored-By line. The only other branch is one work-in-progress branch for a prototype the owner has not approved yet.
 - For visual changes: **show PNG mockups first**, then build; expect two or three rounds ("looks cheap", "darker", "like the game"). When the owner sends a game screenshot, copy its layout closely. For bigger features a short interview first (3–4 multiple-choice questions).
 - Keep README, SPEC, the game notes and tests in step with every change; no personal data in commits; no emoji in the UI. **Never ask for or handle the owner's API key.**
-- When a change needs the game to verify, build it, test it with the demo car and the unit tests, and add the in-game check to "Open" above for the local session. Before the session ends, update this file.
+- Check against the game with the tools above before changing code, and write what the game really sends into its NOTES (the field table and the checked / still-to-check lists). Before the session ends, rewrite this file for the next session (say whether it is for a cloud or a local one, what it can and cannot do, and which in-game checks are left).
