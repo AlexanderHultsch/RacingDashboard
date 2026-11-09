@@ -24,6 +24,7 @@
     return `M${fixed(x0)} ${fixed(y0)} A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${fixed(x1)} ${fixed(y1)}`;
   }
   const up = (v) => Math.ceil(v * 2 - 1e-6) / 2;            // round up to 0.5 bar
+  const LIMIT_BAR = 5;      // no road or race car runs more: a larger maximum or peak is a wrong value, not boost
 
   let gameName = "";
   RD.loadInfo().then((info) => { gameName = (info.game_name || "").toUpperCase(); }).catch(() => {});
@@ -82,8 +83,9 @@
       const ok = !RD.errorOf(f) && typeof f.boost_bar === "number" && isFinite(f.boost_bar);
       const value = ok ? f.boost_bar : 0;
       const min = typeof f.boost_min_bar === "number" && f.boost_min_bar < 0 ? -1 : 0;
-      peak = Math.max(peak, value);
-      scale(min, Math.max(1, f.boost_max_bar > 0 ? up(f.boost_max_bar) : 2, up(peak)));
+      if (value <= LIMIT_BAR) peak = Math.max(peak, value);
+      const max = f.boost_max_bar > 0 && f.boost_max_bar <= LIMIT_BAR ? up(f.boost_max_bar) : 2;
+      scale(min, Math.min(LIMIT_BAR, Math.max(1, max, up(peak))));
       const v = Math.max(lo, Math.min(hi, value));
       const angle = (x) => A0 + (A1 - A0) * (x - lo) / (hi - lo);
       fill.setAttribute("d", v >= 0 ? arc(angle(Math.max(0, lo)), angle(v), R) : arc(angle(v), angle(0), R));

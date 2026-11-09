@@ -141,9 +141,9 @@ class Parse(unittest.TestCase):
         ph, gr, st = self.build()
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))      # no turbo or off the throttle: just 0
         self.assertEqual((values["boost_bar"], values["boost_max_bar"]), (0.0, None))
-        gr.turbo_boost, gr.max_turbo_boost = 1.234, 1.8
+        gr.turbo_boost, gr.max_turbo_boost = 0.389, 157.434       # Camaro ZL1: max_turbo_boost in no usable unit
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
-        self.assertEqual((values["boost_bar"], values["boost_min_bar"], values["boost_max_bar"]), (1.234, 0.0, 1.8))
+        self.assertEqual((values["boost_bar"], values["boost_min_bar"], values["boost_max_bar"]), (0.389, 0.0, None))
 
     def test_wheel_slip_and_lock(self):
         ph, gr, st = self.build()

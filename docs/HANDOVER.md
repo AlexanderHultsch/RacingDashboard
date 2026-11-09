@@ -109,7 +109,7 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 
 - Porsche 992 GT3 R: max rpm 9,400, shift signal (`is_change_up_rpm`) from ~9,000–9,040 rpm in every gear, limiter flag (`is_rpm_limiter_on`) from ~9,070–9,120. `gear_rpm_window` is always 1.0 (no shift-light range from the game).
 - Toyota GR86: no turbo, all turbo values 0, `engine_type` 0.
-- BMW M4 GT3 Evo (Brands Hatch, 9 November 2026): `turbo_boost` 0 .. 1.69 bar (bar, highest around 5,000 rpm), `max_turbo_boost` 0, `turbo_boost_level` 0 or 1 (no turbo flag). `slipRatio` negative braking, positive wheelspin, −1 locked; the tyre `lock` flag never set; ABS starts at ~6.4 % slip, TC at ~7.1 %. Shift signal ~6,740–7,190 rpm, limiter from ~6,660–6,710 (max 7,000).
+- BMW M4 GT3 Evo (Brands Hatch, 9 November 2026): `turbo_boost` 0 .. 1.69 bar (bar, highest around 5,000 rpm), `max_turbo_boost` 0, `turbo_boost_level` 0 or 1 (no turbo flag). Chevrolet Camaro ZL1: `max_turbo_boost` 157.4 at 0.39 bar boost (blew up the gauge scale): ACE's maximum is not used, the gauge never goes past 5 bar. `slipRatio` negative braking, positive wheelspin, −1 locked; the tyre `lock` flag never set; ABS starts at ~6.4 % slip, TC at ~7.1 %. Shift signal ~6,740–7,190 rpm, limiter from ~6,660–6,710 (max 7,000).
 - `tools/live.py` must read `127.0.0.1`, not `localhost`: on Windows `localhost` tries IPv6 first and costs ~2 s per frame (fixed 9 November).
 - `lap_pos`, track length and position work; section times add up to the lap time; `is_valid_lap` false after cutting and on the out lap.
 - Lights / wipers stages are not published by ACE 0.9.1. Not checked: whether the ACE map is mirrored; `session_id` across sessions.
