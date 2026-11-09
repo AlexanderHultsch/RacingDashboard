@@ -205,9 +205,9 @@ class Answers(unittest.TestCase):
 
     def test_fenced_and_limits(self):
         long = " ".join(["word"] * 60)
-        tips = [{"title": "A B C D E F", "section": 5, "from_m": 10, "to_m": 20, "text": long, "gain_s": 0.1}] * 5
+        tips = [{"title": "A B C D E F", "section": 5, "from_m": 10, "to_m": 20, "text": long, "gain_s": 0.1}] * 12
         a = trainer.check_answer("```json\n" + self.answer(tips=tips, note=long) + "\n```", self.data)
-        self.assertEqual(len(a["tips"]), 3)
+        self.assertEqual(len(a["tips"]), 9)
         self.assertTrue(a["note"].endswith("…"))
         self.assertEqual(len(a["note"].split()), 30)
         self.assertEqual(a["tips"][0]["title"], "A B C D")

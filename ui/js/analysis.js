@@ -937,7 +937,7 @@
     } else {
       const why = !t ? "" : t.provider === "off" ? "The AI trainer is OFF: choose an AI in the settings (gear button)."
         : !t.ok ? (ERRORS[t.error] || "The AI is not connected: check the settings.") : "";
-      html = "<div class='tr-none'>Tap <b>AI TRAINER</b> on the map: in the overview it analyses the whole track, zoomed into a section only that section.<br>Best, last and now are compared; you get up to 3 tips."
+      html = "<div class='tr-none'>Tap <b>AI TRAINER</b> on the map: in the overview it analyses the whole track, zoomed into a section only that section.<br>Your driving is judged against the fundamentals and against your best; you get up to 9 tips."
         + (why ? "<br><br>" + esc(why) : "") + "</div>";
     }
     if (pane.innerHTML !== html) pane.innerHTML = html;
