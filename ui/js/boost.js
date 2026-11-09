@@ -1,13 +1,14 @@
 /* Boost gauge (boost.html). Load after rd.js and seg14.js.
  *
- *   <div class="rd-boost"><svg class="boost-dial" viewBox="0 0 200 200"></svg><div class="boost-readout"></div></div>
+ *   <div class="rd-boost"><svg class="boost-dial" viewBox="0 0 200 200"></svg><div class="boost-readout"></div>
+ *     <div class="boost-value"></div></div>
  *
  * Fields (core/telemetry.py): boost_bar (bar above the air pressure, negative = vacuum, null = the game sends
  * none), turbo (false = the car has no turbo), boost_min_bar (iRacing -1), boost_max_bar (the car's maximum).
  * The dial runs over 270 degrees from boost_min_bar (else 0) to the car's maximum rounded up to 0.5 bar (2 bar
  * when unknown); it grows when the boost goes higher, until the car changes.
- * Shows: the needle, a yellow arc up to the value (blue below 0) and the value in segments with BAR, or VACUUM
- * below 0; NO TURBO (a car without a turbo), NO DATA (a game without a boost value, with a hint in the chip),
+ * Shows: the needle, a yellow arc up to the value (blue below 0), BAR (VACUUM below 0) under the hub and the value
+ * with one decimal in segments in the open bottom of the dial; NO TURBO (a car without a turbo), NO DATA (a game without a boost value, with a hint in the chip),
  * E (no usable data, the chip says why).
  */
 (function () {
@@ -30,6 +31,7 @@
   RD.widgetInits.push([".rd-boost", (el) => {
     const dial = el.querySelector(".boost-dial");
     const readout = el.querySelector(".boost-readout");
+    const valueBox = el.querySelector(".boost-value");
     let scaleKey = null, lo = 0, hi = 2, fill = null, needle = null;
     let car = null, peak = 0, lastText = null;
 
@@ -62,15 +64,15 @@
       const key = kind + value + (unit || "");
       if (key === lastText) return;
       lastText = key;
-      readout.innerHTML = "";
-      const add = (cls, t, font) => {
+      readout.innerHTML = valueBox.innerHTML = "";
+      const add = (box, cls, t, font) => {
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("class", cls);
         Seg14.draw(svg, t, font);
-        readout.appendChild(svg);
+        box.appendChild(svg);
       };
-      if (kind === "msg") add("msg", value, Seg14.LABEL);
-      else { add("num", value, Seg14.DIGIT); add("unit", unit, Seg14.LABEL); }
+      if (kind === "msg") add(readout, "msg", value, Seg14.LABEL);
+      else { add(readout, "unit", unit, Seg14.LABEL); add(valueBox, "num", value, Seg14.DIGIT); }
     }
 
     function update(f) {
@@ -90,7 +92,7 @@
       fill.setAttribute("d", v >= 0 ? arc(angle(Math.max(0, lo)), angle(v), R) : arc(angle(v), angle(0), R));
       fill.classList.toggle("vac", v < 0);
       needle.setAttribute("transform", `rotate(${fixed(angle(v))} ${C} ${C})`);
-      text("num", (Math.abs(value) < 0.005 ? 0 : value).toFixed(2), value < -0.005 ? "VACUUM" : "BAR");
+      text("num", (Math.abs(value) < 0.05 ? 0 : value).toFixed(1), value < -0.005 ? "VACUUM" : "BAR");
     }
 
     update({});

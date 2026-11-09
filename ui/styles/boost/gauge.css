@@ -64,21 +64,24 @@ html, body { background: var(--bg); }
 .rd-boost.off .tick, .rd-boost.off text { opacity: 0.25; }
 .rd-boost.off .fill, .rd-boost.off .needle-group { display: none; }
 
-/* the value below the hub, in the open part of the dial */
+/* BAR (or VACUUM) below the hub */
 .boost-readout {
   position: absolute;
   left: 50%;
-  top: 63%;
+  top: 62%;
   width: 40%;
   transform: translateX(-50%);
   display: grid;
   justify-items: center;
   gap: 1.2vmin;
 }
-.boost-readout .num { height: 11vmin; max-width: 100%; overflow: visible; filter: drop-shadow(0 0 1vmin rgba(255, 233, 59, 0.35)); }
-.boost-readout .num .on { fill: var(--seg); }
 .boost-readout .unit { height: 3.6vmin; max-width: 100%; overflow: visible; }
 .boost-readout .unit .on { fill: var(--seg-label); }
+/* the value in the open bottom of the dial, one decimal, in the gear page's SPEED number style */
+.boost-value { position: absolute; left: 50%; bottom: 1%; width: 46%; transform: translateX(-50%); display: flex; justify-content: center; }
+.boost-value .num { height: 10vmin; max-width: 100%; width: auto; overflow: visible; }
+.boost-value .num .on { fill: var(--seg); }
+.rd-boost.off .boost-value { display: none; }
 /* a message instead of the value: in the middle of the dial */
 .rd-boost.off .boost-readout { top: 44%; width: 64%; }
 .boost-readout .msg { height: 7vmin; max-width: 100%; overflow: visible; }
