@@ -230,6 +230,20 @@ def tyres(ph, gr) -> tuple[list | None, list | None, list | None]:
     return (temps if any(temps) else None), (psi if any(psi) else None), (brakes if any(brakes) else None)
 
 
+def temperature_scores(gr) -> dict:
+    """The game's own judgement of each tyre's temperature, 1 = fine up to 2 = too hot: the core
+    (tyre_normalized_temperature_core, goes with tyre_temperature_c, the number on the card) and the surface (the
+    hottest of tyre_normalized_temperature_left / center / right). The ACE HUD colours the tile by the core and the
+    frame around it by the surface: both green in the pits (1.0), the surface red after burnouts (2.0) while the
+    core follows later (Camaro ZL1, November 2026; the frame is not the pressure: 0.33 pressure score in the pits)."""
+    blocks = (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)
+    core = [b.tyre_normalized_temperature_core for b in blocks]
+    surface = [max(b.tyre_normalized_temperature_left, b.tyre_normalized_temperature_center,
+                   b.tyre_normalized_temperature_right) for b in blocks]
+    score = lambda values: [round(min(2.0, max(0.0, v)), 2) for v in values] if any(v > 0 for v in values) else None
+    return {"tyre_core_score": score(core), "tyre_surface_score": score(surface)}
+
+
 # Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
 COOLANT_COLD_C = 50
 COOLANT_HOT_C = 108
@@ -322,6 +336,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "wheel_lock": [bool(b.lock) for b in (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)] if slip else None,
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
+        **temperature_scores(gr),
         "brake_temp_c": tyre_values[2],
         # boost page: graphics turbo_boost in bar (physics turboBoost as a fallback). max_turbo_boost is not used:
         # 0 in the M4 GT3 Evo, 157.4 in the Camaro ZL1 (boost 0.39 bar at turbo_boost_perc 0.65), so no unit

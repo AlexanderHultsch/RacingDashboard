@@ -127,7 +127,11 @@ class Connector(telemetry.Connector):
         self.brakes = getattr(self, "brakes", [80.0, 80.0, 70.0, 70.0])
         heat = [5.0 * brake, 5.0 * brake, 3.5 * brake, 3.5 * brake]          # brakes heat up when used, cool down slowly
         self.brakes = [max(60.0, b * 0.997 + h) for b, h in zip(self.brakes, heat)]
-        return {"tyre_temp_c": temps, "tyre_psi": psi, "brake_temp_c": [round(b) for b in self.brakes]}
+        # the game's scores as ACE sends them: 1 = fine up to 2 = too hot; the surface reacts faster than the core
+        core = [round(min(2.0, 1.0 + max(0.0, t - 85) / 20), 2) for t in temps]
+        surface = [round(min(2.0, 1.0 + max(0.0, t - 80) / 25 + random.uniform(0, 0.1)), 2) for t in temps]
+        return {"tyre_temp_c": temps, "tyre_psi": psi, "tyre_core_score": core, "tyre_surface_score": surface,
+                "brake_temp_c": [round(b) for b in self.brakes]}
 
     def grip(self, gas: float, brake: float, dt: float) -> dict:
         """Wheel slip for the grip page: hard braking slows the fronts (ABS holds them near the limit, without ABS

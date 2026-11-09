@@ -124,6 +124,16 @@ class Parse(unittest.TestCase):
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual(values["tyre_temp_c"], [86.0, 104.0, 61.0, 79.0])
         self.assertEqual(values["tyre_psi"], [27.4, 28.6, 25.9, 26.8])
+        self.assertIsNone(values["tyre_core_score"])                 # no scores sent: the card's own colours
+        # Camaro ZL1 after burnouts: surface 2.0 (left / centre / right), core still 1.0 on the fronts
+        for block, core, l, c, r in ((gr.tyre_lf, 1.0, 1.24, 1.21, 1.22), (gr.tyre_rf, 1.0, 1.0, 1.0, 1.0),
+                                     (gr.tyre_lr, 1.81, 2.0, 2.0, 2.0), (gr.tyre_rr, 2.4, 1.97, 1.99, 2.0)):
+            block.tyre_normalized_temperature_core = core
+            block.tyre_normalized_temperature_left, block.tyre_normalized_temperature_center = l, c
+            block.tyre_normalized_temperature_right = r
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["tyre_core_score"], [1.0, 1.0, 1.81, 2.0])
+        self.assertEqual(values["tyre_surface_score"], [1.24, 1.0, 2.0, 2.0])
         self.assertIsNone(values["brake_temp_c"])                    # no brake temperatures sent yet
         gr.tyre_lf.brake_temperature_c, gr.tyre_rf.brake_temperature_c = 420.4, 415.0
         gr.tyre_lr.brake_temperature_c, gr.tyre_rr.brake_temperature_c = 180.0, 176.6

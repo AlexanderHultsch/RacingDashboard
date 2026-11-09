@@ -47,6 +47,8 @@ FIELDS = {
     "drive_mode_name": None, # the game's name of the active mode, e.g. "SPORT+"
     "tyre_temp_c": None,     # tyre temperatures [front left, front right, rear left, rear right] in C
     "tyre_psi": None,        # tyre pressures, same order, in psi
+    "tyre_core_score": None,     # the game's judgement of each tyre temperature (core), same order: 1 = fine, 2 = too hot
+    "tyre_surface_score": None,  # the same for the tread surface (the hottest of inner / middle / outer)
     "brake_temp_c": None,    # brake temperatures, same order, in C
     # grip page: no range check on purpose (an odd slip value must not stop the other pages with E)
     "wheel_slip": None,      # slip ratio of each wheel, same order: 0 = rolling with the car, negative = slower than
