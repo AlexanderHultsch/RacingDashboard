@@ -141,7 +141,7 @@ class Parse(unittest.TestCase):
         self.assertEqual(v["status"], "live")
         self.assertTrue(v["lap_valid"])
         self.assertEqual(v["session_id"], "0-0-0")
-        self.assertEqual((v["boost_bar"], v["boost_min_bar"], v.get("turbo")), (-0.613, -1.0, None))    # vacuum
+        self.assertEqual((v["boost_bar"], v["boost_min_bar"]), (-0.613, -1.0))    # vacuum
         self.assertTrue(set(v) <= set(telemetry.FIELDS), set(v) - set(telemetry.FIELDS))
         self.assertIsNone(telemetry.check(dict(telemetry.blank(), **v, connected=True)))
 

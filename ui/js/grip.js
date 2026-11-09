@@ -16,7 +16,7 @@
 (function () {
   "use strict";
 
-  const STAGES = [0.06, 0.12, 0.25, 0.5];   // to be checked in a test drive (docs/SPEC.md, GRIP)
+  const STAGES = [0.04, 0.07, 0.15, 0.4];   // ACE M4 GT3 Evo: ABS / TC start at 6-7 % slip = stage 2 (docs/SPEC.md, GRIP)
   const MIN_KMH = 10;
 
   RD.gripStage = function (slip, locked) {

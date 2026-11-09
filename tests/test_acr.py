@@ -79,10 +79,10 @@ class Parse(unittest.TestCase):
 
     def test_boost(self):
         ph, gr, st = build()
-        self.assertFalse(acr.parse(bytes(ph), bytes(gr), bytes(st))["turbo"])          # Lancia: no turbo given
+        self.assertEqual(acr.parse(bytes(ph), bytes(gr), bytes(st))["boost_bar"], 0.0)  # Lancia: no turbo, just 0
         ph.turboBoost, st.maxTurboBoost = 0.9, 1.4
         values = acr.parse(bytes(ph), bytes(gr), bytes(st))
-        self.assertEqual((values["turbo"], values["boost_bar"], values["boost_max_bar"]), (True, 0.9, 1.4))
+        self.assertEqual((values["boost_bar"], values["boost_max_bar"]), (0.9, 1.4))
 
     def test_wheel_slip(self):
         ph, gr, st = build()

@@ -259,7 +259,7 @@ def parse(image: Image, row: bytes) -> dict:
         "engine_map": level(v("dcThrottleShape", v("dcFuelMixture"))),
         "pit_limiter": bool(bits & PIT_LIMITER),
         # boost page: ManifoldPress (absolute, bar) minus the air pressure; below 0 = vacuum, so every car shows
-        # something. iRacing does not say whether a car has a turbo nor its maximum boost
+        # something. iRacing does not send the car's maximum boost
         "boost_bar": round(v("ManifoldPress") - AIR_BAR, 3) if v("ManifoldPress") is not None else None,
         "boost_min_bar": -1.0,
         "engine_running": running,

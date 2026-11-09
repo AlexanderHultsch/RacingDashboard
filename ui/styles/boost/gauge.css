@@ -60,9 +60,7 @@ html, body { background: var(--bg); }
 .boost-dial .needle { fill: var(--needle); filter: drop-shadow(0 0 2px rgba(255, 59, 47, 0.6)); }
 .boost-dial .hub { fill: var(--frame); }
 .boost-dial .hub-dot { fill: var(--bg); }
-/* no value to show (NO TURBO, NO DATA, an error): the dial dims, no needle */
-.rd-boost.off .tick, .rd-boost.off text { opacity: 0.25; }
-.rd-boost.off .fill, .rd-boost.off .needle-group { display: none; }
+/* always fully drawn: without a value the needle and the number stay at 0 (no NO TURBO; owner) */
 
 /* BAR (or VACUUM) below the hub */
 .boost-readout {
@@ -81,8 +79,3 @@ html, body { background: var(--bg); }
 .boost-value { position: absolute; left: 50%; bottom: 1%; width: 46%; transform: translateX(-50%); display: flex; justify-content: center; }
 .boost-value .num { height: 10vmin; max-width: 100%; width: auto; overflow: visible; }
 .boost-value .num .on { fill: var(--seg); }
-.rd-boost.off .boost-value { display: none; }
-/* a message instead of the value: in the middle of the dial */
-.rd-boost.off .boost-readout { top: 44%; width: 64%; }
-.boost-readout .msg { height: 7vmin; max-width: 100%; overflow: visible; }
-.boost-readout .msg .on { fill: var(--seg-label); }

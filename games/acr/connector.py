@@ -149,7 +149,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "session_id": f"acr-{round(length)}",
         "air_c": celsius(ph.airTemp),
         "road_c": celsius(ph.roadTemp),
-        **boost(ph.turboBoost, st.maxTurboBoost),       # boost page; maxTurboBoost 0 = no turbo
+        **boost(ph.turboBoost, st.maxTurboBoost),       # boost page; no turbo = 0
     }
 
 

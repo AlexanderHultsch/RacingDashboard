@@ -52,12 +52,12 @@ def slips(ph) -> list | None:
 
 
 def boost(value: float, peak: float) -> dict:
-    """Boost page fields from a Kunos game's turbo boost and the car's maximum boost (both in bar; 0 = the car
-    has no turbo). Not yet checked in a turbo car (docs/ACE/NOTES.md)."""
-    turbo = peak > 0 or value > 0.01
+    """Boost page fields from a Kunos game's turbo boost and the car's maximum boost (both in bar; 0 = unknown).
+    No check whether the car has a turbo (owner): a car without one simply stays at 0. ACE: bar, checked in the
+    BMW M4 GT3 Evo (docs/ACE/NOTES.md)."""
     return {
-        "turbo": turbo,
-        "boost_bar": round(max(0.0, value), 3) if turbo else None,
+        "boost_bar": round(max(0.0, value), 3),
         "boost_min_bar": 0.0,
         "boost_max_bar": round(peak, 2) if peak > 0 else None,
     }
+

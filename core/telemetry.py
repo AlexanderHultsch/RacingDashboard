@@ -53,7 +53,6 @@ FIELDS = {
                              # the car (braking, -1 = stopped / locked), positive = faster (wheelspin); None = not reported
     "wheel_lock": None,      # same order: True while the game says the wheel is locked; None = the game does not say
     # boost page: no range check on purpose (an odd boost value must not stop the other pages with E)
-    "turbo": None,           # True = the car has a turbo, False = it has none, None = the game does not say
     "boost_bar": None,       # boost above the air pressure in bar, negative = vacuum; None = the game sends no boost
     "boost_min_bar": None,   # lowest value the game sends (iRacing -1: vacuum), None = 0
     "boost_max_bar": None,   # the car's maximum boost in bar (the end of the gauge), None = unknown

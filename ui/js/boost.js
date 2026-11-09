@@ -4,12 +4,13 @@
  *     <div class="boost-value"></div></div>
  *
  * Fields (core/telemetry.py): boost_bar (bar above the air pressure, negative = vacuum, null = the game sends
- * none), turbo (false = the car has no turbo), boost_min_bar (iRacing -1), boost_max_bar (the car's maximum).
+ * none), boost_min_bar (iRacing -1), boost_max_bar (the car's maximum).
  * The dial runs over 270 degrees from boost_min_bar (else 0) to the car's maximum rounded up to 0.5 bar (2 bar
  * when unknown); it grows when the boost goes higher, until the car changes.
  * Shows: the needle, a yellow arc up to the value (blue below 0), BAR (VACUUM below 0) under the hub and the value
- * with one decimal in segments in the open bottom of the dial; NO TURBO (a car without a turbo), NO DATA (a game without a boost value, with a hint in the chip),
- * E (no usable data, the chip says why).
+ * with one decimal in segments in the open bottom of the dial. The gauge is always fully drawn: no check whether
+ * the car has a turbo (owner); without a value (a car without a turbo, DiRT Rally 2.0, an error) it stays at 0,
+ * and the chip says when the game sends no boost at all or why the data is not usable.
  */
 (function () {
   "use strict";
@@ -26,7 +27,7 @@
 
   let gameName = "";
   RD.loadInfo().then((info) => { gameName = (info.game_name || "").toUpperCase(); }).catch(() => {});
-  RD.notices.push((f) => (f.boost_bar == null && f.turbo !== false ? (gameName || "THIS GAME") + " SENDS NO BOOST" : null));
+  RD.notices.push((f) => (f.boost_bar == null ? (gameName || "THIS GAME") + " SENDS NO BOOST" : null));
 
   RD.widgetInits.push([".rd-boost", (el) => {
     const dial = el.querySelector(".boost-dial");
@@ -60,8 +61,8 @@
       needle = dial.querySelector(".needle-group");
     }
 
-    function text(kind, value, unit) {
-      const key = kind + value + (unit || "");
+    function text(value, unit) {
+      const key = value + unit;
       if (key === lastText) return;
       lastText = key;
       readout.innerHTML = valueBox.innerHTML = "";
@@ -71,28 +72,24 @@
         Seg14.draw(svg, t, font);
         box.appendChild(svg);
       };
-      if (kind === "msg") add(readout, "msg", value, Seg14.LABEL);
-      else { add(readout, "unit", unit, Seg14.LABEL); add(valueBox, "num", value, Seg14.DIGIT); }
+      add(readout, "unit", unit, Seg14.LABEL);
+      add(valueBox, "num", value, Seg14.DIGIT);
     }
 
     function update(f) {
       if (f.car !== car) { car = f.car; peak = 0; }
-      const value = f.boost_bar;
-      const ok = !RD.errorOf(f) && typeof value === "number" && isFinite(value);
+      // No check whether the car has a turbo (owner): no value, an error or a car without a turbo all show 0.
+      const ok = !RD.errorOf(f) && typeof f.boost_bar === "number" && isFinite(f.boost_bar);
+      const value = ok ? f.boost_bar : 0;
       const min = typeof f.boost_min_bar === "number" && f.boost_min_bar < 0 ? -1 : 0;
-      if (ok) peak = Math.max(peak, value);
+      peak = Math.max(peak, value);
       scale(min, Math.max(1, f.boost_max_bar > 0 ? up(f.boost_max_bar) : 2, up(peak)));
-      el.classList.toggle("off", !ok);
-      if (!ok) {
-        text("msg", RD.errorOf(f) ? "E" : f.turbo === false ? "NO TURBO" : "NO DATA");
-        return;
-      }
       const v = Math.max(lo, Math.min(hi, value));
       const angle = (x) => A0 + (A1 - A0) * (x - lo) / (hi - lo);
       fill.setAttribute("d", v >= 0 ? arc(angle(Math.max(0, lo)), angle(v), R) : arc(angle(v), angle(0), R));
       fill.classList.toggle("vac", v < 0);
       needle.setAttribute("transform", `rotate(${fixed(angle(v))} ${C} ${C})`);
-      text("num", (Math.abs(value) < 0.05 ? 0 : value).toFixed(1), value < -0.005 ? "VACUUM" : "BAR");
+      text((Math.abs(value) < 0.05 ? 0 : value).toFixed(1), value < -0.005 ? "VACUUM" : "BAR");
     }
 
     update({});

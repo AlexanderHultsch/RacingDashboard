@@ -22,7 +22,7 @@
     "R": "a b f e g1 g2 m", "N": "f e b c h m", "G": "a f e d c g2", "E": "a f e d g1 g2", "A": "a b c e f g1 g2",
     // gearbox letters: P park, D drive, S sport (the standard S, like a 5), B regen, L low, M manual
     "P": "a b f e g1 g2", "D": "a b c d i l", "S": "a f g1 g2 c d", "B": "a b c d g2 i l", "L": "f e d", "M": "f e b c h j",
-    // for the boost page: BOOST, NO TURBO, VACUUM, NO DATA (O drawn like 0)
+    // for the boost page: BOOST, VACUUM (O drawn like 0)
     "O": "a b c d e f", "T": "a i l", "U": "b c d e f", "C": "a f e d", "V": "f e k j",
     // for the grip page: GRIP
     "I": "a d i l",

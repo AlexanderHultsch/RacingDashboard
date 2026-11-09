@@ -41,8 +41,8 @@ def check(rows: list) -> str:
 
 class Live(unittest.TestCase):
     def test_stages_follow_the_page(self):
-        self.assertEqual(live.STAGES, [0.06, 0.12, 0.25, 0.5])          # read from ui/js/grip.js
-        self.assertEqual([live.stage(v) for v in (0.0, -0.07, -0.13, 0.3, 0.6, None)], ["", "l1", "l2", "s3", "s4", ""])
+        self.assertEqual(live.STAGES, [0.04, 0.07, 0.15, 0.4])          # read from ui/js/grip.js
+        self.assertEqual([live.stage(v) for v in (0.0, -0.05, -0.08, 0.2, 0.45, None)], ["", "l1", "l2", "s3", "s4", ""])
         self.assertEqual(live.stage(-0.01, True), "l4")                  # the game's lock flag
 
     def test_check(self):

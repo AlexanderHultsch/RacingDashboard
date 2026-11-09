@@ -1,6 +1,6 @@
 """Live debugging: watch, record and check the values the bridge serves, for every game.
 
-Reads the running bridge (http://localhost:<port>/state, the same frame the pages get), so it works the same
+Reads the running bridge (http://127.0.0.1:<port>/state, the same frame the pages get), so it works the same
 for ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0 and the demo. Start the bridge first, then in a second
 window:
 
@@ -35,7 +35,7 @@ import config  # noqa: E402
 PRESETS = {
     "basic": "status error_text gear rpm rpm_pct speed_kmh gas brake",
     "grip": "speed_kmh gas brake abs_level abs_active tc_level tc_active wheel_slip wheel_lock",
-    "boost": "rpm rpm_pct gas turbo boost_bar boost_min_bar boost_max_bar",
+    "boost": "rpm rpm_pct gas boost_bar boost_min_bar boost_max_bar",
     "revs": "gear rpm rpm_max rpm_pct shift_up limiter",
     "aids": "tc_level tc_cut_level tc_active abs_level abs_active esc_level esc_active engine_map brake_bias "
             "drive_mode drive_mode_name fixed",
@@ -51,7 +51,7 @@ def grip_stages() -> list:
     """The GRIP page's stage limits, read from ui/js/grip.js so this tool always checks what the page shows."""
     text = (ROOT / "ui" / "js" / "grip.js").read_text(encoding="utf-8")
     match = re.search(r"const STAGES = \[([^\]]+)\]", text)
-    return [float(v) for v in match.group(1).split(",")] if match else [0.06, 0.12, 0.25, 0.5]
+    return [float(v) for v in match.group(1).split(",")] if match else [0.04, 0.07, 0.15, 0.4]
 
 
 STAGES = grip_stages()
@@ -71,7 +71,7 @@ def bridge_url(given: str | None) -> str:
     if given:
         return given.rstrip("/")
     port = config.load()["dashboard"]["port"]
-    return f"http://localhost:{port}"
+    return f"http://127.0.0.1:{port}"     # not localhost: on Windows that tries IPv6 first, ~2 s per frame
 
 
 def frame(url: str) -> dict:
@@ -279,13 +279,12 @@ def check_revs(frames: list) -> None:
 
 def check_boost(frames: list) -> None:
     print("\n-- BOOST")
-    turbo = sorted({str(f.get("turbo")) for f in frames})
     boost = numbers(f.get("boost_bar") for f in frames)
     if not boost:
-        print(f"   no boost value (turbo: {', '.join(turbo)})")
+        print("   no boost value (the game sends none)")
         return
     top = max(frames, key=lambda f: f.get("boost_bar") if isinstance(f.get("boost_bar"), (int, float)) else -9)
-    print(f"   turbo: {', '.join(turbo)}; boost {min(boost):.2f} .. {max(boost):.2f} bar (highest at {top.get('rpm')} rpm, "
+    print(f"   boost {min(boost):.2f} .. {max(boost):.2f} bar (highest at {top.get('rpm')} rpm, "
           f"gas {top.get('gas')}); boost_max_bar {', '.join(sorted({str(f.get('boost_max_bar')) for f in frames}))}")
 
 
@@ -326,7 +325,7 @@ def main() -> None:
     parser.add_argument("--once", action="store_true", help="print the whole frame once as JSON")
     parser.add_argument("--record", type=float, metavar="SECONDS", help="record every frame to logs/ and check it")
     parser.add_argument("--check", metavar="FILE", help="check a recording ('last' = the newest in logs/)")
-    parser.add_argument("--url", help="the bridge, default http://localhost:<port from the config>")
+    parser.add_argument("--url", help="the bridge, default http://127.0.0.1:<port from the config>")
     args = parser.parse_args()
     if args.check:
         path = newest() if args.check == "last" else Path(args.check)

@@ -87,15 +87,15 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 | GEAR + REV rev lights and red screen | verified in ACE (Porsche 992 GT3 R, Toyota GR86): shift signal and limiter flag come from the game |
 | Analysis page | verified with ACE (lap times within 0.006 s of the game's) |
 | AI trainer | works with Claude; answers with the rewritten prompt (up to 9 tips) not judged yet |
-| GRIP page | works with the demo car; **not checked in any game** (slip sign, lock flag, stage limits) |
-| BOOST page | works with the demo car and shows NO TURBO in the GR86; **not checked in an ACE turbo car** |
+| GRIP page | **checked in ACE** (BMW M4 GT3 Evo, 9 November 2026): slip sign right, lock flag never set, stages moved to 4 / 7 / 15 / 40 % (ABS / TC start at 6–7 %). Open: the owner's feel on the iPhone, more ABS / TC-on stops |
+| BOOST page | **checked in ACE** (M4 GT3 Evo): `turbo_boost` in bar, up to 1.69; `max_turbo_boost` 0. No turbo check any more: the gauge is always drawn, 0 without a value |
 | TYRES / PERFORMANCE cards | built, **not checked in the game** (pressure unit, colour scales, Num3 / Num6) |
 | Assetto Corsa Rally, iRacing, DiRT Rally 2.0 | **never run against the games** |
 
 ## Open, in the owner's order of interest
 
-1. GRIP in ACE (test plan 1).
-2. BOOST in an ACE turbo car (test plan 2). iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
+1. GRIP in ACE: the owner's feel for the new stages on the iPhone; a recording with ABS and TC on (only 5–6 starts seen so far).
+2. BOOST: done in ACE. iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
 3. AI trainer quality with the new facts and prompt (test plan 3).
 4. First drives in ACR, iRacing, DR2 (test plan 4).
 5. TYRES / PERFORMANCE cards in ACE (test plan 5).
@@ -108,6 +108,8 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 
 - Porsche 992 GT3 R: max rpm 9,400, shift signal (`is_change_up_rpm`) from ~9,000–9,040 rpm in every gear, limiter flag (`is_rpm_limiter_on`) from ~9,070–9,120. `gear_rpm_window` is always 1.0 (no shift-light range from the game).
 - Toyota GR86: no turbo, all turbo values 0, `engine_type` 0.
+- BMW M4 GT3 Evo (Brands Hatch, 9 November 2026): `turbo_boost` 0 .. 1.69 bar (bar, highest around 5,000 rpm), `max_turbo_boost` 0, `turbo_boost_level` 0 or 1 (no turbo flag). `slipRatio` negative braking, positive wheelspin, −1 locked; the tyre `lock` flag never set; ABS starts at ~6.4 % slip, TC at ~7.1 %. Shift signal ~6,740–7,190 rpm, limiter from ~6,660–6,710 (max 7,000).
+- `tools/live.py` must read `127.0.0.1`, not `localhost`: on Windows `localhost` tries IPv6 first and costs ~2 s per frame (fixed 9 November).
 - `lap_pos`, track length and position work; section times add up to the lap time; `is_valid_lap` false after cutting and on the out lap.
 - Lights / wipers stages are not published by ACE 0.9.1. Not checked: whether the ACE map is mirrored; `session_id` across sessions.
 
@@ -126,10 +128,10 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 
 ## Decisions the owner made (keep them)
 
-- Universal UI, one folder per game; UI in `ui/` (plain HTML / CSS / JS); Python standard library only. Every game gets every page; a page a game cannot fill says so (BOOST in DR2: NO DATA).
+- Universal UI, one folder per game; UI in `ui/` (plain HTML / CSS / JS); Python standard library only. Every game gets every page; a page a game cannot fill says so in the chip (BOOST in DR2: the gauge stays at 0).
 - GEAR + REV: yellow 14-segment gear in a light grey frame close to the screen edges, GEAR in the top line; 8 rev lights blue-green-yellow-red-red-yellow-green-blue from the outside in, from 88 % of the game's shift point up to it; the red pair and the dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag — a simple rule by flags, no rule per car**; the lights never flash; no rpm number; SPEED small in a second frame below (no unit); E for errors with a chip; always the gear number (P only for park); gears above 9 show E.
-- BOOST (phone): a gauge, not a number or bar; BAR under the hub, the value with one decimal below the gauge in the SPEED number style; NO TURBO for ACE cars without a turbo, VACUUM in iRacing, DR2 NO DATA; own link `/boost`, listed in the startup window.
-- GRIP (phone): four tyre tiles, colour only (no text, no LEDs), braking yellow to red, wheelspin light blue to purple, **stage 4 flashes bright**; in portrait a compact frame, not stretched; ABS / TC show only the setting, no colour, no flashing, grey without, hidden when the game has none (owner, 10 November 2026).
+- BOOST (phone): a gauge, not a number or bar; BAR under the hub, the value with one decimal below the gauge in the SPEED number style; VACUUM in iRacing; own link `/boost`, listed in the startup window. **No check whether a car has a turbo**: the gauge is always fully drawn and stays at 0 without a value (owner, 9 November 2026: "don't make it too complicated").
+- GRIP (phone): four tyre tiles, colour only (no text, no LEDs), braking yellow to red, wheelspin light blue to purple, stages from 4 / 7 / 15 / 40 % slip, the same for every car, **stage 4 flashes bright**; in portrait a compact frame, not stretched; ABS / TC show only the setting, no colour, no flashing, grey without, hidden when the game has none (owner, 10 November 2026).
 - No BUTTONS page (removed by the owner, 10 November 2026): the dash box is the only page that sends keys.
 - Settings button: same size and place on every page, top right. Home page `/Racing_Dashboard` (the PC also serves flight sim dashboards on the same address and port). On a tablet in landscape every page starts 26 px lower (`--top-gap`).
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; warning lamps as colours only. TYRES like the ACE HUD (no legend, no compound, brake bar full height, colour only). ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE (not DRIVE MODE), no key on Comma (voice chat mute).

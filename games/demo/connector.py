@@ -260,7 +260,7 @@ class Connector(telemetry.Connector):
             "esc_level": None,                                   # the demo car has no stability control
             "diff_power": 5, "diff_coast": 3,
             "drive_mode": s["drive_mode"], "drive_mode_name": MODES[s["drive_mode"]],
-            "turbo": True, "boost_bar": round(self.boost, 3), "boost_min_bar": 0.0, "boost_max_bar": BOOST_MAX,
+            "boost_bar": round(self.boost, 3), "boost_min_bar": 0.0, "boost_max_bar": BOOST_MAX,
             **self.tyres(brake),
             **self.grip(gas, brake, dt),
             **self.warnings(running),

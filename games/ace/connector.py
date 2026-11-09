@@ -323,7 +323,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
         "brake_temp_c": tyre_values[2],
-        # boost page: graphics turbo_boost (physics turboBoost as a fallback), max_turbo_boost 0 = no turbo
+        # boost page: graphics turbo_boost in bar (physics turboBoost as a fallback); max_turbo_boost stays 0
+        # even in a turbo car (M4 GT3 Evo), so the gauge ends at 2 bar or the highest boost seen
         **boost(gr.turbo_boost or ph.turboBoost, gr.max_turbo_boost),
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
         # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
