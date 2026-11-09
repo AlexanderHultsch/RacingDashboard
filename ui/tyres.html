@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tyres">
+<meta name="theme-color" content="#050607">
+<link rel="apple-touch-icon" href="/racing-dashboard-icon.png">
+<title>Tyres</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/tyres/frame.css">
+</head>
+<!-- Tyres: the page for a phone. The DASH TYRES card on its own, in a frame like the gear, boost and grip pages
+     with TYRES in its top line: pressures outside, a tile per tyre with its temperature (coloured by the game's
+     core score), a frame around each tile (the surface score), the brake as a bar on the inner side (the brake
+     score). Drawn by RD.tyreView (rd.js), driven by js/tyres.js. -->
+<body data-page="tyres" data-styles="frame">
+<main class="tyres-page">
+  <div class="tyres-frame">
+    <div class="rd-tyres"></div>
+    <div class="tyres-label"><svg class="rd-seg-text" data-text="TYRES" aria-hidden="true"></svg></div>
+  </div>
+</main>
+<div class="rd-nodata"></div>
+<script src="js/rd.js"></script>
+<script src="js/seg14.js"></script>
+<script src="js/tyres.js"></script>
+<script>RD.start();</script>
+</body>
+</html>

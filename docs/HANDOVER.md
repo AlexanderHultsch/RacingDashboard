@@ -13,7 +13,7 @@ python core\server.py --check
 python core\server.py
 ```
 
-All 84 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/Startup`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change, but **restart the bridge after a change to Python code**. Log: `logs\racing-dashboard.log`. The repository is `github.com/AlexanderHultsch/RacingDashboard` (the old name Racing-Dashboard redirects).
+All 84 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/Startup`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change, but **restart the bridge after a change to Python code**. Log: `logs\racing-dashboard.log`. The repository is `github.com/AlexanderHultsch/RacingDashboard` (the old name Racing-Dashboard redirects).
 
 ## Live debugging: pull the data while the owner drives
 
@@ -117,7 +117,7 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 ## How it works (where to look)
 
 - **Connectors** `games/<id>/connector.py` translate a game into `core/telemetry.py` `FIELDS`; `game.toml` (window, keys), `dash.toml` (dash box cards). Kunos' physics page and `boost()` in `core/kunos.py`.
-- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`, `ui/js/grip.js`, `ui/js/startup.js`; styles `ui/styles/<page>/<style>.css`.
+- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`, `ui/js/grip.js`, `ui/js/tyres.js`, `ui/js/startup.js`; styles `ui/styles/<page>/<style>.css`.
 - **Recorder** `core/recorder.py`, **AI trainer** `core/trainer.py`; file formats in [SPEC.md](SPEC.md#analysis).
 - **Tools** `tools/live.py` (live values of every game, recordings, checks), `tools/ace_probe.py` (ACE values straight from the shared memory, `--analysis`, `--raw`), `tools/analysis_check.py` (recorded laps).
 
@@ -135,7 +135,8 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 - GRIP (phone): four tyre tiles, colour only (no text, no LEDs), braking yellow to red, wheelspin light blue to purple, stages from 4 / 7 / 15 / 40 % slip, the same for every car, **stage 4 flashes bright** and comes and goes at once, stages 1–3 fade in 0.15 s and stay at least 0.3 s before stepping down one stage (calm colours, owner, 9 November 2026); in portrait a compact frame, not stretched; ABS / TC show only the setting, no colour, no flashing, grey without, hidden when the game has none (owner, 10 November 2026).
 - No BUTTONS page (removed by the owner, 10 November 2026). The DASH and STARTUP send keys.
 - STARTUP (`/Startup`, phone): IGN and ENGINE START STOP buttons like a modern road car's, dark brushed metal, chrome bezels, glass caps, white text; state by light only (IGN amber, START red ready / green running), no label under IGN; same functions as the DASH ignition card (owner, 9 November 2026, from three rounds of PNG mockups).
-- Page arrows on the phone pages only (GEAR, BOOST, GRIP, STARTUP, round again): faint chevrons in the bottom left and right corner; HOME, DASH and ANALYSIS are not in the cycle (owner, 9 November 2026).
+- TYRES page (`/tyres`, phone): the DASH TYRES card on its own in the GEAR / BOOST / GRIP frame, same code (`RD.tyreView`) (owner, 9 November 2026).
+- Page arrows on the phone pages only (GEAR, BOOST, GRIP, TYRES, STARTUP, round again): faint chevrons in the bottom left and right corner; HOME, DASH and ANALYSIS are not in the cycle (owner, 9 November 2026).
 - Settings button: same size and place on every page, top right. Home page `/Racing_Dashboard` (the PC also serves flight sim dashboards on the same address and port). On a tablet in landscape every page starts 26 px lower (`--top-gap`).
 - TYRES card exactly like the ACE HUD: the tile coloured by the game's core temperature score, a frame around it by the surface score, the brake bars by the game's brake score (0 cold blue .. 1 working green) (owner, 9 November 2026; first taken for the pressure, but the HUD frame is green in the pits where the pressure score is 0.33). The HUD's wear bar cannot be built: ACE 0.9.1 does not publish wear.
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; warning lamps as colours only. TYRES like the ACE HUD (no legend, no compound, brake bar full height, colour only). ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE (not DRIVE MODE), no key on Comma (voice chat mute).

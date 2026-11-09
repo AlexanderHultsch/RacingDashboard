@@ -1,0 +1,65 @@
+﻿/* Tyres, style FRAME: the DASH TYRES card on its own, in a light grey frame like the gear, boost and grip pages
+   with TYRES set into the top line. In portrait a compact box in the middle of the screen; in landscape the whole
+   screen. Tile, frame and bar colours come from RD.tyreView (rd.js). */
+
+:root {
+  --seg-label: #e6d23a;
+  --frame: #d9dde2;
+  --frame-w: 1.1vmin;
+  --edge: 2.8vmin;
+  --bg: #050607;
+}
+
+html, body { background: var(--bg); }
+
+.tyres-page {
+  height: 100%;
+  display: grid;
+  align-items: center;
+  padding: max(5vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
+}
+
+.tyres-frame {
+  position: relative;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+  width: 100%;
+  aspect-ratio: 1 / 1.5;      /* portrait: a compact box, not stretched to the top and bottom */
+}
+@media (orientation: landscape) {
+  .tyres-page { align-items: stretch; padding-top: max(4.6vmin, var(--safe-t)); }
+  .tyres-frame { aspect-ratio: auto; height: 100%; }
+}
+
+.tyres-label {
+  position: absolute;
+  top: calc(var(--frame-w) * -0.5);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 2.4vmin;
+  background: var(--bg);
+}
+.tyres-label svg { display: block; height: 6vmin; width: auto; }
+.tyres-label .on { fill: var(--seg-label); }
+
+/* the tyres, laid out like the car (as the DASH card and the ACE HUD) */
+.rd-tyres { position: absolute; inset: 6vmin 5vmin 4vmin; display: grid; }
+@media (orientation: landscape) { .rd-tyres { inset: 5vmin 0 3.5vmin; justify-items: center; } }
+.rd-tyres .tyres-body {
+  display: grid; width: 100%; min-height: 0;
+  grid-template-columns: 1fr 3vmin 4vmin 3vmin 1fr;
+  grid-template-rows: auto 1fr 1fr auto;
+  gap: 2.2vmin;
+}
+@media (orientation: landscape) {
+  .rd-tyres .tyres-body { width: auto; grid-template-columns: 40vmin 3.2vmin 10vmin 3.2vmin 40vmin; gap: 2.4vmin 2.2vmin; }
+}
+.rd-tyres .psi { text-align: center; font-size: 8vmin; font-weight: 800; color: var(--text); line-height: 1; min-height: 1em; }
+@media (orientation: landscape) { .rd-tyres .psi { font-size: 7vmin; } }
+.rd-tyres .tyre { border-radius: 3.4vmin; display: grid; place-items: center; min-height: 0; background: #1a2027; color: var(--dim);
+                  border: 1.6vmin solid #2a313a; background-clip: padding-box; box-shadow: inset 0 0 0 0.5vmin #0b0e12; }
+.rd-tyres .tyre b { font-size: 11vmin; font-weight: 800; line-height: 1; color: inherit; }
+.rd-tyres .tyre.hot { color: #fff; }
+.rd-tyres .tyre.hot b { text-shadow: 0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.25); }
+.rd-tyres .brake { border-radius: 1.4vmin; background: #2a313a; }
+.rd-tyres.off .tyre, .rd-tyres.off .brake { opacity: 0.35; }

@@ -1,11 +1,11 @@
-/* 14-segment display, drawn as SVG (no font needed, sharp at any size).
+﻿/* 14-segment display, drawn as SVG (no font needed, sharp at any size).
  *
  * Segments as on a real display: outer a (top) b (upper right) c (lower right) d (bottom)
  * e (lower left) f (upper left), middle bar g1 g2, centre verticals i (upper) l (lower),
  * diagonals h (upper left) j (upper right) k (lower left) m (lower right). Every diagonal
  * fills its quadrant from the outer corner to the centre, with the same gap as the others.
  *
- * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M O T U C V I, "-", "." decimal
+ * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M O T U C V I Y, "-", "." decimal
  *                                      point, ":" colon)
  *
  * Widgets (registered with RD when rd.js is loaded first):
@@ -26,6 +26,8 @@
     "O": "a b c d e f", "T": "a i l", "U": "b c d e f", "C": "a f e d", "V": "f e k j",
     // for the grip page: GRIP
     "I": "a d i l",
+    // for the tyres page: TYRES
+    "Y": "f b g1 g2 l",
     "-": "g1 g2", " ": "",
   };
 

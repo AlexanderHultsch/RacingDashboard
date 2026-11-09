@@ -1,4 +1,4 @@
-"""Bridge smoke test with the demo game: pages, /state, /api/info, /api/command, /stream.
+﻿"""Bridge smoke test with the demo game: pages, /state, /api/info, /api/command, /stream.
 
 Run: python -m unittest discover tests
 """
@@ -67,13 +67,13 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/grip", "/js/grip.js", "/styles/grip/tiles.css", "/startup", "/Startup", "/js/startup.js", "/styles/startup/metal.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
+        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/grip", "/js/grip.js", "/styles/grip/tiles.css", "/tyres", "/js/tyres.js", "/styles/tyres/frame.css", "/startup", "/Startup", "/js/startup.js", "/styles/startup/metal.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
                      "/analysis", "/js/analysis.js", "/styles/analysis/standard.css"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)
         self.assertIn("text/html", get("/gear")[1])
-        self.assertIn('RD.CYCLE = ["gear", "boost", "grip", "startup"]', get("/js/rd.js")[2].decode())   # the page arrows
+        self.assertIn('RD.CYCLE = ["gear", "boost", "grip", "tyres", "startup"]', get("/js/rd.js")[2].decode())   # the page arrows
 
     def test_trainer_api_keeps_the_key(self):
         status, _, body = get("/api/trainer")

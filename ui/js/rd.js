@@ -324,6 +324,79 @@
     style: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18V3z"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
   };
 
+  /* ------------------------------------------------------------ tyre view (DASH card and TYRES page) */
+
+  /* Four tyres as the car sees them: pressure (psi) above the fronts / below the rears, a tile per tyre with its
+     temperature, the brake as a bar on the inner side. def: the game's tyres card from its dash map (/api/info):
+     field, pressure, brakes, scale, brake_scale and the game's own scores core_score, surface_score (1 = fine ..
+     2 = too hot) and brake_score (0 = cold .. 1 = working). With the scores the tile is coloured by the core score,
+     a frame around it by the surface score and the bar by the brake score, like the ACE HUD; without them the tile
+     and bar follow the scales [blue, green from, green to, red] and the frame stays dark. update(f, error) returns
+     true when the game sends no tyre temperatures. */
+  const isNone = (v) => v === null || v === undefined;
+  function heat(t, [b, g1, g2, r]) {
+    const stops = [[b, [26, 120, 232]], [(b + g1) / 2, [26, 167, 232]], [g1, [25, 180, 91]], [g2, [25, 180, 91]],
+                   [(g2 + r) / 2, [230, 198, 25]], [g2 + (r - g2) * 0.75, [240, 138, 28]], [r, [229, 65, 47]]];
+    return along(t, stops);
+  }
+  function scoreColour(s, cold) {
+    const stops = (cold ? [[0, [26, 120, 232]], [0.5, [26, 167, 232]]] : [])    // brakes: 0 = cold (blue) .. 1 = working
+      .concat([[1.0, [25, 180, 91]], [1.5, [230, 198, 25]], [1.75, [240, 138, 28]], [2.0, [229, 65, 47]]]);
+    return along(s, stops);
+  }
+  function along(v, stops) {
+    if (v <= stops[0][0]) return stops[0][1];
+    for (let i = 1; i < stops.length; i++) {
+      if (v <= stops[i][0]) {
+        const k = (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0] || 1);
+        return stops[i - 1][1].map((c, j) => Math.round(c + (stops[i][1][j] - c) * k));
+      }
+    }
+    return stops[stops.length - 1][1];
+  }
+  function paint(node, colour, text) {
+    const bg = colour ? `rgb(${colour.join(",")})` : "";
+    if (node._bg === bg) return;
+    node._bg = bg;
+    node.style.background = bg;
+    node.classList.toggle("hot", !!colour);
+    // dark digits on light colours (yellow, orange), white on the others
+    if (text) node.style.color = colour && (0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]) / 255 > 0.6 ? "#14100a" : "";
+  }
+  RD.tyreView = function (def) {
+    const el = (cls, html) => { const e = document.createElement("div"); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
+    const body = el("tyres-body");
+    const P = [0, 1, 2, 3].map(() => el("psi")), T = [0, 1, 2, 3].map(() => el("tyre", "<b></b>"));
+    const B = [0, 1, 2, 3].map(() => el("brake"));
+    // rows: pressures front / tyres front / tyres rear / pressures rear; the brakes on the inner side
+    body.append(P[0], el(), el(), el(), P[1], T[0], B[0], el(), B[1], T[1], T[2], B[2], el(), B[3], T[3], P[2], el(), el(), el(), P[3]);
+    const tyreScale = def.scale || [50, 80, 100, 130], brakeScale = def.brake_scale || [100, 300, 650, 900];
+    const list = (f, key) => (key && Array.isArray(f[key]) ? f[key] : null);
+    function update(f, error) {
+      const temps = list(f, def.field), press = list(f, def.pressure), brakes = list(f, def.brakes);
+      const core = list(f, def.core_score), surface = list(f, def.surface_score), brakeScores = list(f, def.brake_score);
+      const missing = !temps || temps.every(isNone);
+      for (let i = 0; i < 4; i++) {
+        const v = error || missing ? null : temps[i];
+        const cs = isNone(v) || !core ? null : core[i];
+        paint(T[i], isNone(v) ? null : isNone(cs) ? heat(v, tyreScale) : scoreColour(cs), true);
+        const text = isNone(v) ? "–" : Math.round(v) + "°";
+        if (T[i].firstChild.textContent !== text) T[i].firstChild.textContent = text;
+        const p = error || !press ? null : press[i];
+        const pt = isNone(p) ? "" : p.toFixed(1);
+        if (P[i].textContent !== pt) P[i].textContent = pt;
+        const bv = error || !brakes ? null : brakes[i];
+        const bs = isNone(bv) || !brakeScores ? null : brakeScores[i];
+        paint(B[i], isNone(bv) ? null : isNone(bs) ? heat(bv, brakeScale) : scoreColour(bs, true), false);
+        const ss = isNone(v) || !surface ? null : surface[i];
+        const frame = isNone(ss) ? "" : `rgb(${scoreColour(ss).join(",")})`;
+        if (T[i]._frame !== frame) { T[i]._frame = frame; T[i].style.borderColor = frame; }
+      }
+      return missing;
+    }
+    return { body, update };
+  };
+
   /* ------------------------------------------------------------ toolbar and settings */
 
   RD.HOME = "/Racing_Dashboard";    // the home page; the link to save on the tablet
@@ -350,7 +423,7 @@
   };
 
   /* The phone pages cycle with an arrow at the left and right edge (owner); HOME, DASH and ANALYSIS do not. */
-  RD.CYCLE = ["gear", "boost", "grip", "startup"];
+  RD.CYCLE = ["gear", "boost", "grip", "tyres", "startup"];
   RD.pageArrows = function () {
     const at = RD.CYCLE.indexOf(document.body.dataset.page);
     if (at < 0) return;
@@ -450,7 +523,7 @@
       el.innerHTML = "<header><h2>SETTINGS</h2><button class='rd-back'>BACK</button></header><div class='rd-set-body'></div>";
       el.querySelector(".rd-back").addEventListener("click", () => this.close());
       const body = el.querySelector(".rd-set-body");
-      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["boost", "BOOST"], ["grip", "GRIP"], ["startup", "STARTUP"]];
+      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["boost", "BOOST"], ["grip", "GRIP"], ["tyres", "TYRES"], ["startup", "STARTUP"]];
       body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? RD.HOME : "/" + p; }));
       if (info) {
         body.appendChild(choice("GAME (ALL DEVICES)", info.games.map((g) => [g.id, g.name.toUpperCase()]), info.game, (id) => {

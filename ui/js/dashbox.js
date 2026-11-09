@@ -426,85 +426,12 @@
     return card;
   }
 
-  /* temperature colour along a scale [blue, green from, green to, red]: blue - light blue - green (the
-     window) - yellow - orange - red, mixed in between (a tyre at 111 C with a window to 100 C is yellowish) */
-  function heat(t, [b, g1, g2, r]) {
-    const stops = [[b, [26, 120, 232]], [(b + g1) / 2, [26, 167, 232]], [g1, [25, 180, 91]], [g2, [25, 180, 91]],
-                   [(g2 + r) / 2, [230, 198, 25]], [g2 + (r - g2) * 0.75, [240, 138, 28]], [r, [229, 65, 47]]];
-    if (t <= stops[0][0]) return stops[0][1];
-    for (let i = 1; i < stops.length; i++) {
-      if (t <= stops[i][0]) {
-        const k = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0] || 1);
-        return stops[i - 1][1].map((c, j) => Math.round(c + (stops[i][1][j] - c) * k));
-      }
-    }
-    return stops[stops.length - 1][1];
-  }
-
-  function paint(node, value, scale, text, colour) {
-    const c = colour !== undefined ? colour : isNone(value) ? null : heat(value, scale);
-    const bg = c ? `rgb(${c.join(",")})` : "";
-    if (node._bg === bg) return;
-    node._bg = bg;
-    node.style.background = bg;
-    node.classList.toggle("hot", !!c);
-    // dark digits on light colours (yellow, orange), white on the others
-    if (text) node.style.color = c && (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255 > 0.6 ? "#14100a" : "";
-  }
-
-  /* the game's own temperature judgement (ACE: 1 = fine up to 2 = too hot) as green - yellow - orange - red, like
-     the ACE HUD: the tile by the core, the frame by the surface */
-  function scoreColour(s, cold) {
-    const stops = (cold ? [[0, [26, 120, 232]], [0.5, [26, 167, 232]]] : [])    // brakes: 0 = cold (blue) .. 1 = working
-      .concat([[1.0, [25, 180, 91]], [1.5, [230, 198, 25]], [1.75, [240, 138, 28]], [2.0, [229, 65, 47]]]);
-    if (s <= stops[0][0]) return stops[0][1];
-    for (let i = 1; i < stops.length; i++) {
-      if (s <= stops[i][0]) {
-        const k = (s - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
-        return stops[i - 1][1].map((c, j) => Math.round(c + (stops[i][1][j] - c) * k));
-      }
-    }
-    return stops[stops.length - 1][1];
-  }
-
   function tyres(def) {
     const card = baseCard(def, "tyres");
     card.querySelector(".rng").textContent = def.pressure ? "PSI · °C" : "°C";
-    const body = el("div", "tyres-body");
-    const psi = () => el("div", "psi");
-    const tile = () => el("div", "tyre", "<b></b>");
-    const brake = () => el("div", "brake");
-    const P = [psi(), psi(), psi(), psi()], T = [tile(), tile(), tile(), tile()], B = [brake(), brake(), brake(), brake()];
-    // rows: pressures front / tyres front / tyres rear / pressures rear; the brakes on the inner side
-    body.append(P[0], el("div"), el("div"), el("div"), P[1],
-                T[0], B[0], el("div"), B[1], T[1],
-                T[2], B[2], el("div"), B[3], T[3],
-                P[2], el("div"), el("div"), el("div"), P[3]);
-    card.insertBefore(body, card.querySelector(".hint"));
-    const tyreScale = def.scale || [50, 80, 100, 130], brakeScale = def.brake_scale || [100, 300, 650, 900];
-    card.update = (f, error) => {
-      const temps = f[def.field], press = def.pressure ? f[def.pressure] : null, brakes = def.brakes ? f[def.brakes] : null;
-      const core = def.core_score ? f[def.core_score] : null, surface = def.surface_score ? f[def.surface_score] : null;
-      const brakeScores = def.brake_score ? f[def.brake_score] : null;
-      const missing = !Array.isArray(temps) || temps.every(isNone);
-      setState(card, error, missing);
-      for (let i = 0; i < 4; i++) {
-        const v = error || missing ? null : temps[i];
-        const cs = error || missing || !Array.isArray(core) ? null : core[i];
-        paint(T[i], v, tyreScale, true, isNone(cs) || isNone(v) ? undefined : scoreColour(cs));   // the game's score, else the scale
-        const text = isNone(v) ? "–" : Math.round(v) + "°";
-        if (T[i].firstChild.textContent !== text) T[i].firstChild.textContent = text;
-        const p = error || !Array.isArray(press) ? null : press[i];
-        const pt = isNone(p) ? "" : p.toFixed(1);
-        if (P[i].textContent !== pt) P[i].textContent = pt;
-        const bv = error || !Array.isArray(brakes) ? null : brakes[i];
-        const bs = error || isNone(bv) || !Array.isArray(brakeScores) ? null : brakeScores[i];
-        paint(B[i], bv, brakeScale, false, isNone(bs) ? undefined : scoreColour(bs, true));   // the game's score, else the scale
-        const ss = error || missing || !Array.isArray(surface) ? null : surface[i];
-        const frame = isNone(ss) ? "" : `rgb(${scoreColour(ss).join(",")})`;
-        if (T[i]._frame !== frame) { T[i]._frame = frame; T[i].style.borderColor = frame; }
-      }
-    };
+    const view = RD.tyreView(def);                    // shared with the TYRES page (rd.js)
+    card.insertBefore(view.body, card.querySelector(".hint"));
+    card.update = (f, error) => setState(card, error, view.update(f, error));
     return card;
   }
 
