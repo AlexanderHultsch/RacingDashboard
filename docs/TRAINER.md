@@ -54,7 +54,7 @@ FAST and BEST each stand for a fixed **model + effort** pair per provider. The t
 - Ollama: set `model` for a level to use a specific pulled model; empty takes the smallest (FAST) or largest (BEST). The address is `[trainer] ollama_url` (default `http://localhost:11434`).
 - `[trainer] timeout_s` (default 90) is how long the bridge waits for an answer.
 - Claude BEST (`claude-opus-5-5`) is sent with the server-side refusal fallback (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): if the model declines, the API answers with a fallback model in the same call.
-- Rough cost per question (about 3,000 tokens in, under 1,000 out): Claude FAST well under a cent, Claude BEST a few cents. Ollama is free.
+- Rough cost per question (about 1,000 tokens in for a section, 3,000–4,000 for the whole track, under 1,000 out): Claude FAST well under a cent, Claude BEST a few cents. Ollama is free.
 
 ## History
 
@@ -76,14 +76,19 @@ Per section and per line (`best`, `last`, `now`; a line that does not exist is `
 | `brake_off_m` | where the brake is back below 5 % |
 | `coast_m` | metres with neither throttle above 10 % nor brake above 10 % |
 | `min_kmh`, `min_at_m` | slowest point and where it is |
-| `gear_at_min` | gear at the slowest point |
-| `gears` | gear sequence through the section, e.g. `"4-3-4"` (neutral while shifting left out) |
+| `gear_at_min`, `rpm_at_min` | gear and engine speed at the slowest point (rpm since November 2026; older laps have none) |
+| `gears`, `shifts` | gear sequence through the section, e.g. `"4-3-4"` (neutral while shifting left out), and where each change happened (`at_m`, `to`) |
 | `full_throttle_m` | where the throttle is back above 95 % (held for 30 m) after the slowest point |
 | `steer_max` | largest steering, 0–1 of full lock |
+| `trace` | the line every 10 m: `[metres, km/h, throttle %, brake %, steering −100..100, off]`; `off` (`last` and `now` only, and only in a corner) is the distance in metres from the best line, positive towards the inside of the corner, negative towards the outside. This is what lets the AI judge the line and the shape of the inputs, not only a few points |
 | `delta_by_50m` | time behind best (positive = slower) at every 50 m and at the section end (`now` and `last` only) |
 | `aids` | driving aids, when recorded: `tc_working_m`, `tc_working_pct`, `tc_first_m` (and the same for `abs`, `esc`), `levels` at the section start (`tc`, `tc_cut`, `abs`, `esc`, `engine_map`), `level_changes` (`at_m`, `setting`, `to`) |
 
-Whole-track mode adds a `sections` table (per section: best / last / now time and the deltas) and the lap times; the full facts are sent for the 3 sections where now loses the most against best.
+Per section, measured from the recorded track outline (`corner`, next to the three lines): `type` (straight, fast / medium / slow corner, chicane), `turn_deg` (how much the road turns), `tightest_at_m` and `radius_m` (the geometric apex). `next_section` says what follows (a straight after a slow corner makes the exit the priority) and `lap_m` where the section lies in the lap, so the AI can place the corner on the real circuit and use what it knows about it.
+
+Whole-track mode adds a `sections` table (per section: type, best / last / now time and the deltas) and the lap times; the full facts are sent for the 3 sections where now loses the most against best.
+
+Since November 2026 the prompt asks for judgement against the fundamentals as well (braking in a straight line and a progressive release towards the apex, no coasting, one apex placed for the exit or for speed, throttle as the steering opens, outside – inside – outside, the gear for the power band), because the driver's own best may be far from a good lap; and it allows the AI to name a corner of a real circuit it knows. Every number in a tip still has to come from DATA.
 
 ## The prompt
 
@@ -102,7 +107,16 @@ How to read DATA:
 - coast_m is the total distance without throttle or brake in the section, not a position.
 - entry_kmh comes from the section before: a slower entry is lost in the section before, so say so and
   point there instead of inventing a fix in this section.
-- gears is the sequence of gears used; gear_at_min is the gear at the slowest point.
+- gears is the sequence of gears used; gear_at_min and rpm_at_min are the gear and the engine speed at
+  the slowest point; shifts says where the gear changed.
+- corner is the shape of the section measured from the recorded track: type (straight, fast / medium /
+  slow corner, chicane), turn_deg (how much the road turns), tightest_at_m and radius_m (the geometric
+  apex). next_section says what follows: a straight after a slow corner makes the exit the priority.
+- trace samples the line every 10 m: [metres, km/h, throttle %, brake %, steering -100..100, off].
+  off (LAST and NOW only) is the distance in metres from the BEST line: positive = towards the inside of
+  the corner, negative = towards the outside. On a straight section off is left out.
+- lap_m is where the section lies in the lap, metres from the start / finish line, so you can place the
+  corner on the real circuit.
 
 How to analyse:
 1. Use only the numbers in DATA. Never invent a number. A time you give must come from time_s or
@@ -111,19 +125,31 @@ How to analyse:
    ("your last lap braked at 112 m").
 3. Look at these, in this order: braking point (brake_on_m, lift_m), brake release (brake_off_m), coasting
    (coast_m), minimum speed and where it is (min_kmh, min_at_m), throttle pickup (full_throttle_m),
-   gear at the slowest point (gear_at_min, gears), exit speed (exit_kmh).
+   gear at the slowest point (gear_at_min, rpm_at_min, gears), exit speed (exit_kmh).
 4. Find the place from delta_by_50m: where the delta grows is where the time goes.
    Driving aids ("aids"): where TC, ABS and stability worked (*_working_m, *_working_pct, *_first_m) and
    the set levels (levels, level_changes). If NOW differs from BEST in an aid level or in how much an aid
    worked, and that is where NOW loses or gains time, say whether a lower or higher setting may help.
    Only when the data shows it; never as a general rule.
-5. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
-6. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
-   and metres. Give the time at stake, rounded to 0.05 s.
-7. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
-8. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
-9. If NOW is not slower than BEST anywhere that matters, say so in "note" and give no tips.
-10. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
+5. Judge the driving against the fundamentals too, not only against BEST, because BEST is the driver's
+   own lap and may be far from a good one: brake hard and in a straight line, release the brake
+   progressively towards the apex (brake_off_m against min_at_m and tightest_at_m); no coasting; one
+   apex, at or after the tightest point when a straight follows (exit speed first), earlier in a fast
+   corner (carry speed); throttle fully open as soon as the steering opens (full_throttle_m against the
+   steering in trace); a line that uses the outside on entry, the inside at the apex and the outside on
+   exit (off in trace); the gear that keeps the engine in its power band at the slowest point
+   (rpm_at_min). Name the fundamental and the numbers that show it.
+6. If you know this real circuit (track name, lap_m), you may name the corner and use what is commonly
+   known about driving it; every number in a tip still comes from DATA.
+7. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
+8. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
+   and metres. Give the time at stake, rounded to 0.05 s; for a tip from the fundamentals alone (no BEST
+   to measure against) estimate it from the speeds in DATA and say "about" in the text.
+9. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
+10. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
+11. If NOW is not slower than BEST anywhere that matters, say so in "note" and look for tips from the
+    fundamentals (rule 5) instead; give none if the driving is sound.
+12. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
     say so in "note"; otherwise "note" is an empty string.
 
 Answer with JSON only, no markdown, exactly this shape:
@@ -141,8 +167,10 @@ text at most 35 words. No more than 3 tips. Plain English, metres, km/h and seco
 TASK: Analyse SECTION 5 (250 m) of Brands Hatch, Toyota GR86, Assetto Corsa EVO. NOW is lap 3, LAST is lap 2, BEST is the saved section best.
 DATA:
 {"mode": "section", "game": "Assetto Corsa EVO", "car": "Toyota GR86", "track": "Brands Hatch",
- "track_length_m": 3916, "section": 5, "section_m": 250, "laps": {"now": 3, "last": 2, "best": "baseline"},
- "lines": {"best": {...facts...}, "last": {...facts...}, "now": {...facts...}}}
+ "track_length_m": 3916, "section": 5, "section_length_m": 250, "lap_m": [1000, 1250],
+ "laps": {"now": 3, "last": 2, "best": "saved section best"}, "next_section": {"section": 6, "type": "fast corner", "turn_deg": 18},
+ "lines": {"best": {...facts...}, "last": {...facts...}, "now": {...facts...},
+           "corner": {"type": "slow corner", "turn_deg": 109, "tightest_at_m": 184, "radius_m": 40}}}
 ```
 
 Whole-track mode: `TASK: Analyse the WHOLE LAP of …`, and DATA has `"mode": "track"`, `"lap_times"`, `"sections"` (one row per section) and `"focus"` (the full facts of the 3 sections that lose the most).

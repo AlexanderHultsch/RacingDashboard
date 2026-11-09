@@ -258,8 +258,9 @@ class RecorderTest(unittest.TestCase):
         car.drive(300, ms=48)                          # into section 2 of the next lap
         data = self.rec.section(1)
         self.assertTrue(data["best"] and data["last"] and data["now"])
-        self.assertEqual(len(data["best"][0]), 17)                # 9 values + 3 aids working + 5 levels
-        self.assertEqual(data["best"][0][9:], [None] * 8)          # this game reports no aids
+        self.assertEqual(len(data["best"][0]), 18)                # 9 values + 3 aids working + 5 levels + rpm
+        self.assertEqual(data["best"][0][9:17], [None] * 8)       # this game reports no aids
+        self.assertEqual(data["best"][0][17], 0)                 # and the test frames have no rpm
         self.assertEqual(data["to_m"], 500.0)
         live = self.rec.live()
         self.assertEqual(live["strip"]["best"][0] > 0, True)   # slower than the baseline
@@ -281,7 +282,7 @@ class RecorderTest(unittest.TestCase):
         self.assertEqual(samples[0]["lv"], [3, 2, 2, None, 1])
         self.assertTrue(any(s["a"][0] == 1 and s["lv"][0] == 4 for s in samples))
         row = next(r for r in self.rec.section(1)["best"] if r[9] == 1)     # from the saved section best
-        self.assertEqual(row[9:], [1, 0, 0, 4, 2, 2, None, 1])
+        self.assertEqual(row[9:17], [1, 0, 0, 4, 2, 2, None, 1])
 
     def test_strip_shows_the_last_lap_until_the_new_one_gets_there(self):
         car = Car(self.rec, p=0.0)

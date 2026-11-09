@@ -9,6 +9,7 @@ Settings (provider, FAST / BEST, the API keys) are kept on the PC in config/trai
 git). An API key is never sent back to a page and never written to the log. Standard library only.
 """
 import json
+import math
 import re
 import threading
 import time
@@ -39,7 +40,16 @@ How to read DATA:
 - coast_m is the total distance without throttle or brake in the section, not a position.
 - entry_kmh comes from the section before: a slower entry is lost in the section before, so say so and
   point there instead of inventing a fix in this section.
-- gears is the sequence of gears used; gear_at_min is the gear at the slowest point.
+- gears is the sequence of gears used; gear_at_min and rpm_at_min are the gear and the engine speed at
+  the slowest point; shifts says where the gear changed.
+- corner is the shape of the section measured from the recorded track: type (straight, fast / medium /
+  slow corner, chicane), turn_deg (how much the road turns), tightest_at_m and radius_m (the geometric
+  apex). next_section says what follows: a straight after a slow corner makes the exit the priority.
+- trace samples the line every 10 m: [metres, km/h, throttle %, brake %, steering -100..100, off].
+  off (LAST and NOW only) is the distance in metres from the BEST line: positive = towards the inside of
+  the corner, negative = towards the outside. On a straight section off is left out.
+- lap_m is where the section lies in the lap, metres from the start / finish line, so you can place the
+  corner on the real circuit.
 
 How to analyse:
 1. Use only the numbers in DATA. Never invent a number. A time you give must come from time_s or
@@ -48,19 +58,31 @@ How to analyse:
    ("your last lap braked at 112 m").
 3. Look at these, in this order: braking point (brake_on_m, lift_m), brake release (brake_off_m), coasting
    (coast_m), minimum speed and where it is (min_kmh, min_at_m), throttle pickup (full_throttle_m),
-   gear at the slowest point (gear_at_min, gears), exit speed (exit_kmh).
+   gear at the slowest point (gear_at_min, rpm_at_min, gears), exit speed (exit_kmh).
 4. Find the place from delta_by_50m: where the delta grows is where the time goes.
    Driving aids ("aids"): where TC, ABS and stability worked (*_working_m, *_working_pct, *_first_m) and
    the set levels (levels, level_changes). If NOW differs from BEST in an aid level or in how much an aid
    worked, and that is where NOW loses or gains time, say whether a lower or higher setting may help.
    Only when the data shows it; never as a general rule.
-5. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
-6. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
-   and metres. Give the time at stake, rounded to 0.05 s.
-7. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
-8. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
-9. If NOW is not slower than BEST anywhere that matters, say so in "note" and give no tips.
-10. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
+5. Judge the driving against the fundamentals too, not only against BEST, because BEST is the driver's
+   own lap and may be far from a good one: brake hard and in a straight line, release the brake
+   progressively towards the apex (brake_off_m against min_at_m and tightest_at_m); no coasting; one
+   apex, at or after the tightest point when a straight follows (exit speed first), earlier in a fast
+   corner (carry speed); throttle fully open as soon as the steering opens (full_throttle_m against the
+   steering in trace); a line that uses the outside on entry, the inside at the apex and the outside on
+   exit (off in trace); the gear that keeps the engine in its power band at the slowest point
+   (rpm_at_min). Name the fundamental and the numbers that show it.
+6. If you know this real circuit (track name, lap_m), you may name the corner and use what is commonly
+   known about driving it; every number in a tip still comes from DATA.
+7. Ignore differences smaller than 0.05 s, 5 m or 3 km/h.
+8. Give one concrete action per tip that the driver can try on the next lap. Name the place as section
+   and metres. Give the time at stake, rounded to 0.05 s; for a tip from the fundamentals alone (no BEST
+   to measure against) estimate it from the speeds in DATA and say "about" in the text.
+9. Order the tips by time at stake, biggest first. At most 3 tips; fewer if fewer places matter.
+10. Driving technique only: no car setup, no assists, no general safety advice, no praise, no filler.
+11. If NOW is not slower than BEST anywhere that matters, say so in "note" and look for tips from the
+    fundamentals (rule 5) instead; give none if the driving is sound.
+12. If a line is missing (no BEST yet, or NOW has not reached a section), compare with what exists and
     say so in "note"; otherwise "note" is an empty string.
 
 Answer with JSON only, no markdown, exactly this shape:
@@ -117,9 +139,10 @@ class TrainerError(Exception):
 # ------------------------------------------------------------------ facts
 
 
-def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250.0) -> dict | None:
-    """Facts of one line in one section. rows: [d, t, v, thr, brk, str, g, ...] (recorder.section),
-    d metres and t seconds from the section start. best_rows: the best line, for delta_by_50m."""
+def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250.0, turn: float = 0.0) -> dict | None:
+    """Facts of one line in one section. rows: [d, t, v, thr, brk, str, g, x, y, ..., rpm] (recorder.section),
+    d metres and t seconds from the section start. best_rows: the best line, for delta_by_50m and the line
+    offset in the trace; turn: the section's signed turn (corner_facts), for the inside / outside sign."""
     if not rows or len(rows) < 2:
         return None
     d = [r[0] for r in rows]
@@ -146,11 +169,18 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
     out["coast_m"] = round(coast)
     low = min(range(len(v)), key=lambda i: v[i])
     out["min_kmh"], out["min_at_m"], out["gear_at_min"] = round(v[low]), round(d[low]), rows[low][6]
-    gears = []                                    # neutral (0) during a shift is not a gear used
+    rpm = rows[low][RPM_COL] if len(rows[low]) > RPM_COL else None
+    if rpm:
+        out["rpm_at_min"] = int(rpm)
+    gears, shifts = [], []                        # neutral (0) during a shift is not a gear used
     for r in rows:
         if r[6] != 0 and (not gears or gears[-1] != r[6]):
+            if gears:
+                shifts.append({"at_m": round(r[0]), "to": r[6]})
             gears.append(r[6])
     out["gears"] = "-".join(str(g) for g in gears)
+    if shifts:
+        out["shifts"] = shifts[:8]
     full = None                                   # back above 95 % after the slowest point, held 30 m
     for i in range(low, len(rows)):
         if thr[i] < 0.95:
@@ -166,6 +196,7 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
             break
     out["full_throttle_m"] = None if full is None else round(d[full])
     out["steer_max"] = round(max(abs(r[5]) for r in rows), 2)
+    out["trace"] = trace(rows, best_rows if best_rows and len(best_rows) > 1 else None, turn)
     aids = aid_facts(rows, d)
     if aids:
         out["aids"] = aids
@@ -190,6 +221,83 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
 
 AIDS = (("tc", 9), ("abs", 10), ("esc", 11))
 LEVEL_NAMES = ("tc", "tc_cut", "abs", "esc", "engine_map")      # rows[12:17]
+RPM_COL = 17
+TRACE_STEP_M = 10.0
+STRAIGHT_DEG = 15.0           # a section that turns less is a straight
+CHICANE_DEG = 20.0            # left and right each more than this: a chicane
+
+
+def _heading(ax, ay, bx, by) -> float:
+    return math.atan2(by - ay, bx - ax)
+
+
+def _wrap(angle: float) -> float:
+    return math.atan2(math.sin(angle), math.cos(angle))
+
+
+def corner_facts(outline: list, a: float, b: float, length: float) -> dict | None:
+    """The shape of the section between lap positions a and b, from the recorded track outline
+    ([x, y, p] every few metres): type, how much the road turns, where it is tightest and its radius there.
+    "turn" is the signed total turn (radians) for the inside / outside sign of the trace."""
+    pts = [o for o in outline if o[2] is not None and a - 0.004 <= o[2] <= b + 0.004 and o[0] is not None]
+    if len(pts) < 4:
+        return None
+    heads = [_heading(p[0], p[1], q[0], q[1]) for p, q in zip(pts, pts[1:])]
+    curv = []                                                  # signed curvature at every inner point
+    for i in range(1, len(heads)):
+        ds = max(1e-6, math.hypot(pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]))
+        curv.append(_wrap(heads[i] - heads[i - 1]) / ds * 2)
+    if len(curv) >= 3:                                         # smooth over three points (about 15 m)
+        curv = [sum(curv[max(0, i - 1):i + 2]) / len(curv[max(0, i - 1):i + 2]) for i in range(len(curv))]
+    turn = sum(_wrap(h2 - h1) for h1, h2 in zip(heads, heads[1:]))
+    turn_deg = abs(math.degrees(turn))
+    left = sum(math.degrees(_wrap(h2 - h1)) for h1, h2 in zip(heads, heads[1:]) if _wrap(h2 - h1) > 0)
+    right = -sum(math.degrees(_wrap(h2 - h1)) for h1, h2 in zip(heads, heads[1:]) if _wrap(h2 - h1) < 0)
+    tight = max(range(len(curv)), key=lambda i: abs(curv[i]))
+    radius = 1 / abs(curv[tight]) if abs(curv[tight]) > 1e-4 else None
+    if left > CHICANE_DEG and right > CHICANE_DEG:
+        kind = "chicane"                                       # turns back on itself: a small net turn
+    elif turn_deg < STRAIGHT_DEG:
+        kind = "straight"
+    elif radius is not None and radius > 120:
+        kind = "fast corner"
+    elif radius is not None and radius > 50:
+        kind = "medium corner"
+    else:
+        kind = "slow corner"
+    out = {"type": kind, "turn_deg": round(turn_deg), "turn": turn}
+    if kind != "straight":
+        out["tightest_at_m"] = round(max(0.0, (pts[tight + 1][2] - a) * length))
+        out["radius_m"] = None if radius is None else round(min(radius, 999))
+    return out
+
+
+def trace(rows: list, best_rows: list | None, turn: float = 0.0) -> list:
+    """The line every 10 m: [m, km/h, throttle %, brake %, steering -100..100, off]; off = metres from the
+    BEST line, positive towards the inside of the corner (only with a best line and in a corner)."""
+    d = [r[0] for r in rows]
+    cols = {i: [r[i] for r in rows] for i in (2, 3, 4, 5)}
+    xy = len(rows[0]) > 8 and all(r[7] is not None for r in rows)
+    bxy = best_rows is not None and len(best_rows[0]) > 8 and all(r[7] is not None for r in best_rows)
+    bd = [r[0] for r in best_rows] if bxy else []
+    out, m = [], 0.0
+    while m <= d[-1] + 0.5:
+        at = max(d[0], min(m, d[-1]))                       # the first sample may lie a little after 0 m
+        point = [round(m), round(interp(d, cols[2], at) or 0), round((interp(d, cols[3], at) or 0) * 100),
+                 round((interp(d, cols[4], at) or 0) * 100), round((interp(d, cols[5], at) or 0) * 100)]
+        if xy and bxy and abs(turn) >= math.radians(STRAIGHT_DEG):
+            x, y = interp(d, [r[7] for r in rows], at), interp(d, [r[8] for r in rows], at)
+            bx, by = interp(bd, [r[7] for r in best_rows], at), interp(bd, [r[8] for r in best_rows], at)
+            ax, ay = interp(bd, [r[7] for r in best_rows], max(bd[0], at - 5)), interp(bd, [r[8] for r in best_rows], max(bd[0], at - 5))
+            cx, cy = interp(bd, [r[7] for r in best_rows], min(bd[-1], at + 5)), interp(bd, [r[8] for r in best_rows], min(bd[-1], at + 5))
+            if None not in (x, y, bx, by, ax, ay, cx, cy) and (ax, ay) != (cx, cy):
+                hx, hy = cx - ax, cy - ay                       # heading of the best line there
+                side = hx * (y - by) - hy * (x - bx)           # left of the heading > 0
+                inside = 1 if (side > 0) == (turn > 0) else -1
+                point.append(round(inside * math.hypot(x - bx, y - by), 1))
+        out.append(point)
+        m += TRACE_STEP_M
+    return out
 
 
 def aid_facts(rows: list, d: list) -> dict | None:
@@ -219,15 +327,29 @@ def aid_facts(rows: list, d: list) -> dict | None:
     return out or None
 
 
-def section_data(sec: dict) -> dict:
-    """The three lines of one section (recorder.section) as facts."""
+def section_data(sec: dict, corner: dict | None = None) -> dict:
+    """The three lines of one section (recorder.section) as facts, plus the section's shape."""
     length = (sec.get("to_m") or 0) - (sec.get("from_m") or 0) or 250.0
-    best = facts(sec["best"], sec.get("best_time"), None, length)
-    return {
-        "best": best,
-        "last": facts(sec["last"], sec.get("last_time"), sec["best"], length),
-        "now": facts(sec["now"], sec.get("now_time"), sec["best"], length),
+    turn = corner["turn"] if corner else 0.0
+    out = {
+        "best": facts(sec["best"], sec.get("best_time"), None, length, turn),
+        "last": facts(sec["last"], sec.get("last_time"), sec["best"], length, turn),
+        "now": facts(sec["now"], sec.get("now_time"), sec["best"], length, turn),
     }
+    if corner:
+        out["corner"] = {k: v for k, v in corner.items() if k != "turn"}
+    return out
+
+
+def corners(state: dict) -> list:
+    """corner_facts for every section of the current track (None where the outline does not cover it)."""
+    length, size, n = state["track_length_m"], state["section_m"], state["sections"]
+    out = []
+    for k in range(n):
+        a = k * size / length
+        b = 1.0 if k == n - 1 else (k + 1) * size / length
+        out.append(corner_facts(state.get("outline") or [], a, b, length))
+    return out
 
 
 def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[str, dict, dict]:
@@ -240,16 +362,21 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
     from_game = meta["game"]
     laps = {"now": state.get("red_lap"), "last": state.get("blue_lap")}
     head = f"of {state['track']}, {state['car']}, {from_game}. NOW is lap {laps['now']}, LAST is lap {laps['last']}"
+    shapes = corners(state)
     if mode == "section":
         if n is None or not 0 <= n < state["sections"]:
             raise TrainerError("NO DATA", "no such section")
         sec = rec.section(n)
-        lines = section_data(sec)
-        if not any(lines.values()):
+        lines = section_data(sec, shapes[n])
+        if not any(lines.get(k) for k in ("best", "last", "now")):
             raise TrainerError("NO DATA", "nothing recorded in this section yet")
         length = round(sec["to_m"] - sec["from_m"])
+        after = shapes[(n + 1) % len(shapes)]
         data = {"mode": "section", **meta, "section": n + 1, "section_length_m": length,
+                "lap_m": [round(sec["from_m"]), round(sec["to_m"])],
                 "laps": dict(laps, best="saved section best"), "lines": lines}
+        if after:
+            data["next_section"] = {"section": (n + 1) % len(shapes) + 1, "type": after["type"], "turn_deg": after["turn_deg"]}
         task = f"TASK: Analyse SECTION {n + 1} ({length} m) {head}, BEST is the saved section best."
         if lines["now"] and not lines["now"]["complete"]:
             task += " NOW has not finished this section yet."
@@ -267,14 +394,16 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
         sec = rec.section(k, (now_lap, last_lap))
         secs[k] = sec
         b, last, now = sec.get("best_time"), sec.get("last_time"), sec.get("now_time")
-        rows.append({"section": k + 1, "best_s": b, "last_s": last, "now_s": now,
+        rows.append({"section": k + 1, "type": shapes[k]["type"] if shapes[k] else None,
+                     "best_s": b, "last_s": last, "now_s": now,
                      "now_vs_best": None if now is None or b is None else round(now - b, 3),
                      "now_vs_last": None if now is None or last is None else round(now - last, 3)})
     if not any(r["now_s"] or r["last_s"] or r["best_s"] for r in rows):
         raise TrainerError("NO DATA", "no section recorded yet")
     losing = sorted((r for r in rows if r["now_vs_best"] is not None and r["now_vs_best"] > 0.05),
                     key=lambda r: -r["now_vs_best"])[:3]
-    focus = [{"section": r["section"], "lines": section_data(secs[r["section"] - 1])} for r in losing]
+    focus = [{"section": r["section"], "lap_m": [round(secs[r["section"] - 1]["from_m"]), round(secs[r["section"] - 1]["to_m"])],
+              "lines": section_data(secs[r["section"] - 1], shapes[r["section"] - 1])} for r in losing]
     driven = [r["section"] for r in rows if r["now_s"] is not None]
     lap_times = {"best_lap_s": state.get("base_lap"),
                  "last_lap_s": None if not last_lap or last_lap.time is None else round(last_lap.time, 3),

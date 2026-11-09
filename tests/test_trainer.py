@@ -1,6 +1,7 @@
 """Tests of the AI trainer (core/trainer.py, docs/TRAINER.md) without a real AI: facts, the prompt
 container, answer checks, the history, settings and keys. Providers are simulated."""
 import json
+import math
 import sys
 import tempfile
 import unittest
@@ -66,6 +67,66 @@ class Facts(unittest.TestCase):
         self.assertIsNone(trainer.facts([], None))
 
 
+def outline(parts, step=5.0):
+    """A track outline [x, y, p] from straight and arc parts: ("s", metres) or ("a", radius, degrees, left)."""
+    pts, x, y, h = [], 0.0, 0.0, 0.0
+    for part in parts:
+        if part[0] == "s":
+            n = int(part[1] / step)
+            for _ in range(n):
+                pts.append([x, y]); x += step * math.cos(h); y += step * math.sin(h)
+        else:
+            _, radius, degrees, left = part
+            n = int(radius * math.radians(degrees) / step)
+            for _ in range(n):
+                pts.append([x, y]); h += (1 if left else -1) * step / radius
+                x += step * math.cos(h); y += step * math.sin(h)
+    pts.append([x, y])
+    return [[px, py, i / (len(pts) - 1)] for i, (px, py) in enumerate(pts)]
+
+
+class Shape(unittest.TestCase):
+    def test_corner_facts(self):
+        hairpin = outline([("s", 100), ("a", 40, 90, True), ("s", 87)])                 # 250 m, 90 degrees left
+        c = trainer.corner_facts(hairpin, 0.0, 1.0, 250.0)
+        self.assertEqual(c["type"], "slow corner")
+        self.assertAlmostEqual(c["turn_deg"], 90, delta=5)
+        self.assertAlmostEqual(c["radius_m"], 40, delta=8)
+        self.assertTrue(100 <= c["tightest_at_m"] <= 170, c)
+        self.assertGreater(c["turn"], 0)
+        fast = trainer.corner_facts(outline([("a", 200, 60, False)]), 0.0, 1.0, 209.0)
+        self.assertEqual(fast["type"], "fast corner")
+        self.assertAlmostEqual(fast["turn_deg"], 60, delta=5)
+        self.assertLess(fast["turn"], 0)
+        straight = trainer.corner_facts(outline([("s", 250)]), 0.0, 1.0, 250.0)
+        self.assertEqual(straight, {"type": "straight", "turn_deg": 0, "turn": 0.0})
+        chicane = trainer.corner_facts(outline([("s", 60), ("a", 60, 35, True), ("a", 60, 35, False), ("s", 60)]), 0.0, 1.0, 193.0)
+        self.assertEqual(chicane["type"], "chicane")
+        self.assertIsNone(trainer.corner_facts(hairpin[:3], 0.0, 1.0, 250.0))          # too short to tell
+
+    def test_trace_and_line_offset(self):
+        plain = trainer.trace(rows(), None)
+        self.assertEqual(len(plain), 26)                                                # every 10 m, 0..250
+        self.assertEqual(len(plain[0]), 5)                                              # no best line: no offset
+        self.assertEqual(plain[0][:2], [0, 150])
+        self.assertEqual(plain[10][2:5], [0, 90, 30])                                   # braking at 100 m
+        best = [r + [float(r[0]), 0.0] for r in rows()]                                 # along the x axis
+        now = [r + [float(r[0]), 1.0] for r in rows()]                                  # one metre to the left of it
+        self.assertEqual(trainer.trace(now, best, turn=1.0)[5][5], 1.0)                 # left turn: inside
+        self.assertEqual(trainer.trace(now, best, turn=-1.0)[5][5], -1.0)               # right turn: outside
+        self.assertEqual(len(trainer.trace(now, best, turn=0.0)[5]), 5)                 # a straight: no side
+        f = trainer.facts(now, now[-1][1], best, 250.0, 1.0)
+        self.assertEqual(f["trace"][20][5], 1.0)
+
+    def test_rpm_and_shifts(self):
+        wide = [r + [None] * 10 + [6500 if r[6] == 3 else 5000] for r in rows()]      # 18 columns, rpm last
+        f = trainer.facts(wide, wide[-1][1])
+        self.assertEqual(f["rpm_at_min"], 6500)
+        self.assertEqual(f["shifts"], [{"at_m": 100, "to": 3}, {"at_m": 140, "to": 4}])
+        self.assertNotIn("rpm_at_min", trainer.facts(rows(), None))                     # old rows without rpm
+        self.assertIn("fundamentals", trainer.SYSTEM_PROMPT)
+
+
 class Aids(unittest.TestCase):
     def test_aid_facts(self):
         base = rows(110, 140, 70.0)
@@ -99,7 +160,11 @@ class Requests(unittest.TestCase):
         self.assertIn("SECTION 2 (250 m)", task)
         self.assertEqual(data["mode"], "section")
         self.assertEqual(data["game"], "Demo")
-        self.assertEqual(set(data["lines"]), {"best", "last", "now"})
+        self.assertEqual(set(data["lines"]), {"best", "last", "now", "corner"})
+        self.assertEqual(data["lines"]["corner"]["type"], "straight")      # the test ring is a straight line
+        self.assertEqual(data["lap_m"], [250, 500])
+        self.assertEqual(data["next_section"]["section"], 3)
+        self.assertIn("trace", data["lines"]["now"])
         self.assertEqual(view["title"], "SECTION 2")
         json.dumps(data)                                     # sendable
 

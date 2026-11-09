@@ -38,10 +38,10 @@ OUTLINE_STEP_M = 5.0
 LINE_STEP = 2                # every 2nd sample for the full-lap race lines on the map
 AMBIENT = ("air_c", "road_c", "tyre_compound", "time_of_day", "fuel_l")
 
-# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line, tc_on, abs_on, esc_on, levels]
+# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line, tc_on, abs_on, esc_on, levels, rpm]
 # line = 1: part of the lap's line; *_on: the aid works right now (None = the game does not say);
 # levels: [tc, tc_cut, abs, esc, engine_map] as set (None = not on this car / not reported)
-NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE, TC_ON, ABS_ON, ESC_ON, LV = range(16)
+NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE, TC_ON, ABS_ON, ESC_ON, LV, RPM = range(17)
 LEVELS = ("tc_level", "tc_cut_level", "abs_level", "esc_level", "engine_map")
 
 
@@ -242,7 +242,7 @@ class Recorder:
                float(frame.get("gas") or 0.0), float(frame.get("brake") or 0.0), float(frame.get("steer") or 0.0),
                int(frame.get("gear") or 0), sec, 0, 0,
                _flag(frame.get("tc_active")), _flag(frame.get("abs_active")), _flag(frame.get("esc_active")),
-               [frame.get(name) for name in LEVELS]]
+               [frame.get(name) for name in LEVELS], int(frame.get("rpm") or 0)]
         last = self.last
         self.paused = False
         self.last = row
@@ -416,7 +416,7 @@ class Recorder:
     def _sample_line(row, t0: float) -> dict:
         line = {"type": "s", "t": round(row[NOW] - t0, 3), "p": round(row[P], 6), "x": row[X], "y": row[Y],
                 "v": round(row[V], 1), "thr": round(row[THR], 3), "brk": round(row[BRK], 3), "str": round(row[STR], 3),
-                "g": row[G], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
+                "g": row[G], "rpm": row[RPM], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
         aids = row[TC_ON:ESC_ON + 1]
         if any(a is not None for a in aids):
             line["a"] = list(aids)                         # TC, ABS, stability working: 1 / 0
@@ -804,8 +804,8 @@ class Recorder:
 
     def section(self, n: int, laps=None) -> dict:
         """One section's three lines: best (baseline), last, now. Rows: [d, t, v, thr, brk, str, g, x, y,
-        tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map], d = metres from the section
-        start, t = seconds from the section start; the aids are None where they were not recorded."""
+        tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map, rpm], d = metres from the
+        section start, t = seconds from the section start; aids and rpm are None where they were not recorded."""
         with self.lock:
             if not self.key or not 0 <= n < self.sections:
                 return {"n": n, "best": [], "last": [], "now": []}
@@ -817,11 +817,11 @@ class Recorder:
                     return []
                 return [[round(r[P] * self.length - d0, 2), round(r[NOW] - attempt.t_in, 3), round(r[V], 1),
                          round(r[THR], 3), round(r[BRK], 3), round(r[STR], 3), r[G], r[X], r[Y],
-                         r[TC_ON], r[ABS_ON], r[ESC_ON], *r[LV]] for r in attempt.samples]
+                         r[TC_ON], r[ABS_ON], r[ESC_ON], *r[LV], r[RPM]] for r in attempt.samples]
 
             base = self.base["sections"].get(n)
             best = [[round(s["p"] * self.length - d0, 2), s["t"], s["v"], s["thr"], s["brk"], s["str"], s["g"],
-                     s["x"], s["y"], *(s.get("a") or [None] * 3), *(s.get("lv") or [None] * 5)]
+                     s["x"], s["y"], *(s.get("a") or [None] * 3), *(s.get("lv") or [None] * 5), s.get("rpm")]
                     for s in base["samples"]] if base else []
             now_attempt = red.latest(n) if red else None
             last_attempt = blue.done(n) if blue else None
