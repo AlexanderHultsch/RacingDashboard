@@ -1,4 +1,4 @@
-﻿"""Bridge smoke test with the demo game: pages, /state, /api/info, /api/command, /stream.
+"""Bridge smoke test with the demo game: pages, /state, /api/info, /api/command, /stream.
 
 Run: python -m unittest discover tests
 """

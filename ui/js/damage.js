@@ -1,4 +1,4 @@
-﻿/* Damage page (damage.html): the car from above, coloured by damage. Load after rd.js.
+/* Damage page (damage.html): the car from above, coloured by damage. Load after rd.js.
  *
  *   <div class="rd-damage"></div>
  *

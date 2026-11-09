@@ -1,4 +1,4 @@
-﻿/* 14-segment display, drawn as SVG (no font needed, sharp at any size).
+/* 14-segment display, drawn as SVG (no font needed, sharp at any size).
  *
  * Segments as on a real display: outer a (top) b (upper right) c (lower right) d (bottom)
  * e (lower left) f (upper left), middle bar g1 g2, centre verticals i (upper) l (lower),

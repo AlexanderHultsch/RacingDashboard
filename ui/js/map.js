@@ -1,4 +1,4 @@
-﻿/* Map page (map.html): the whole track fitted to the screen and a red dot for the car. Load after rd.js.
+/* Map page (map.html): the whole track fitted to the screen and a red dot for the car. Load after rd.js.
  *
  *   <div class="rd-map"></div>
  *
