@@ -101,7 +101,7 @@ DASH_TYPES = {
     "mode": {"need": ("field", "down", "up"), "actions": ("down", "up")},
     "tyres": {"need": ("field",), "actions": ()},
 }
-DASH_FIELD_KEYS = ("field", "active", "max", "per_lap", "running", "name", "pressure")   # map keys that name one telemetry field
+DASH_FIELD_KEYS = ("field", "active", "max", "per_lap", "running", "name", "pressure", "brakes")   # map keys that name one telemetry field
 LAMP_ICONS = ("brake", "engine", "oil", "coolant")
 
 

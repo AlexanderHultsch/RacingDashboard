@@ -204,10 +204,10 @@ STEPPED = {"tc_level": "tc_level", "tc_cut_level": "tc_cut_level", "abs_level": 
            "drive_mode": "active_performance_mode"}
 
 
-def tyres(ph, gr) -> tuple[list | None, list | None]:
-    """Tyre temperatures (C) and pressures (psi), front left, front right, rear left, rear right: from the
-    graphics tyre blocks, else the physics page. A pressure below 6 is taken as bar and shown in psi.
-    Not checked in the game yet (docs/ACE/NOTES.md)."""
+def tyres(ph, gr) -> tuple[list | None, list | None, list | None]:
+    """Tyre temperatures (C), pressures (psi) and brake temperatures (C), front left, front right, rear left,
+    rear right: from the graphics tyre blocks, else the physics page. A pressure below 6 is taken as bar and
+    shown in psi. Not checked in the game yet (docs/ACE/NOTES.md)."""
     blocks = (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)
     temps = [b.tyre_temperature_c for b in blocks]
     if not any(t > 0 for t in temps):
@@ -215,9 +215,13 @@ def tyres(ph, gr) -> tuple[list | None, list | None]:
     psi = [b.tyre_pressure for b in blocks]
     if not any(p > 0 for p in psi):
         psi = list(ph.wheelsPressure)
+    brakes = [b.brake_temperature_c for b in blocks]
+    if not any(t > 0 for t in brakes):
+        brakes = list(ph.brakeTemp)
     temps = [round(t, 1) if 0 < t < 400 else None for t in temps]
     psi = [round(p * 14.5038 if p < 6 else p, 1) if 0 < p < 100 else None for p in psi]
-    return (temps if any(temps) else None), (psi if any(psi) else None)
+    brakes = [round(t) if 0 < t < 2000 else None for t in brakes]
+    return (temps if any(temps) else None), (psi if any(psi) else None), (brakes if any(brakes) else None)
 
 
 # Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
@@ -308,6 +312,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "drive_mode_name": (text(gr.performance_mode_name) or None) if steps["drive_mode"][0] is not None else None,
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
+        "brake_temp_c": tyre_values[2],
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
         # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
         "gear_mode": None,

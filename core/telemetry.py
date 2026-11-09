@@ -46,7 +46,8 @@ FIELDS = {
     "drive_mode": None,      # performance / drive mode as a step (ACE: active_performance_mode), None = not on this car
     "drive_mode_name": None, # the game's name of the active mode, e.g. "SPORT+"
     "tyre_temp_c": None,     # tyre temperatures [front left, front right, rear left, rear right] in C
-    "tyre_psi": None,        # tyre pressures, same order, in psi  # differential locking off throttle, 0..1
+    "tyre_psi": None,        # tyre pressures, same order, in psi
+    "brake_temp_c": None,    # brake temperatures, same order, in C  # differential locking off throttle, 0..1
     # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
     "warn_brake": None,      # brake warning (!): handbrake on, brake system
     "warn_engine": None,     # check engine: ignition on with the engine off, engine trouble

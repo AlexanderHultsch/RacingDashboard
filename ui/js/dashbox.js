@@ -12,8 +12,9 @@
  *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
  *   push     a big button without a state; confirm_ms: hold that long before it fires; a "hold" action is
  *            pressed as long as the finger is on it
- *   tyres    four tyres as the car sees them (front left / right, rear left / right): temperature in C
- *            and pressure in psi, coloured cold (blue) / ok (green) / hot (red) by the card's cold / hot
+ *   tyres    four tyres as the car sees them (front left / right, rear left / right): the temperature in a tile
+ *            coloured cold (blue) / ok (green) / hot (red) by the card's cold / hot, the pressure in psi above /
+ *            below, and the brake as a bar beside each tyre, its colour by brake_cold / brake_hot
  *   mode     a drive / performance mode: the game's name for it, one dot per mode, - / + buttons
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
@@ -424,31 +425,38 @@
 
   function tyres(def) {
     const card = baseCard(def, "tyres");
-    card.querySelector(".rng").textContent = def.pressure ? "\u00b0C \u00b7 PSI" : "\u00b0C";
+    card.querySelector(".rng").textContent = def.pressure ? "PSI · °C" : "°C";
     const body = el("div", "tyres-body");
-    const tile = () => el("div", "tyre", "<b><span></span><sup>\u00b0</sup></b><small></small>");
-    const tiles = [tile(), tile(), tile(), tile()];             // front left, front right, rear left, rear right
-    body.append(tiles[0], el("div", "car-axis"), tiles[1], tiles[2], tiles[3]);
-    const legend = el("div", "tyres-legend", "<span><i class='c'></i>COLD</span><span><i class='o'></i>OK</span><span><i class='h'></i>HOT</span>");
+    const psi = () => el("div", "psi");
+    const tile = () => el("div", "tyre", "<b></b>");
+    const brake = () => el("div", "brake");
+    const P = [psi(), psi(), psi(), psi()], T = [tile(), tile(), tile(), tile()], B = [brake(), brake(), brake(), brake()];
+    // rows: pressures front / tyres front / tyres rear / pressures rear; the brakes on the inner side
+    body.append(P[0], el("div"), el("div"), el("div"), P[1],
+                T[0], B[0], el("div", "car-axis"), B[1], T[1],
+                T[2], B[2], el("div", "car-axis"), B[3], T[3],
+                P[2], el("div"), el("div"), el("div"), P[3]);
     card.insertBefore(body, card.querySelector(".hint"));
-    card.insertBefore(legend, card.querySelector(".hint"));
+    const band = (v, low, high) => (isNone(v) ? "" : v < low ? "cold" : v > high ? "hot" : "ok");
     const cold = Number(def.cold || 70), hot = Number(def.hot || 100);
+    const bCold = Number(def.brake_cold || 150), bHot = Number(def.brake_hot || 650);
     card.update = (f, error) => {
-      const temps = f[def.field], psi = def.pressure ? f[def.pressure] : null;
+      const temps = f[def.field], press = def.pressure ? f[def.pressure] : null, brakes = def.brakes ? f[def.brakes] : null;
       const missing = !Array.isArray(temps) || temps.every(isNone);
       setState(card, error, missing);
-      tiles.forEach((t, i) => {
+      for (let i = 0; i < 4; i++) {
         const v = error || missing ? null : temps[i];
-        const p = error || !Array.isArray(psi) ? null : psi[i];
-        const cls = "tyre " + (isNone(v) ? "" : v < cold ? "cold" : v > hot ? "hot" : "ok");
-        if (t.className !== cls.trim()) t.className = cls.trim();
-        const text = isNone(v) ? "\u2013" : String(Math.round(v));
-        const span = t.querySelector("span");
-        if (span.textContent !== text) span.textContent = text;
-        const sub = isNone(p) ? "" : p.toFixed(1) + " psi";
-        const small = t.querySelector("small");
-        if (small.textContent !== sub) small.textContent = sub;
-      });
+        const cls = ("tyre " + band(v, cold, hot)).trim();
+        if (T[i].className !== cls) T[i].className = cls;
+        const text = isNone(v) ? "–" : Math.round(v) + "°";
+        if (T[i].firstChild.textContent !== text) T[i].firstChild.textContent = text;
+        const p = error || !Array.isArray(press) ? null : press[i];
+        const pt = isNone(p) ? "" : p.toFixed(1);
+        if (P[i].textContent !== pt) P[i].textContent = pt;
+        const bv = error || !Array.isArray(brakes) ? null : brakes[i];
+        const bc = ("brake " + band(bv, bCold, bHot)).trim();                 // the bar is the brake: its colour is the temperature
+        if (B[i].className !== bc) B[i].className = bc;
+      }
     };
     return card;
   }

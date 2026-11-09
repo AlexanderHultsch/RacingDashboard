@@ -116,13 +116,16 @@ class Connector(telemetry.Connector):
                       "drive_mode": 1,
                       "lights": 0, "wipers": 0, "ignition": True, "engine_running": True, "auto_shifter": True}
 
-    def tyres(self) -> dict:
+    def tyres(self, brake: float = 0.0) -> dict:
         """Tyres that warm up while driving: fronts hotter than rears, the left side a little more."""
         warm = min(1.0, self.speed / 180.0)
         base = [72 + 26 * warm, 70 + 22 * warm, 64 + 18 * warm, 62 + 16 * warm]
         temps = [round(t + random.uniform(-0.6, 0.6), 1) for t in base]
         psi = [round(26.0 + (t - 60) * 0.045, 1) for t in temps]
-        return {"tyre_temp_c": temps, "tyre_psi": psi}
+        self.brakes = getattr(self, "brakes", [80.0, 80.0, 70.0, 70.0])
+        heat = [5.0 * brake, 5.0 * brake, 3.5 * brake, 3.5 * brake]          # brakes heat up when used, cool down slowly
+        self.brakes = [max(60.0, b * 0.997 + h) for b, h in zip(self.brakes, heat)]
+        return {"tyre_temp_c": temps, "tyre_psi": psi, "brake_temp_c": [round(b) for b in self.brakes]}
 
     def handle(self, action: str, state: str) -> bool:
         s = self.state
@@ -244,7 +247,7 @@ class Connector(telemetry.Connector):
             "esc_level": None,                                   # the demo car has no stability control
             "diff_power": 5, "diff_coast": 3,
             "drive_mode": s["drive_mode"], "drive_mode_name": MODES[s["drive_mode"]],
-            **self.tyres(),
+            **self.tyres(brake),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],

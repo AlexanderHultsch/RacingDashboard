@@ -116,6 +116,10 @@ class Parse(unittest.TestCase):
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual(values["tyre_temp_c"], [86.0, 104.0, 61.0, 79.0])
         self.assertEqual(values["tyre_psi"], [27.4, 28.6, 25.9, 26.8])
+        self.assertIsNone(values["brake_temp_c"])                    # no brake temperatures sent yet
+        gr.tyre_lf.brake_temperature_c, gr.tyre_rf.brake_temperature_c = 420.4, 415.0
+        gr.tyre_lr.brake_temperature_c, gr.tyre_rr.brake_temperature_c = 180.0, 176.6
+        self.assertEqual(ace.parse(bytes(ph), bytes(gr), bytes(st))["brake_temp_c"], [420, 415, 180, 177])
         self.assertEqual((values["drive_mode"], values["drive_mode_name"]), (0, "SPORT+"))
         self.assertEqual(values["limits"]["drive_mode"], [0, 2])
         gr.tyre_lf.tyre_pressure = 1.89                              # bar: shown in psi

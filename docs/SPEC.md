@@ -65,7 +65,7 @@ Phone / tablet pages (ui/)
 | `tc_level`, `tc_cut_level`, `abs_level`, `esc_level`, `engine_map`, `diff_power`, `diff_coast` | driver settings, `None` if the car has none |
 | `diff_power_pct`, `diff_coast_pct` | differential locking on / off throttle as a share 0..1 (the value, not a setting step), `None` = not reported |
 | `drive_mode`, `drive_mode_name` | drive / performance mode as a step (range in `limits`) and the game's name for it (e.g. `SPORT+`), `None` = not on this car |
-| `tyre_temp_c`, `tyre_psi` | tyre temperatures (C) and pressures (psi) as lists [front left, front right, rear left, rear right], `None` = not reported |
+| `tyre_temp_c`, `tyre_psi`, `brake_temp_c` | tyre temperatures (C), pressures (psi) and brake temperatures (C) as lists [front left, front right, rear left, rear right], `None` = not reported |
 | `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
 | `latched` | set by the bridge: latch actions whose key is held down right now, e.g. `["wipers"]` |
 | `fixed` | stepped settings the car has but the driver cannot change, e.g. `["abs_level"]`: the card shows the value with FIXED and no − / + |
@@ -163,7 +163,7 @@ The tablet page (`dash.html`, `js/dashbox.js`, style **CARDS** `styles/dash/card
 | --- | --- | --- | --- |
 | `stepper` | big value (segments), range from the game (`limits`), level dots; FIXED instead of the range for a setting in `fixed` | − / + (disabled at the ends of the range, and for a fixed setting) | `field`, `down`, `up` |
 | `mode` | a drive / performance mode: the game's name for it in big letters (else MODE n), one dot per mode, the range counted from 1 | − / + as a stepper | `field`, `name`, `down`, `up` |
-| `tyres` | four tiles laid out like the car (front left / right, rear left / right) with the temperature (C) and pressure (psi); blue below `cold`, green between, red above `hot` (ACE: 70 / 100 C), legend | none | `field`, `pressure`, `cold`, `hot` |
+| `tyres` | laid out like the car, as the ACE HUD (front left / right, rear left / right): a tile per tyre with its temperature, filled blue below `cold`, green between, red above `hot` (70 / 100 C); the pressure in psi above the fronts and below the rears; the brake as a full-height bar on the inner side of each tyre whose colour is its temperature (blue below `brake_cold`, green, red above `brake_hot`: 150 / 650 C); no legend | none | `field`, `pressure`, `cold`, `hot`, `brakes`, `brake_cold`, `brake_hot` |
 | `bias` | brake bias % front (segments) and a front / rear bar | ◀ FRONT / REAR ▶, holding repeats (after 0.4 s, every 0.16 s) | `field`, `front`, `rear` |
 | `toggle` | a lamp with the state text (`on` / `off`), `style` `amber` (lights up) or `green` | the whole lamp, if the card has an `action`; else display only | `field`, `action`?, `on`, `off`, `style` |
 | `pair` | two values side by side (e.g. differential power / coast); with `alt` the alt fields are shown in % (labels `alt_labels`) when none of the main fields has a value | none | `fields`, `labels`, `alt`, `alt_labels` |

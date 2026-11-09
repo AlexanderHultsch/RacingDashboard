@@ -225,25 +225,22 @@ button.lamp { width: 100%; min-height: 56px; }      /* a tappable lamp stays a b
 .ignition .lamp.on { border-color: var(--amber); color: var(--amber); box-shadow: inset 0 0 0 1px rgba(255, 159, 26, 0.35); }
 .ignition .lamp.run { border-color: var(--green); color: var(--green); box-shadow: inset 0 0 0 1px rgba(34, 211, 107, 0.25); }
 
-/* TYRES: four tiles laid out like the car, the car's centre line between the columns */
-.tyres-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 22px 1fr; grid-template-rows: 1fr 1fr; gap: 8px 6px; }
-.tyre { border-radius: 12px; border: 2px solid #2f3843; background: #12171c; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px; min-height: 0; }
-.tyre b { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text); }
-.tyre b sup { font-size: 13px; font-weight: 700; vertical-align: top; margin-left: 1px; }
-.tyre small { font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: 0.04em; min-height: 1em; }
-.tyre.cold { border-color: #3d8bff; background: rgba(61, 139, 255, 0.12); }
-.tyre.cold b { color: #8fbaff; }
-.tyre.ok { border-color: var(--green); background: rgba(34, 211, 107, 0.10); }
-.tyre.ok b { color: #7dffb4; }
-.tyre.hot { border-color: #ff4d3d; background: rgba(255, 77, 61, 0.14); }
-.tyre.hot b { color: #ff8f84; }
-.car-axis { grid-column: 2; grid-row: 1 / span 2; border-radius: 10px; border: 1px solid #2a323b; background: #0c1014; }
-.tyres-legend { display: flex; justify-content: center; gap: 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--dim); flex: none; }
-.tyres-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-.tyres-legend i.c { background: #3d8bff; }
-.tyres-legend i.o { background: var(--green); }
-.tyres-legend i.h { background: #ff4d3d; }
+/* TYRES: laid out like the car (as the ACE HUD): pressures outside, a tile per tyre coloured by its
+   temperature, the brake as a full bar on the inner side coloured by its temperature, the centre line */
+.tyres-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 9px 8px 9px 1fr;
+  grid-template-rows: auto 1fr 1fr auto; gap: 5px; align-items: stretch; }
+.tyres-body .psi { text-align: center; font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; min-height: 1.1em; }
+.tyre { border-radius: 12px; display: grid; place-items: center; min-height: 0; background: #1a2027; }
+.tyre b { font-size: 24px; font-weight: 800; line-height: 1; color: var(--dim); }
+.tyre.cold { background: #1aa7e8; }
+.tyre.ok { background: #19b45b; }
+.tyre.hot { background: #e5412f; }
+.tyre.cold b, .tyre.ok b, .tyre.hot b { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+.brake { border-radius: 4px; background: #2a313a; }
+.brake.cold { background: #1aa7e8; }
+.brake.ok { background: #22d36b; }
+.brake.hot { background: #ff4d3d; }
+.car-axis { border-radius: 6px; border: 1px solid #2a323b; background: #0c1014; }
 
 /* DRIVE MODE: the game's name for the mode in big yellow letters */
 .mode-name { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center;
