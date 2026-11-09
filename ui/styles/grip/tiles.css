@@ -58,7 +58,9 @@ html, body { background: var(--bg); }
   .rd-grip { inset: 5vmin 12vmin 4vmin; grid-template-columns: 1fr 22vmin 1fr; gap: 4vmin 4vmin; }
 }
 
-.grip-tyre { border-radius: 3.4vmin; background: var(--tile); box-shadow: inset 0 0 0 1px #262d36; }
+.grip-tyre { border-radius: 3.4vmin; background: var(--tile); box-shadow: inset 0 0 0 1px #262d36;
+             transition: background-color 0.15s linear; }   /* stages 1-3 fade (calm colours, owner) */
+.grip-tyre.l4, .grip-tyre.s4, .grip-tyre.snap { transition: none; }   /* stage 4 comes and goes at once */
 .grip-tyre.l1 { background: var(--l1); }
 .grip-tyre.l2 { background: var(--l2); }
 .grip-tyre.l3 { background: var(--l3); }

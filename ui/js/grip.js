@@ -27,6 +27,20 @@
     return stage ? (slip < 0 ? "l" : "s") + stage : "";
   };
 
+  /* Calm colours (owner): stages 1-3 fade in 0.15 s (the CSS) up and down, and a stage is shown at least HOLD_MS
+     before it steps down, one stage at a time; going up (or to the other side at the same stage) is at once.
+     Stage 4 (locked / full spin) comes and goes at once and flashes. shownMs: how long the current class has been
+     shown (or the slip has stayed at least that high). */
+  const HOLD_MS = 300;
+  const level = (cls) => (cls ? Number(cls[1]) : 0);
+  RD.gripCalm = function (current, target, shownMs) {
+    if (target === current) return current;
+    const lt = level(target), lc = level(current);
+    if (lt === 4 || lc === 4 || lt >= lc) return target;
+    if (shownMs < HOLD_MS) return current;
+    return lc > 1 ? current[0] + (lc - 1) : "";
+  };
+
   let gameName = "";
   RD.notices.push((f) => (f.wheel_slip == null ? (gameName || "THIS GAME") + " SENDS NO WHEEL SLIP" : null));
 
@@ -41,19 +55,26 @@
     }).catch(() => {});
     aids.forEach((aid) => aid.classList.add("hide"));      // until the game's dash map says it has the setting
 
-    const last = ["", "", "", ""];
+    const last = ["", "", "", ""], since = [0, 0, 0, 0];
     function update(f) {
       const error = RD.errorOf(f);
       const slips = Array.isArray(f.wheel_slip) ? f.wheel_slip : null;
       const locks = Array.isArray(f.wheel_lock) ? f.wheel_lock : [];
       const moving = (f.speed_kmh || 0) >= MIN_KMH;
+      const now = performance.now();
       el.classList.toggle("off", !!error || !slips);
       tyres.forEach((tyre, i) => {
-        const cls = !error && slips && moving ? RD.gripStage(slips[i], locks[i] === true) : "";
+        const target = !error && slips && moving ? RD.gripStage(slips[i], locks[i] === true) : "";
+        const cls = error ? "" : RD.gripCalm(last[i], target, now - since[i]);
+        if (level(target) >= level(cls)) since[i] = now;    // the hold starts again while the slip stays this high
         if (cls === last[i]) return;
+        const snap = level(last[i]) === 4;                     // stage 4 goes off at once, no fade
+        if (snap) tyre.classList.add("snap");
         if (last[i]) tyre.classList.remove(last[i]);
         if (cls) tyre.classList.add(cls);
+        if (snap) { void tyre.offsetWidth; tyre.classList.remove("snap"); }
         last[i] = cls;
+        since[i] = now;
       });
       aids.forEach((aid) => {
         const v = error ? null : f[aid.dataset.field];
