@@ -13,17 +13,24 @@
 <link rel="stylesheet" href="css/base.css">
 <link id="rd-style" rel="stylesheet" href="styles/gear/segment.css">
 </head>
-<!-- Gear + Rev: the page for a phone. 8 rev lights and the gear as a 14-segment display in a frame.
+<!-- Gear + Rev: the page for a phone. 8 rev lights, the gear as a 14-segment display in a frame, and the
+     speed small in a second frame below (for info).
      A style (styles/gear/<name>.css) arranges these elements; add a style by adding a CSS file and
      its name to data-styles. -->
 <body data-page="gear" data-styles="segment">
 <main class="gear-page">
-  <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.25"></div>
+  <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12" data-early="0.03"></div>
   <div class="gear-area">
     <div class="gear-frame">
       <svg class="rd-seg gear-digit" data-field="gear" data-fmt="gearseg" role="img" aria-label="Gear"></svg>
     </div>
     <div class="gear-label"><svg class="rd-seg-text" data-text="GEAR" aria-hidden="true"></svg></div>
+  </div>
+  <div class="speed-area">
+    <div class="speed-frame">
+      <svg class="rd-seg speed-num" data-field="speed_kmh" data-fmt="speed" role="img" aria-label="Speed"></svg>
+    </div>
+    <div class="speed-label"><svg class="rd-seg-text" data-text="SPEED" aria-hidden="true"></svg></div>
   </div>
 </main>
 <div class="rd-nodata"></div>

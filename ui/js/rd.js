@@ -257,16 +257,19 @@
     });
   };
 
-  /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.25"></div>
+  /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12" data-early="0.03"></div>
      One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
-     from the outside in; "left": one after another from the left. They light over the last `range` of the
-     rpm share below the learned shift point; the innermost pair (the red one) only at the game's shift signal
+     from the outside in; "left": one after another from the left. The scale ends `early` below the learned
+     shift point (0.03: the red pair at 97 %, so the driver is not late) and is `range` wide (0.12 of the shift
+     point). Porsche 992 GT3 R in ACE: shift signal ~9,030 rpm, the car's own red 8.7k; ours blue ~7.68k, green
+     ~7.95k, yellow ~8.22k, red ~8.76k; the innermost pair (the red one) only at the game's shift signal
      (or at the learned shift point), so it means "shift now". The fields never flash: at the shift signal and
      on the limiter all are lit (classes "shift" / "limiter" for styles). Unlit fields stay dim (CSS). */
   RD.widgets.revlights = function (el) {
     const colors = (el.dataset.colors || "b g y r r y g b").trim().split(/\s+/);
     const outside = (el.dataset.fill || "outside") === "outside";
-    const range = Number(el.dataset.range || 0.25);
+    const range = Number(el.dataset.range || 0.12);
+    const early = Number(el.dataset.early || 0);
     const n = colors.length;
     const fields = colors.map((color) => {
       const field = document.createElement("i");
@@ -279,15 +282,16 @@
     let lastLit = -1, lastState = "";
     widgets.push((f) => {
       const shift = RD.shiftPoint(f);
-      const share = ((f.rpm_pct || 0) - (shift - range)) / range;
+      const end = shift * (1 - early), start = end - shift * range;
+      const share = ((f.rpm_pct || 0) - start) / (end - start || 1);
       const error = RD.errorOf(f);
       let lit = error ? 0 : Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6)));
       const state = error ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
       if (state) lit = steps;
-      else if (lit === steps && share < 1) lit = steps - 1;          // the last pair waits for the shift point
+      else if (lit === steps && share < 1) lit = steps - 1;          // the last pair waits for the end of the scale
       if (lit !== lastLit) {
         fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
-        // the red fields are lit (at the game's shift point): the gear page turns its screen red
+        // the red fields are lit (at the end of the scale or the game's shift signal): the gear page turns its screen red
         document.body.classList.toggle("rd-redzone", fields.some((field, i) => colors[i] === "r" && step[i] < lit));
         lastLit = lit;
       }

@@ -15,8 +15,8 @@ html, body { background: var(--bg); }
 .gear-page {
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 2.4vmin;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1.6vmin;
   padding: max(2.6vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
 }
 
@@ -51,13 +51,35 @@ html, body { background: var(--bg); }
 /* the gear: as large as the frame allows */
 .gear-digit {
   display: block;
-  height: 92%;
+  height: 97%;
   width: auto;
-  max-width: 94%;
+  max-width: 96%;
   overflow: visible;
   filter: drop-shadow(0 0 1vmin rgba(255, 233, 59, 0.35));
 }
 .gear-digit .on { fill: var(--seg); }
+
+/* SPEED: a second frame of the same width and style below the gear, the speed in small segments (for info;
+   km/h or mph as set on the device, no unit shown) */
+.speed-area { position: relative; height: 22vmin; }
+.speed-frame {
+  position: absolute;
+  top: 3vmin;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1.8vmin;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+}
+.speed-label { position: absolute; top: 3vmin; left: 50%; transform: translate(-50%, -50%); padding: 0 2.4vmin; background: var(--bg); }
+.speed-label svg { display: block; height: 6vmin; width: auto; }
+.speed-label .on { fill: var(--seg-label); }
+.speed-num { height: 10vmin; width: auto; overflow: visible; }
+.speed-num .on { fill: var(--seg); }
 
 /* the screen inside the frame: dark red while the red rev lights are lit (the game's shift point),
    bright red and flashing at max rev / on the limiter; the rev lights themselves work as before */
@@ -72,6 +94,7 @@ body.rd-error .gear-frame { background: none; animation: none; }
 
 @media (orientation: portrait) {
   .gear-page { padding-top: max(4vmin, var(--safe-t)); gap: 4vmin; }
+  .speed-area { height: 21vmin; }
   .rd-revlights { height: auto; aspect-ratio: 8 / 1.4; }
   .gear-digit { width: 92%; height: auto; max-height: 92%; }
 }
