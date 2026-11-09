@@ -56,7 +56,7 @@ Game versions: Assetto Corsa EVO 0.9.1, Assetto Corsa Rally 0.6, BeamNG.drive 0.
 ## Not confirmed
 
 - AC EVO: the options of the ABS / TC master switch in the assist menu; key names for EBB, differential, turbo, engine braking; DRS.
-- AC Rally: whether TC, ABS and brake bias can be changed while driving (a guide says yes for newer cars, no binding names found); number of engine map levels.
+- AC Rally: the binding names are now known from the game's input settings (November 2026: IncreaseTc / DecreaseTc, IncreaseAbs / DecreaseAbs on newer cars, brake bias increments, CycleLights, CycleWipers, StartStopEngine, Respawn; see [ACR/NOTES.md](ACR/NOTES.md)); their default keys and the number of engine map levels are not documented.
 - BeamNG: the ABS mode names (from players), whether the ESC/TC key also cycles drive modes, launch control activation.
 - Project CARS 2: the exact binding names (TC up/down, engine mode up/down, ABS / TC / SC toggles), the levels of the menu aids, launch control, racing line levels, damage modes.
 - Forza Motorsport 6: the full option lists of steering, braking and TC / STM; whether assists can be changed from the pause menu.

@@ -1,0 +1,88 @@
+# The iPad dash box (page DASH) for iRacing. Card types and keys: see games/ace/dash.toml.
+#
+# iRacing reports the in-car adjustments a car has (dcTractionControl, dcABS, dcBrakeBias, ...); a card
+# whose setting the car does not have is greyed out. The sim reports no ignition state, no light or wiper
+# stage, so IGNITION, STARTER, FLASH and WIPERS are buttons without a state ("push"; a push button whose
+# action is held, like STARTER, is pressed as long as the finger is on it).
+
+[[control]]
+type = "stepper"
+label = "TC"
+field = "tc_level"
+down = "tc_down"
+up = "tc_up"
+
+[[control]]
+type = "stepper"
+label = "TC 2"
+field = "tc_cut_level"
+down = "tc_cut_down"
+up = "tc_cut_up"
+
+[[control]]
+type = "stepper"
+label = "ABS"
+active = "abs_active"
+field = "abs_level"
+down = "abs_down"
+up = "abs_up"
+
+[[control]]
+type = "stepper"
+label = "ENGINE MAP"
+field = "engine_map"
+down = "map_down"
+up = "map_up"
+
+[[control]]
+type = "bias"
+label = "BRAKE BIAS"
+field = "brake_bias"
+front = "bias_front"
+rear = "bias_rear"
+
+[[control]]
+type = "fuel"
+label = "FUEL"
+field = "fuel_l"
+max = "fuel_max_l"
+
+[[control]]
+type = "toggle"
+label = "PIT LIMITER"
+field = "pit_limiter"
+action = "pit_limiter"
+on = "ON"
+off = "OFF"
+style = "amber"
+
+[[control]]
+type = "push"
+label = "IGNITION"
+action = "ignition"
+text = "IGNITION"
+
+[[control]]
+type = "push"
+label = "STARTER"
+action = "starter"
+text = "HOLD TO START"
+
+[[control]]
+type = "push"
+label = "FLASH"
+action = "flash"
+text = "FLASH"
+
+[[control]]
+type = "push"
+label = "WIPERS"
+action = "wipers"
+text = "WIPERS"
+
+[[control]]
+type = "lamps"
+label = "WARNINGS"
+fields = ["warn_brake", "warn_engine", "warn_oil", "warn_coolant"]
+icons = ["brake", "engine", "oil", "coolant"]
+labels = ["BRAKE", "ENGINE", "OIL", "TEMP"]

@@ -10,7 +10,8 @@
  *   cycle    a stage setting (lights, wipers): the lamp steps to the next stage, optional extra button
  *   ignition ignition lamp (OFF / ON / RUNNING) that sends the ignition action (held if its kind is hold), and a START button (held)
  *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
- *   push     a big button without a state; confirm_ms: hold that long before it fires
+ *   push     a big button without a state; confirm_ms: hold that long before it fires; a "hold" action is
+ *            pressed as long as the finger is on it
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
  * when it is pressed (until the new value arrives) and whenever its value changes in the game, so a
@@ -391,13 +392,18 @@
     b.dataset.action = def.action;
     b._enabled = def.enabled[def.action];
     const confirm = Number(def.confirm_ms || 0);
-    let timer = null;
-    const cancel = () => { clearTimeout(timer); timer = null; b.classList.remove("pressed", "arming"); };
+    const hold = (def.kinds || {})[def.action] === "hold";     // e.g. a starter: held while the finger is on it
+    let timer = null, held = false;
+    const cancel = () => {
+      clearTimeout(timer); timer = null; b.classList.remove("pressed", "arming");
+      if (held) { held = false; RD.command(def.action, "up"); }
+    };
     b.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      if (b.disabled || timer) return;
+      if (b.disabled || timer || held) return;
       try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
       b.classList.add("pressed");
+      if (hold) { held = true; card.press(def.action, "down"); return; }
       if (!confirm) { card.press(def.action); return; }
       b.style.setProperty("--confirm", `${confirm}ms`);
       b.classList.add("arming");                      // the fill grows while the finger stays on the button

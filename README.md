@@ -10,9 +10,9 @@ A universal dashboard for PC racing games on your phone and tablet. A small Pyth
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
 
-**Games:** Assetto Corsa EVO (PC), DiRT Rally 2.0 (PC) and a **Demo** game, a simulated car for trying the pages without a game. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
+**Games:** Assetto Corsa EVO, Assetto Corsa Rally, iRacing and DiRT Rally 2.0 (all PC), and a **Demo** game, a simulated car for trying the pages without a game. Every game gets every page: gear and rev lights, its own dash box, the analysis page with the AI trainer, and the buttons. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
 
-**Status:** in daily use with Assetto Corsa EVO (0.9.1) on an iPad and an iPhone: bridge, all pages, the dash box, the analysis page and the AI trainer. ACE has no keyboard defaults for the car controls, so bind the keys once in the game, see [ACE keys](#ace-keys). DiRT Rally 2.0 is built from the game's UDP telemetry documentation and tested with simulated packets only.
+**Status:** in daily use with Assetto Corsa EVO (0.9.1) on an iPad and an iPhone: bridge, all pages, the dash box, the analysis page and the AI trainer. ACE has no keyboard defaults for the car controls, so bind the keys once in the game, see [ACE keys](#ace-keys). DiRT Rally 2.0, Assetto Corsa Rally and iRacing are built from their telemetry documentation and the code of other tools that read them, and tested with simulated data only (November 2026): see their notes in `docs/` for what to check on the first drive.
 
 ## Requirements
 
@@ -49,7 +49,7 @@ Unattended options for `tools\install.ps1`: `-Yes` (accept all defaults), `-Inst
 
 1. **Start** Racing Dashboard from the Start menu or the desktop (or double-click `start_dashboard.bat`). The window shows the address, for example `http://192.168.1.20:8080/Racing_Dashboard`. Keep the window open while you drive.
 2. **Phone / tablet** (same Wi-Fi as the PC): open the address in the browser and choose a page, or open `/gear` or `/dash` directly. Save **`/Racing_Dashboard`** (the home page) on the tablet: Share → **Add to Home Screen** runs it full screen under the name Racing_Dashboard. The name keeps it apart from other dashboards (e.g. flight simulator ones) on the same address and port; `/` opens the same home page.
-3. **Game.** Start the game and drive; the pages follow as soon as the car is on track. Assetto Corsa EVO needs no set-up: it publishes its shared memory by itself. DiRT Rally 2.0 needs its UDP telemetry switched on once, see [docs/DR2/NOTES.md](docs/DR2/NOTES.md).
+3. **Game.** Start the game and drive; the pages follow as soon as the car is on track. Assetto Corsa EVO needs no set-up: it publishes its shared memory by itself. Assetto Corsa Rally and iRacing need no set-up either. DiRT Rally 2.0 needs its UDP telemetry switched on once, see [docs/DR2/NOTES.md](docs/DR2/NOTES.md). Most games have no keyboard defaults for the car controls: bind the proposed keys once in the game (ACE: [docs/ACE/KEYS.md](docs/ACE/KEYS.md), the others in their notes).
 
 No game at hand? Open the settings (gear button, top right) and choose **DEMO** under GAME.
 
@@ -64,7 +64,7 @@ The gear button at the top right of every page (same size and place on every pag
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
 | PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS or BUTTONS |
-| GAME | all devices | the connector: Assetto Corsa EVO, DiRT Rally 2.0 or Demo; remembered on the PC |
+| GAME | all devices | the connector: Assetto Corsa EVO, Assetto Corsa Rally, DiRT Rally 2.0, iRacing or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
 | STYLE OF THIS PAGE | this device | shown when a page has more than one style (the half-moon button cycles them) |
@@ -97,12 +97,15 @@ core/                     the bridge, the same for every game
   actions.py              the universal button set (groups AIDS, CAR, VIEW, PIT)
   keys.py                 keypresses (SendInput, scan codes), brings the game window to the front
   winmem.py               Windows shared memory reader for shared-memory games
+  kunos.py                the physics page shared by Kunos' games (ACE, Assetto Corsa Rally)
   recorder.py             lap recording for the analysis page: sections, attempts, files, baselines, offers
   trainer.py              the AI trainer: facts, prompt, providers (Claude, ChatGPT, Gemini, Ollama), answer checks
   config.py, log.py       configuration and rolling log
 games/                    one folder per game
   ace/                    Assetto Corsa EVO: connector.py (shared memory), game.toml (window, keys), dash.toml (dash box)
+  acr/                    Assetto Corsa Rally: connector.py (shared memory, ACC layout), game.toml, dash.toml
   dr2/                    DiRT Rally 2.0: connector.py (UDP telemetry), game.toml (window, keys, port), dash.toml
+  iracing/                iRacing: connector.py (irsdk shared memory, session YAML), game.toml, dash.toml
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
   index.html, gear.html, dash.html, analysis.html, buttons.html    the pages
@@ -115,7 +118,7 @@ ui/                       the web pages
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml, settings.json and trainer.json are local and ignored)
 data/                     recorded laps and baselines (JSON Lines; local, ignored by git)
-docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS.md, HANDOVER.md, ACE/ and DR2/ notes
+docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS.md, HANDOVER.md, notes per game (ACE/, ACR/, DR2/, IRACING/)
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/ace_probe.py        prints the live ACE values (Windows, game running); --analysis for the analysis fields

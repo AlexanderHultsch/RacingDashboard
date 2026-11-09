@@ -1,0 +1,72 @@
+# The iPad dash box (page DASH) for Assetto Corsa Rally. Card types and keys: see games/ace/dash.toml and
+# games/dr2/dash.toml (value, push).
+#
+# ACR reports the TC and ABS levels (cars without them: greyed out) and the brake bias, but no light,
+# wiper or engine state, so LIGHTS, WIPERS and ENGINE are buttons without a state.
+
+[[control]]
+type = "stepper"
+label = "TC"
+active = "tc_active"
+field = "tc_level"
+down = "tc_down"
+up = "tc_up"
+
+[[control]]
+type = "stepper"
+label = "ABS"
+active = "abs_active"
+field = "abs_level"
+down = "abs_down"
+up = "abs_up"
+
+[[control]]
+type = "bias"
+label = "BRAKE BIAS"
+field = "brake_bias"
+front = "bias_front"
+rear = "bias_rear"
+
+[[control]]
+type = "value"
+label = "STAGE TIME"
+field = "lap_ms"
+fmt = "lap"
+
+[[control]]
+type = "value"
+label = "STAGE"
+field = "lap_progress"
+fmt = "pct"
+bar = true
+
+[[control]]
+type = "value"
+label = "SPEED"
+field = "speed_kmh"
+fmt = "speed"
+
+[[control]]
+type = "push"
+label = "LIGHTS"
+action = "lights"
+text = "LIGHTS"
+
+[[control]]
+type = "push"
+label = "WIPERS"
+action = "wipers"
+text = "WIPERS"
+
+[[control]]
+type = "push"
+label = "ENGINE"
+action = "ignition"
+text = "START / STOP"
+
+[[control]]
+type = "push"
+label = "RECOVER"
+action = "recover"
+text = "HOLD TO RESPAWN"
+confirm_ms = 1000

@@ -1,0 +1,36 @@
+# iRacing (PC). Reads the sim's live telemetry (irsdk shared memory), sends buttons as keypresses.
+# Do not edit for your own key changes: put overrides in config/config.toml under [games.iracing.keys].
+
+[game]
+name = "iRacing"
+
+[window]
+# The sim window gets the keypresses; the core brings it to the front if needed.
+process = "iRacingSim64DX11.exe"
+title = "iRacing.com Simulator"
+
+# Action -> key combo (key names: see games/ace/game.toml). Empty = no key, the button is greyed out.
+# iRacing's own keyboard defaults (iracing.com/keyboard-shortcuts): S starter, I ignition, A pit speed
+# limiter, = / - brake bias. Traction control, ABS, the engine map, headlight flash and wipers have no
+# default: the keys below are proposals you bind once in iRacing (Options > Controls, In-car adjustments).
+# The list with the iRacing control names: docs/IRACING/NOTES.md.
+[keys]
+tc_down = "Num7"                  # proposal: Traction control -
+tc_up = "Num8"                    # proposal: Traction control +
+tc_cut_down = "Num4"              # proposal: Traction control 2 -
+tc_cut_up = "Num5"                # proposal: Traction control 2 +
+abs_down = "Num1"                 # proposal: ABS -
+abs_up = "Num2"                   # proposal: ABS +
+map_down = "NumMinus"             # proposal: Throttle shape / engine map -
+map_up = "NumPlus"                # proposal: Throttle shape / engine map +
+bias_rear = "Minus"               # iRacing default: Brake bias decrease
+bias_front = "Equals"             # iRacing default: Brake bias increase
+pit_limiter = "A"                 # iRacing default: Pit speed limiter
+ignition = "I"                    # iRacing default: Ignition
+starter = "S"                     # iRacing default: Starter (held)
+flash = "PageUp"                  # proposal: Headlight flash (held)
+wipers = "U"                      # proposal: Windshield wipers / tear-off
+
+# How a button sends its key where iRacing differs from core/actions.py: the ignition toggles with a tap.
+[kinds]
+ignition = "tap"

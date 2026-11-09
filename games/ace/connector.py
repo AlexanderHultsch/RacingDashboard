@@ -1,7 +1,7 @@
 """Assetto Corsa EVO connector: reads the game's shared memory (Windows).
 
 ACE (v0.6 and later) publishes three named shared memory blocks:
-    Local\\acevo_pmf_physics   800 bytes, physics at the physics rate (same layout as ACC)
+    Local\\acevo_pmf_physics   800 bytes, physics at the physics rate (same layout as ACC, core/kunos.py)
     Local\\acevo_pmf_graphics  HUD values: shift lights, aids, fuel, timing ...
     Local\\acevo_pmf_static    session and track, written at session start
 
@@ -15,6 +15,7 @@ from ctypes import Structure, c_bool, c_byte, c_char, c_float, c_int8, c_int16, 
 import log
 import telemetry
 import winmem
+from kunos import Physics  # noqa: F401  (the physics page is shared with AC / ACC / Assetto Corsa Rally)
 
 PHYSICS_TAG = "Local\\acevo_pmf_physics"
 GRAPHICS_TAG = "Local\\acevo_pmf_graphics"
@@ -22,38 +23,6 @@ STATIC_TAG = "Local\\acevo_pmf_static"
 REOPEN_S = 1.0          # retry interval while the game is not running
 STALE_REOPEN_S = 5.0    # reattach after this long without new data (detects a closed game)
 STATUS = {0: "off", 1: "replay", 2: "live", 3: "pause"}   # ACEVO_STATUS, assumed as in AC / ACC
-
-
-class Physics(Structure):
-    _pack_ = 4
-    _fields_ = [
-        ("packetId", c_int32), ("gas", c_float), ("brake", c_float), ("fuel", c_float),
-        ("gear", c_int32), ("rpms", c_int32), ("steerAngle", c_float), ("speedKmh", c_float),
-        ("velocity", c_float * 3), ("accG", c_float * 3), ("wheelSlip", c_float * 4),
-        ("wheelLoad", c_float * 4), ("wheelsPressure", c_float * 4), ("wheelAngularSpeed", c_float * 4),
-        ("tyreWear", c_float * 4), ("tyreDirtyLevel", c_float * 4), ("tyreCoreTemperature", c_float * 4),
-        ("camberRAD", c_float * 4), ("suspensionTravel", c_float * 4), ("drs", c_float), ("tc", c_float),
-        ("heading", c_float), ("pitch", c_float), ("roll", c_float), ("cgHeight", c_float),
-        ("carDamage", c_float * 5), ("numberOfTyresOut", c_int32), ("pitLimiterOn", c_int32), ("abs", c_float),
-        ("kersCharge", c_float), ("kersInput", c_float), ("autoShifterOn", c_int32), ("rideHeight", c_float * 2),
-        ("turboBoost", c_float), ("ballast", c_float), ("airDensity", c_float), ("airTemp", c_float),
-        ("roadTemp", c_float), ("localAngularVel", c_float * 3), ("finalFF", c_float), ("performanceMeter", c_float),
-        ("engineBrake", c_int32), ("ersRecoveryLevel", c_int32), ("ersPowerLevel", c_int32),
-        ("ersHeatCharging", c_int32), ("ersIsCharging", c_int32), ("kersCurrentKJ", c_float),
-        ("drsAvailable", c_int32), ("drsEnabled", c_int32), ("brakeTemp", c_float * 4), ("clutch", c_float),
-        ("tyreTempI", c_float * 4), ("tyreTempM", c_float * 4), ("tyreTempO", c_float * 4),
-        # ACE additions from offset 416
-        ("isAIControlled", c_int32), ("tyreContactPoint", (c_float * 3) * 4),
-        ("tyreContactNormal", (c_float * 3) * 4), ("tyreContactHeading", (c_float * 3) * 4),
-        ("brakeBias", c_float), ("localVelocity", c_float * 3), ("P2PActivations", c_int32),
-        ("P2PStatus", c_int32), ("currentMaxRpm", c_int32), ("mz", c_float * 4), ("fx", c_float * 4),
-        ("fy", c_float * 4), ("slipRatio", c_float * 4), ("slipAngle", c_float * 4), ("tcInAction", c_int32),
-        ("absInAction", c_int32), ("suspensionDamage", c_float * 4), ("tyreTemp", c_float * 4),
-        ("waterTemp", c_float), ("brakeTorque", c_float * 4), ("frontBrakeCompound", c_int32),
-        ("rearBrakeCompound", c_int32), ("padLife", c_float * 4), ("discLife", c_float * 4),
-        ("ignitionOn", c_int32), ("starterEngineOn", c_int32), ("isEngineRunning", c_int32),
-        ("kerbVibration", c_float), ("slipVibrations", c_float), ("roadVibrations", c_float), ("absVibrations", c_float),
-    ]
 
 
 class Static(Structure):

@@ -1,0 +1,31 @@
+# Assetto Corsa Rally (PC, Early Access). Reads the game's shared memory, sends buttons as keypresses.
+# Do not edit for your own key changes: put overrides in config/config.toml under [games.acr.keys].
+
+[game]
+name = "Assetto Corsa Rally"
+
+[window]
+# The game window gets the keypresses (the window title is not documented: the process name is enough).
+process = "acr.exe"
+title = ""
+
+# Action -> key combo (key names: see games/ace/game.toml). Empty = no key, the button is greyed out.
+# ACR's keyboard defaults are not documented, so every key below is a proposal you bind once in the game
+# (Options > Controls). The game's actions: IncreaseTc / DecreaseTc, IncreaseAbs / DecreaseAbs (newer cars),
+# brake bias increments, CycleLights, CycleWipers, StartStopEngine, Respawn (needs "Manual Respawn" in the
+# session settings), Pause. The list: docs/ACR/NOTES.md.
+[keys]
+tc_down = "Num7"                  # DecreaseTc
+tc_up = "Num8"                    # IncreaseTc
+abs_down = "Num1"                 # DecreaseAbs
+abs_up = "Num2"                   # IncreaseAbs
+bias_rear = "NumDivide"           # brake bias rear
+bias_front = "NumMultiply"        # brake bias front
+lights = "Num9"                   # CycleLights
+wipers = "U"                      # CycleWipers
+ignition = "I"                    # StartStopEngine
+recover = "R"                     # Respawn
+pause = "Esc"
+
+[kinds]
+ignition = "tap"
