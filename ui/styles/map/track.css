@@ -1,4 +1,4 @@
-/* Map, style TRACK: the whole track in a light grey frame like the gear, boost and grip pages with MAP set into
+﻿/* Map, style TRACK: the whole track in a light grey frame like the gear, boost and grip pages with MAP set into
    the top line; a red dot with a glow for the car, a white start / finish line. Drawn by js/map.js. */
 
 :root {
@@ -37,7 +37,7 @@ html, body { background: var(--bg); }
 
 .rd-map { position: absolute; inset: 6vmin 4vmin 4vmin; }
 .map-svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.map-svg polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.map-svg .edge, .map-svg .track { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .map-svg .edge { stroke: #5b6470; }
 .map-svg .track { stroke: #262c33; }
 .map-svg .start { stroke: #ffffff; }
