@@ -226,7 +226,7 @@ button.lamp { width: 100%; min-height: 56px; }      /* a tappable lamp stays a b
 .ignition .lamp.run { border-color: var(--green); color: var(--green); box-shadow: inset 0 0 0 1px rgba(34, 211, 107, 0.25); }
 
 /* TYRES: laid out like the car (as the ACE HUD): pressures outside, a tile per tyre coloured by its
-   temperature, the brake as a full bar on the inner side coloured by its temperature, the centre line */
+   temperature, the brake as a full bar on the inner side coloured by its temperature */
 .tyres-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 9px 8px 9px 1fr;
   grid-template-rows: auto 1fr 1fr auto; gap: 5px; align-items: stretch; }
 .tyres-body .psi { text-align: center; font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; min-height: 1.1em; }
@@ -240,7 +240,6 @@ button.lamp { width: 100%; min-height: 56px; }      /* a tappable lamp stays a b
 .brake.cold { background: #1aa7e8; }
 .brake.ok { background: #22d36b; }
 .brake.hot { background: #ff4d3d; }
-.car-axis { border-radius: 6px; border: 1px solid #2a323b; background: #0c1014; }
 
 /* DRIVE MODE: the game's name for the mode in big yellow letters */
 .mode-name { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center;

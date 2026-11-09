@@ -433,8 +433,8 @@
     const P = [psi(), psi(), psi(), psi()], T = [tile(), tile(), tile(), tile()], B = [brake(), brake(), brake(), brake()];
     // rows: pressures front / tyres front / tyres rear / pressures rear; the brakes on the inner side
     body.append(P[0], el("div"), el("div"), el("div"), P[1],
-                T[0], B[0], el("div", "car-axis"), B[1], T[1],
-                T[2], B[2], el("div", "car-axis"), B[3], T[3],
+                T[0], B[0], el("div"), B[1], T[1],
+                T[2], B[2], el("div"), B[3], T[3],
                 P[2], el("div"), el("div"), el("div"), P[3]);
     card.insertBefore(body, card.querySelector(".hint"));
     const band = (v, low, high) => (isNone(v) ? "" : v < low ? "cold" : v > high ? "hot" : "ok");

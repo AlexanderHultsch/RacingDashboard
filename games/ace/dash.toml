@@ -139,7 +139,7 @@ brake_hot = 650
 
 [[control]]
 type = "mode"
-label = "DRIVE MODE"
+label = "PERFORMANCE"
 field = "drive_mode"
 name = "drive_mode_name"
 down = "drive_mode_down"

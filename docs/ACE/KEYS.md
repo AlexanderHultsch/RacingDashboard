@@ -20,8 +20,8 @@ The names in the first column are written exactly as ACE shows them. All proposa
 | ESC Cycle + | STABILITY + | `NumDecimal` |
 | Engine Map Cycle − | ENGINE MAP − | `NumMinus` |
 | Engine Map Cycle + | ENGINE MAP + | `NumPlus` |
-| Performance Mode Cycle − | DRIVE MODE − | `Num3` |
-| Performance Mode Cycle + | DRIVE MODE + | `Num6` |
+| Performance Mode Cycle − | PERFORMANCE − | `Num3` |
+| Performance Mode Cycle + | PERFORMANCE + | `Num6` |
 | Brake Bias Rear | BRAKE BIAS REAR | `NumDivide` |
 | Brake Bias Front | BRAKE BIAS FRONT | `NumMultiply` |
 | Pit Limiter Toggle | PIT LIMITER | `P` |
@@ -48,7 +48,7 @@ On the numpad each setting is a pair, − on the left and + on the right: TC on 
 ## 3. Not needed
 
 - Formula / hybrid controls: RS Deployment Map, MGU-Heat Mode, ERS Overtake, DRS Activate, Turbo Level Cycle.
-- Damper Front / Rear Bump / Rebound Cycle, EBB Map Cycle, Performance Mode Cycle, Display Device Cycle, FFB Gain, Cycle / Pitch / Yaw / FOV Mirror, Optional Animation, Retractable Headlights Toggle, Rain Lights.
+- Damper Front / Rear Bump / Rebound Cycle, EBB Map Cycle, Display Device Cycle, FFB Gain, Cycle / Pitch / Yaw / FOV Mirror, Optional Animation, Retractable Headlights Toggle, Rain Lights.
 - Light Cycle −, Wiper Cycle −: only if Light Cycle + / Wiper Cycle + stop at the last stage instead of wrapping round to off (see section 5).
 - The tab **Car Advanced** (one key per stage: Light Stage 1–3, Traction Control 1–15, Traction Control Cut 1–15, ABS Stage 1–8 or more, Engine Map Stage 1–10, ESC Stage 1–10, Performance Mode 1–10, Display Page 1–5, Wipers Stage 1–5). The dashboard steps with − / +, so these are not needed. They tell us the ranges, though (section 4).
 - Differential Power / Coast Cycle − / +: the DIFF card only shows the values for now. ACE does have bindings for them, so the card could become two steppers later.
