@@ -73,6 +73,7 @@ class Bridge(unittest.TestCase):
             self.assertEqual(status, 200, path)
             self.assertTrue(body, path)
         self.assertIn("text/html", get("/gear")[1])
+        self.assertIn('RD.CYCLE = ["gear", "boost", "grip", "startup"]', get("/js/rd.js")[2].decode())   # the page arrows
 
     def test_trainer_api_keeps_the_key(self):
         status, _, body = get("/api/trainer")

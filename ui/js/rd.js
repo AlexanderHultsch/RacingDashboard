@@ -346,6 +346,24 @@
     gear.addEventListener("click", () => RD.settings.open());
     bar.appendChild(gear);
     document.body.appendChild(bar);
+    RD.pageArrows();
+  };
+
+  /* The phone pages cycle with an arrow at the left and right edge (owner); HOME, DASH and ANALYSIS do not. */
+  RD.CYCLE = ["gear", "boost", "grip", "startup"];
+  RD.pageArrows = function () {
+    const at = RD.CYCLE.indexOf(document.body.dataset.page);
+    if (at < 0) return;
+    const n = RD.CYCLE.length;
+    for (const [side, step] of [["left", -1], ["right", 1]]) {
+      const a = document.createElement("a");
+      const page = RD.CYCLE[(at + step + n) % n];
+      a.className = "rd-arrow " + side;
+      a.href = "/" + page;
+      a.setAttribute("aria-label", (step < 0 ? "Previous page: " : "Next page: ") + page);
+      a.innerHTML = `<svg viewBox="0 0 24 48" aria-hidden="true"><path d="${step < 0 ? "M17 6 L6 24 L17 42" : "M7 6 L18 24 L7 42"}"/></svg>`;
+      document.body.appendChild(a);
+    }
   };
 
   function choice(title, options, current, onPick, note) {

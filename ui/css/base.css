@@ -123,6 +123,25 @@ button {
 .rd-tool:active { opacity: 1; background: rgba(255, 255, 255, 0.15); }
 .rd-tool svg { width: 24px; height: 24px; }
 
+/* page arrows on the phone pages (GEAR, BOOST, GRIP, STARTUP): mostly transparent, in the bottom left and
+   bottom right corner (owner); a big touch area around a thin chevron */
+.rd-arrow {
+  position: fixed;
+  bottom: calc(2px + var(--safe-b));
+  width: 56px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  z-index: 9;
+  opacity: 0.32;
+  -webkit-tap-highlight-color: transparent;
+}
+.rd-arrow.left { left: calc(2px + var(--safe-l)); }
+.rd-arrow.right { right: calc(2px + var(--safe-r)); }
+.rd-arrow svg { width: 22px; height: 44px; fill: none; stroke: #ffffff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+                filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)); }
+.rd-arrow:active { opacity: 0.85; }
+
 /* ------------------------------------------------------------ toast */
 
 #rd-toast {
