@@ -7,11 +7,12 @@ A universal dashboard for PC racing games on your phone and tablet. A small Pyth
 - **ANALYSIS** (`/analysis`), for a tablet in landscape: where the time goes. The bridge records every lap; the page shows the track map cut into 250 m sections on the left and graphs of one section on the right (speed, throttle, brake, steering, gear, time delta), each with three lines: **green** your best, **blue** the last lap, **red** the lap now. Always visible: the delta of the lap and of the section against your best ever and the last lap, and a strip with the delta of every section. Tap any section, while driving or afterwards. New best laps and sections wait in the REVIEW tab to SAVE or SKIP, one by one or all at once (nothing is saved without a tap, one backup kept for UNDO); the GRAPHS tab is for the deep dive. Details: [docs/ANALYSIS.md](docs/ANALYSIS.md).
   - **AI trainer**: an AI TRAINER button on the map sends the facts of the whole lap (overview) or of the zoomed section to an AI of your choice (Claude, ChatGPT, Gemini or a local Ollama model, set up in the settings with your own API key, kept on the PC) and shows up to 9 tips in a TRAINER tab: what to change, where, and how much time it is worth. The tips judge the driving against the fundamentals of fast driving (braking, brake release, apex, throttle, line, gear) and against your own best. Only on a tap; greyed out without a working connection. Details: [docs/TRAINER.md](docs/TRAINER.md).
 - **BOOST** (`/boost`), for a phone, portrait or landscape: the turbo boost as a round gauge in a frame like GEAR + REV's, a red needle, a yellow arc up to the value, BAR under the hub and the value with one decimal below it in yellow 14-segment digits (like the speed on GEAR + REV); the gauge ends at the car's maximum boost (2 bar when the game does not say) or the highest boost seen. The gauge is always fully drawn: a car without a turbo simply stays at 0 (no check whether the car has one), and so does DiRT Rally 2.0, which sends no boost (the chip says so). In iRacing the manifold pressure, so below 0 the arc turns blue and the page says **VACUUM**.
+- **STARTUP** (`/Startup`), for a phone, portrait or landscape: an IGN button and an ENGINE START STOP button like a modern road car's, on a dark brushed metal plate (chrome bezels, black glass caps). They do what the DASH ignition card does: IGN sends the ignition key, START holds the starter while the finger is on it. The light rings show the state, no text: IGN amber with the ignition on, START red when ready and green while the engine runs (START then does nothing).
 - **GRIP** (`/grip`), for a phone, portrait or landscape: four tyres laid out like the car, each tile coloured by the slip of its wheel, no text. Braking (the wheel turns slower than the car): yellow from 4 % slip, orange from 7 % (about where ABS and TC start to work in ACE), red from 15 %, and bright red flashing from 40 % or when it locks. Wheelspin (faster than the car): light blue, blue-violet, purple, and magenta flashing. Dark grey while the tyre grips. Between the front tyres the ABS setting, between the rear tyres the TC setting: just the value (OFF at 0), a grey – when the car does not have it, hidden when the game does not report it. Slip comes from ACE, Assetto Corsa Rally and DiRT Rally 2.0; iRacing sends no slip per wheel (the chip says so).
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
 
-**Games:** Assetto Corsa EVO, Assetto Corsa Rally, iRacing and DiRT Rally 2.0 (all PC), and a **Demo** game, a simulated car for trying the pages without a game. Every game gets every page: gear and rev lights, its own dash box, the analysis page with the AI trainer, the boost gauge and the grip tiles. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
+**Games:** Assetto Corsa EVO, Assetto Corsa Rally, iRacing and DiRT Rally 2.0 (all PC), and a **Demo** game, a simulated car for trying the pages without a game. Every game gets every page: gear and rev lights, its own dash box, the analysis page with the AI trainer, the boost gauge, the grip tiles and the startup buttons. More games can be added as one folder each, see [docs/SPEC.md](docs/SPEC.md).
 
 **Status:** in daily use with Assetto Corsa EVO (0.9.1) on an iPad and an iPhone: bridge, all pages, the dash box, the analysis page and the AI trainer. ACE has no keyboard defaults for the car controls, so bind the keys once in the game, see [ACE keys](#ace-keys). DiRT Rally 2.0, Assetto Corsa Rally and iRacing are built from their telemetry documentation and the code of other tools that read them, and tested with simulated data only (November 2026): see their notes in `docs/` for what to check on the first drive.
 
@@ -64,7 +65,7 @@ The gear button at the top right of every page (same size and place on every pag
 
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
-| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS, BOOST or GRIP |
+| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS, BOOST, GRIP or STARTUP |
 | GAME | all devices | the connector: Assetto Corsa EVO, Assetto Corsa Rally, DiRT Rally 2.0, iRacing or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
@@ -109,7 +110,7 @@ games/                    one folder per game
   iracing/                iRacing: connector.py (irsdk shared memory, session YAML), game.toml, dash.toml
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
-  index.html, gear.html, dash.html, analysis.html, boost.html, grip.html    the pages
+  index.html, gear.html, dash.html, analysis.html, boost.html, grip.html, startup.html    the pages
   icon.ico, racing-dashboard-icon.png icons for the Windows shortcut and the home screen (own name: other dashboards on the same address keep their icon)
   js/rd.js                            live data, widgets, styles, settings
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
@@ -117,6 +118,7 @@ ui/                       the web pages
   js/analysis.js                      the analysis page: map, section strip, graphs, offers, AI trainer tab
   js/boost.js                         the boost gauge
   js/grip.js                          the grip tiles (slip stages, ABS / TC settings)
+  js/startup.js                       the ignition and engine start buttons
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml, settings.json and trainer.json are local and ignored)

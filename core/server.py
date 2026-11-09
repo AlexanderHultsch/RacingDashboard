@@ -428,6 +428,10 @@ class Handler(BaseHTTPRequestHandler):
         target = (config.UI / name).resolve()
         if not target.suffix:
             target = target.with_suffix(".html")
+        if not target.is_file():
+            target = (config.UI / name.lower()).resolve()      # /Startup, /Gear: page names in any case
+            if not target.suffix:
+                target = target.with_suffix(".html")
         if config.UI not in target.parents or not target.is_file():
             return self.reply(404, "text/plain", b"not found")
         content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
@@ -519,7 +523,8 @@ def banner(port: int) -> None:
     print(f"      Dash         {address}/dash")
     print(f"      Analysis     {address}/analysis")
     print(f"      Boost        {address}/boost")
-    print(f"      Grip         {address}/grip\n")
+    print(f"      Grip         {address}/grip")
+    print(f"      Startup      {address}/Startup\n")
     print("  Tip: Share > Add to Home Screen runs it full screen.")
     print(f"  Close this window (or press Ctrl+C) to stop.\n{line}\n", flush=True)
 

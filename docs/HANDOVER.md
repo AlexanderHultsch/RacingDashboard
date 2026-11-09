@@ -13,7 +13,7 @@ python core\server.py --check
 python core\server.py
 ```
 
-All 84 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change, but **restart the bridge after a change to Python code**. Log: `logs\racing-dashboard.log`. The repository is `github.com/AlexanderHultsch/RacingDashboard` (the old name Racing-Dashboard redirects).
+All 84 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/Startup`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change, but **restart the bridge after a change to Python code**. Log: `logs\racing-dashboard.log`. The repository is `github.com/AlexanderHultsch/RacingDashboard` (the old name Racing-Dashboard redirects).
 
 ## Live debugging: pull the data while the owner drives
 
@@ -96,13 +96,14 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 
 1. GRIP in ACE: the owner's feel for the new stages on the iPhone; a recording with ABS and TC on (only 5–6 starts seen so far).
 2. BOOST: done in ACE. iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
-3. AI trainer quality with the new facts and prompt (test plan 3).
-4. First drives in ACR, iRacing, DR2 (test plan 4).
-5. TYRES / PERFORMANCE cards in ACE (test plan 5).
-6. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
-7. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
-8. A LICENSE file for the public repository (the owner's decision; MIT suggested).
-9. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, GRIP limits learned per car, more games ([ASSISTS.md](ASSISTS.md)).
+3. STARTUP page (`/Startup`, built 9 November 2026): checked with the live ACE state (engine running: IGN amber, START green) and with the demo (presses, blocked START while running); **not yet pressed in ACE from the iPhone** (IGN off / on, START with the ignition on).
+4. AI trainer quality with the new facts and prompt (test plan 3).
+5. First drives in ACR, iRacing, DR2 (test plan 4).
+6. TYRES / PERFORMANCE cards in ACE (test plan 5).
+7. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
+8. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
+9. A LICENSE file for the public repository (the owner's decision; MIT suggested).
+10. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, GRIP limits learned per car, more games ([ASSISTS.md](ASSISTS.md)).
 
 ## Findings from the real data (ACE 0.9.1)
 
@@ -116,7 +117,7 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 ## How it works (where to look)
 
 - **Connectors** `games/<id>/connector.py` translate a game into `core/telemetry.py` `FIELDS`; `game.toml` (window, keys), `dash.toml` (dash box cards). Kunos' physics page and `boost()` in `core/kunos.py`.
-- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`, `ui/js/grip.js`; styles `ui/styles/<page>/<style>.css`.
+- **Pages** `ui/*.html`, shared code `ui/js/rd.js` (stream, formats, widgets, rev lights, settings, styles), `ui/js/seg14.js` (14-segment SVG), `ui/js/dashbox.js`, `ui/js/analysis.js`, `ui/js/boost.js`, `ui/js/grip.js`, `ui/js/startup.js`; styles `ui/styles/<page>/<style>.css`.
 - **Recorder** `core/recorder.py`, **AI trainer** `core/trainer.py`; file formats in [SPEC.md](SPEC.md#analysis).
 - **Tools** `tools/live.py` (live values of every game, recordings, checks), `tools/ace_probe.py` (ACE values straight from the shared memory, `--analysis`, `--raw`), `tools/analysis_check.py` (recorded laps).
 
@@ -132,7 +133,8 @@ Before that, the local session of 10 November: BOOST page (`2a636cc`, `d9b43d7`)
 - GEAR + REV: yellow 14-segment gear in a light grey frame close to the screen edges, GEAR in the top line; 8 rev lights blue-green-yellow-red-red-yellow-green-blue from the outside in, from 88 % of the game's shift point up to it; the red pair and the dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag — a simple rule by flags, no rule per car**; the lights never flash; no rpm number; SPEED small in a second frame below (no unit); E for errors with a chip; always the gear number (P only for park); gears above 9 show E.
 - BOOST (phone): a gauge, not a number or bar; BAR under the hub, the value with one decimal below the gauge in the SPEED number style; VACUUM in iRacing; own link `/boost`, listed in the startup window. **No check whether a car has a turbo**: the gauge is always fully drawn and stays at 0 without a value (owner, 9 November 2026: "don't make it too complicated").
 - GRIP (phone): four tyre tiles, colour only (no text, no LEDs), braking yellow to red, wheelspin light blue to purple, stages from 4 / 7 / 15 / 40 % slip, the same for every car, **stage 4 flashes bright**; in portrait a compact frame, not stretched; ABS / TC show only the setting, no colour, no flashing, grey without, hidden when the game has none (owner, 10 November 2026).
-- No BUTTONS page (removed by the owner, 10 November 2026): the dash box is the only page that sends keys.
+- No BUTTONS page (removed by the owner, 10 November 2026). The DASH and STARTUP send keys.
+- STARTUP (`/Startup`, phone): IGN and ENGINE START STOP buttons like a modern road car's, dark brushed metal, chrome bezels, glass caps, white text; state by light only (IGN amber, START red ready / green running), no label under IGN; same functions as the DASH ignition card (owner, 9 November 2026, from three rounds of PNG mockups).
 - Settings button: same size and place on every page, top right. Home page `/Racing_Dashboard` (the PC also serves flight sim dashboards on the same address and port). On a tablet in landscape every page starts 26 px lower (`--top-gap`).
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; warning lamps as colours only. TYRES like the ACE HUD (no legend, no compound, brake bar full height, colour only). ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE (not DRIVE MODE), no key on Comma (voice chat mute).
 - ANALYSIS ([ANALYSIS.md](ANALYSIS.md)): map left with BACK and the cursor; tabs REVIEW first, GRAPHS, TRAINER; green best, blue last, red now; every new best offered, never saved without a tap; a pause stops the lap time; no pro / reference laps.

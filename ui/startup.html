@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Startup">
+<meta name="theme-color" content="#030405">
+<link rel="apple-touch-icon" href="/racing-dashboard-icon.png">
+<title>Startup</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/startup/metal.css">
+</head>
+<!-- Startup: the page for a phone. An IGN button and an ENGINE START STOP button on a dark brushed metal plate,
+     like the start button of a modern road car. They send the same ignition and starter actions as the DASH
+     ignition card; the light rings show the state: IGN amber with the ignition on, START red when ready, green
+     while the engine runs. Driven by js/startup.js. -->
+<body data-page="startup" data-styles="metal">
+<main class="startup-page">
+  <div class="startup-plate rd-startup">
+    <button class="sb ign" data-role="ignition" aria-label="Ignition">
+      <div class="seat"></div><div class="drop"></div><div class="chamfer"></div><div class="turned"></div><div class="wall"></div>
+      <div class="light"></div><div class="cap"><span class="txt">IGN</span></div><div class="gloss"></div><div class="spec"></div>
+    </button>
+    <button class="sb start" data-role="starter" aria-label="Engine start">
+      <div class="seat"></div><div class="drop"></div><div class="chamfer"></div><div class="turned"></div><div class="wall"></div>
+      <div class="light"></div><div class="cap"><span class="txt"><span class="a">ENGINE</span><span class="b">START</span><span class="c">STOP</span></span></div><div class="gloss"></div><div class="spec"></div>
+    </button>
+  </div>
+</main>
+<div class="rd-nodata"></div>
+<script src="js/rd.js"></script>
+<script src="js/startup.js"></script>
+<script>RD.start();</script>
+</body>
+</html>

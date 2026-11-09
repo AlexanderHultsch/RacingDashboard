@@ -1,0 +1,110 @@
+/* Startup, style METAL: a dark brushed metal plate with two buttons like the start button of a modern road car:
+   a machined chrome bezel, a smoked light ring lit from behind and a domed black glass cap with white text.
+   Built from layers (.seat .drop .chamfer .turned .wall .light .cap .gloss .spec, sizes in % of the button).
+   States on .rd-startup (js/startup.js): s-off, s-on (IGN amber, START red), s-run (IGN amber, START green).
+   The look was chosen from PNG mockups by the owner (9 November 2026). */
+
+:root { --bg: #030405; }
+
+html, body { background: var(--bg); }
+
+.startup-page {
+  height: 100%;
+  display: grid;
+  padding: max(2.4vmin, var(--safe-t)) max(2.4vmin, var(--safe-r)) max(2.4vmin, var(--safe-b)) max(2.4vmin, var(--safe-l));
+}
+
+/* the plate: dark brushed metal (two stretched noise layers = the brushing, two light sweeps, a vignette) */
+.startup-plate {
+  position: relative; border-radius: 4vmin; overflow: hidden; min-height: 0;
+  background:
+    radial-gradient(130% 120% at 50% 45%, transparent 45%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(97deg, transparent 8%, rgba(255, 255, 255, 0.07) 24%, transparent 38%, rgba(255, 255, 255, 0.05) 61%, transparent 74%, rgba(255, 255, 255, 0.04) 90%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='2400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.0018 0.75' numOctaves='4' seed='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0'/></filter><rect width='2400' height='2400' filter='url(%23n)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='2400'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='0.004 1.6' numOctaves='2' seed='11' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0'/></filter><rect width='2400' height='2400' filter='url(%23m)'/></svg>"),
+    linear-gradient(180deg, #3a3e44 0%, #2b2e33 50%, #202326 100%);
+  box-shadow: inset 0 0.35vmin 0 rgba(255, 255, 255, 0.18), inset 0 -0.4vmin 0 rgba(0, 0, 0, 0.6),
+              inset 0 0 0 0.2vmin rgba(0, 0, 0, 0.7), 0 0 0 0.25vmin #000;
+  display: flex; align-items: center; justify-content: space-evenly;
+}
+@media (orientation: portrait) { .startup-plate { flex-direction: column; } }
+
+/* a button */
+.sb {
+  position: relative; border-radius: 50%; flex: none;
+  appearance: none; -webkit-appearance: none; border: 0; padding: 0; margin: 0; background: none; color: inherit;
+  font: inherit; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+}
+.sb > div { position: absolute; border-radius: 50%; pointer-events: none; }
+.sb.ign { width: 38vmin; height: 38vmin; }
+.sb.start { width: 72vmin; height: 72vmin; }
+@media (orientation: portrait) {
+  .sb.ign { width: 44vmin; height: 44vmin; }
+  .sb.start { width: 76vmin; height: 76vmin; }
+}
+
+/* the cut-out in the plate and the shadow the button throws */
+.sb .seat { inset: -5%; background: radial-gradient(circle, rgba(0, 0, 0, 0.75) 62%, rgba(0, 0, 0, 0) 72%);
+            box-shadow: 0 0.25vmin 0 rgba(255, 255, 255, 0.10); }
+.sb .drop { inset: 1%; top: 6%; bottom: -5%; background: rgba(0, 0, 0, 0.85); filter: blur(1.8vmin); }
+/* outer chamfer: polished, lit from above */
+.sb .chamfer { inset: 0;
+  background: linear-gradient(172deg, #ffffff 0%, #c9ced4 18%, #7c838b 46%, #3a3e44 72%, #6d737a 88%, #b9bfc5 100%);
+  box-shadow: 0 0 0 0.18vmin rgba(0, 0, 0, 0.85); }
+/* machined face: concentric turning grooves with a radial highlight */
+.sb .turned { inset: 3.2%;
+  background:
+    conic-gradient(from 200deg, rgba(255,255,255,0.55), rgba(0,0,0,0.45) 10%, rgba(255,255,255,0.35) 22%, rgba(0,0,0,0.5) 33%,
+                   rgba(255,255,255,0.6) 50%, rgba(0,0,0,0.45) 61%, rgba(255,255,255,0.3) 73%, rgba(0,0,0,0.5) 85%, rgba(255,255,255,0.55)),
+    repeating-radial-gradient(circle, #b4bac1 0 0.35%, #8a9198 0.35% 0.7%, #a6adb4 0.7% 1.05%),
+    #9aa1a8;
+  background-blend-mode: overlay, normal, normal;
+  box-shadow: inset 0 0.25vmin 0.2vmin rgba(255, 255, 255, 0.7), inset 0 -0.25vmin 0.3vmin rgba(0, 0, 0, 0.6); }
+/* inner chamfer: the wall down to the light ring (dark at the top, light at the bottom) */
+.sb .wall { inset: 13%;
+  background: linear-gradient(172deg, #15171a 0%, #3c4046 35%, #9aa1a8 75%, #e9ecef 100%);
+  box-shadow: 0 -0.2vmin 0.3vmin rgba(0, 0, 0, 0.6); }
+/* light ring: smoked acrylic, lit from behind */
+.sb .light { inset: 15.6%;
+  background: var(--lightbg, radial-gradient(circle closest-side, #050607 84%, #23272c 89%, #121417 95%, #08090a 100%));
+  box-shadow: var(--lightglow, inset 0 0.4vmin 0.6vmin rgba(0, 0, 0, 0.9)); }
+/* the cap: a dome of black glass */
+.sb .cap { inset: 20.5%;
+  background: radial-gradient(85% 70% at 50% 18%, #474c53 0%, #1d2024 38%, #0a0b0d 66%, #020203 100%);
+  box-shadow: 0 0 0 0.22vmin #000, inset 0 -1.6vmin 2.2vmin rgba(0, 0, 0, 0.95), inset 0 0.5vmin 0.8vmin rgba(255, 255, 255, 0.16),
+              0 0.4vmin 1vmin rgba(0, 0, 0, 0.9);
+  display: grid; place-items: center; text-align: center; overflow: hidden;
+  transition: transform 0.06s, filter 0.06s; }
+.sb .cap::before { /* light from the ring spilling into the glass at the bottom */
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(90% 40% at 50% 100%, var(--spill, transparent), transparent 70%); }
+.sb .gloss { inset: 22.5%; bottom: 52%; left: 30%; right: 30%; border-radius: 50% / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 70%, rgba(255, 255, 255, 0) 100%);
+  transition: transform 0.06s; }
+.sb .spec { width: 6%; height: 4%; left: 36%; top: 27%; background: rgba(255, 255, 255, 0.4); filter: blur(0.4vmin); }
+.sb .txt { position: relative; z-index: 1; font-weight: 800; line-height: 1;
+  color: var(--txt, #e6e8eb);
+  text-shadow: var(--txtglow, 0 0.15vmin 0.2vmin rgba(0, 0, 0, 0.9)); }
+.sb.ign .txt { font-size: 6.8vmin; letter-spacing: 0.1em; padding-left: 0.1em; }
+.sb.start .txt .a, .sb.start .txt .c { display: block; font-size: 3.9vmin; letter-spacing: 0.32em; padding-left: 0.32em; }
+.sb.start .txt .b { display: block; font-size: 9.6vmin; letter-spacing: 0.05em; margin: 0.9vmin 0; }
+
+/* pressed: the cap goes in a little and gets darker */
+.sb.pressed .cap { transform: scale(0.965) translateY(0.3vmin); filter: brightness(0.82); }
+.sb.pressed .gloss, .sb.pressed .spec { transform: scale(0.965) translateY(0.3vmin); }
+/* no key for this button (or the game has no such action): the text is dim */
+.sb.na .txt { color: #6d727a; }
+
+/* lit states */
+.rd-startup.s-on .ign, .rd-startup.s-run .ign {
+  --lightbg: radial-gradient(circle closest-side, #050607 83%, #ff8a00 86.5%, #ffe7b0 91.5%, #ff9a10 96%, #6a3000 100%);
+  --lightglow: 0 0 2.4vmin rgba(255, 150, 20, 0.75), inset 0 0 1vmin rgba(255, 150, 20, 0.6);
+  --spill: rgba(255, 150, 20, 0.28); --txt: #ffd58a; --txtglow: 0 0 1.4vmin rgba(255, 160, 30, 0.9), 0 0 0.4vmin rgba(255, 200, 120, 0.9); }
+.rd-startup.s-on .start {
+  --lightbg: radial-gradient(circle closest-side, #050607 83%, #ff1a0a 86.5%, #ffc2b8 91.5%, #ff1e10 96%, #500400 100%);
+  --lightglow: 0 0 3.2vmin rgba(255, 30, 15, 0.8), inset 0 0 1.2vmin rgba(255, 30, 15, 0.65);
+  --spill: rgba(255, 30, 15, 0.30); --txt: #f4f6f8; --txtglow: 0 0 1.2vmin rgba(255, 255, 255, 0.55), 0 0 0.3vmin rgba(255, 255, 255, 0.8); }
+.rd-startup.s-run .start {
+  --lightbg: radial-gradient(circle closest-side, #050607 83%, #10d45a 86.5%, #c4ffdc 91.5%, #14d860 96%, #003e18 100%);
+  --lightglow: 0 0 3.2vmin rgba(20, 216, 96, 0.8), inset 0 0 1.2vmin rgba(20, 216, 96, 0.65);
+  --spill: rgba(20, 216, 96, 0.30); --txt: #f4f6f8; --txtglow: 0 0 1.2vmin rgba(255, 255, 255, 0.55), 0 0 0.3vmin rgba(255, 255, 255, 0.8); }

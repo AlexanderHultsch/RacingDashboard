@@ -20,7 +20,7 @@ Principles:
 | --- | --- |
 | First game | Assetto Corsa EVO on PC (shared memory) |
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
-| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST and GRIP (phone); every device can open every page |
+| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST, GRIP and STARTUP (phone); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
 | Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
@@ -118,7 +118,7 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 
 | Request | Reply |
 | --- | --- |
-| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
+| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/startup` (also `/Startup`), any file in `ui/` | the page or file (a path without extension gets `.html`, a page name in any case is found in lower case; nothing outside `ui/`) |
 | `GET /stream?hz=N` | Server-Sent Events, one `data: {frame}` per tick at N Hz (capped at `read_hz`), `retry: 1000` |
 | `GET /state` | the latest frame as JSON (for polling clients, e.g. an ESP32 display) |
 | `GET /api/info` | `{"game", "game_name", "games": [{"id", "name"}], "dash": [...cards with "enabled" and "kinds" per action], "address", "hz_choices", "keys_available"}` |
@@ -156,6 +156,10 @@ One style, **GAUGE** (`styles/boost/gauge.css`, drawn by `js/boost.js`): a light
 ### GRIP
 
 One style, **TILES** (`styles/grip/tiles.css`, drawn by `js/grip.js`): a light grey frame like the gear and boost pages with GRIP (in segments) in its top line; in portrait a compact box in the middle of the screen (not stretched to the top and bottom), in landscape the whole screen. Inside, four tyre tiles laid out like the car (front on top), colour only, no text (owner, 10 November 2026). A tile's stage comes from the slip ratio of its wheel: 1 from 4 %, 2 from 7 %, 3 from 15 %, 4 from 40 % or when the game's lock flag is set (`STAGES` in `js/grip.js`, the same for every car; owner, 9 November 2026, after a drive in the ACE BMW M4 GT3 Evo, where ABS and TC start to work at 6–7 % slip: stage 2 is that limit). Braking (negative slip) runs yellow `#e6c619`, orange `#f08a1c`, red `#e5412f`, bright red `#ff1414`; wheelspin light blue `#8fa8ff`, blue-violet `#6f5cff`, purple `#a83cf0`, magenta `#e02ce6`; dark grey while the tyre grips. **Stage 4 flashes** bright (with a glow) and dark, 0.3 s each. No colour below 10 km/h (the slip of a standing car means nothing) and none on an error (the tiles dim). Between the front tyres ABS and between the rear tyres TC: the selected setting only, white, no colour, no flashing; 0 shows OFF, `None` a grey –; hidden when the game reports no such setting (its dash map has no card with `abs_level` / `tc_level`, so DR2 shows none). A game without wheel slip (iRacing) leaves the tiles dim and the chip says "<GAME> SENDS NO WHEEL SLIP". The segment font has I for GRIP.
+
+### STARTUP
+
+One style, **METAL** (`styles/startup/metal.css`, driven by `js/startup.js`), chosen by the owner from PNG mockups (9 November 2026): the whole screen is a dark brushed metal plate with two round buttons like a modern road car's start button, side by side in landscape, IGN above START in portrait. Each button is built from layers: a cut-out in the plate with a shadow, a polished outer chamfer, a machined chrome face with turning grooves, a wall down to a smoked light ring lit from behind, and a domed black glass cap with a soft reflection. The text (IGN; ENGINE START STOP) is white; it glows when the ring is lit. No label under the buttons, no state text: the state is light only. IGN: amber ring with the ignition on (or the engine running). START: red ring with the ignition on (ready), green while the engine runs. A pressed cap goes in a little and darkens. The buttons send the same actions as the DASH ignition card, found in the game's dash map (`/api/info`): the card with the `ignition` action and the one with `starter` (ACE and demo: the ignition card; ACR, iRacing: push cards), with their kind (a hold action is pressed while the finger is on the button, a tap is one keypress) and whether a key is set (without one the button's text is grey and it does nothing). The state comes from that ignition card's `field` and `running` (else `ignition`, `engine_running`). While the engine runs START does nothing (as on the DASH); on an error both rings are dark and the buttons send nothing.
 
 ### DASH (dash box)
 

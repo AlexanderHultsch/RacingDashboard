@@ -67,7 +67,7 @@ def post(path, body):
 
 class Bridge(unittest.TestCase):
     def test_pages(self):
-        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/grip", "/js/grip.js", "/styles/grip/tiles.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
+        for path in ("/", "/gear", "/dash", "/boost", "/js/boost.js", "/styles/boost/gauge.css", "/grip", "/js/grip.js", "/styles/grip/tiles.css", "/startup", "/Startup", "/js/startup.js", "/styles/startup/metal.css", "/js/rd.js", "/css/base.css", "/styles/gear/segment.css", "/js/seg14.js", "/js/dashbox.js", "/styles/dash/cards.css", "/racing-dashboard-icon.png",
                      "/analysis", "/js/analysis.js", "/styles/analysis/standard.css"):
             status, content_type, body = get(path)
             self.assertEqual(status, 200, path)
