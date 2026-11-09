@@ -158,6 +158,17 @@ class Parse(unittest.TestCase):
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual((values["boost_bar"], values["boost_min_bar"], values["boost_max_bar"]), (0.389, 0.0, None))
 
+    def test_damage(self):
+        ph, gr, st = self.build()
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["damage_body"], values["damage_suspension"]), ([0.0] * 5, [0.0] * 4))
+        # Camaro ZL1 after a front and a rear hit
+        for i, v in enumerate((1.0, 1.0, 0.8796, 0.0, 1.0, 0.9132, 0.0, 0.5841, 0.0)):
+            gr.car_damage.damage[i] = v
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["damage_body"], [1.0, 1.0, 0.88, 0.0, 1.0])
+        self.assertEqual(values["damage_suspension"], [0.913, 0.0, 0.584, 0.0])
+
     def test_wheel_slip_and_lock(self):
         ph, gr, st = self.build()
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))

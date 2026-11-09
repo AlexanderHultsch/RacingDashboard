@@ -267,6 +267,8 @@ class Connector(telemetry.Connector):
             "drive_mode": s["drive_mode"], "drive_mode_name": MODES[s["drive_mode"]],
             "boost_bar": round(self.boost, 3), "boost_min_bar": 0.0, "boost_max_bar": BOOST_MAX,
             **self.tyres(brake),
+            # a car with some damage, so the damage page shows something
+            "damage_body": [0.35, 0.8, 0.0, 0.15, 0.25], "damage_suspension": [0.2, 0.0, 0.6, 0.0],
             **self.grip(gas, brake, dt),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},

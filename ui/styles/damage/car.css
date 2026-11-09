@@ -1,0 +1,55 @@
+﻿/* Damage, style CAR: the car from above in a light grey frame like the gear, boost and grip pages with DAMAGE
+   set into the top line. Zone and spring colours come from js/damage.js. */
+
+:root {
+  --seg-label: #e6d23a;
+  --frame: #d9dde2;
+  --frame-w: 1.1vmin;
+  --edge: 2.8vmin;
+  --bg: #050607;
+}
+
+html, body { background: var(--bg); }
+
+.damage-page {
+  height: 100%;
+  display: grid;
+  align-items: center;
+  padding: max(5vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
+}
+
+.damage-frame {
+  position: relative;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+  width: 100%;
+  aspect-ratio: 1 / 1.5;
+}
+@media (orientation: landscape) {
+  .damage-page { align-items: stretch; padding-top: max(4.6vmin, var(--safe-t)); }
+  .damage-frame { aspect-ratio: auto; height: 100%; }
+}
+
+.damage-label {
+  position: absolute;
+  top: calc(var(--frame-w) * -0.5);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 2.4vmin;
+  background: var(--bg);
+}
+.damage-label svg { display: block; height: 6vmin; width: auto; }
+.damage-label .on { fill: var(--seg-label); }
+
+.rd-damage { position: absolute; inset: 7vmin 4vmin 5vmin; }
+.damage-car { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }   /* the car fits, centred */
+.damage-car .edge { fill: none; stroke-width: 18; }   /* half of it inside the body: a 9-unit band along the edge */
+/* thin dark lines between the parts: one along the inner side of the bands (a slightly wider dark band under
+   them), and across the bands where front, flanks and rear meet */
+.damage-car .divide { fill: none; stroke: #0d1014; stroke-width: 1.4; }
+.damage-car .divide.band { stroke-width: 21; }
+.damage-car .glass { fill: #0d1014; }
+.damage-car .mirror { fill: #0d1014; }
+.damage-car .outline { fill: none; stroke: #0d1014; stroke-width: 1.6; }
+.damage-car .shock .coil { stroke: #0d1014; stroke-width: 1.4; }
+.rd-damage.off .damage-car { opacity: 0.35; }

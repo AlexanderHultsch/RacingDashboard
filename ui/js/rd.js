@@ -1,4 +1,4 @@
-/* Racing Dashboard client library: one file every page loads.
+﻿/* Racing Dashboard client library: one file every page loads.
  *
  * - RD.connect()       live telemetry from the bridge (Server-Sent Events at the chosen rate)
  * - data-rd="field"    any element with this attribute shows that telemetry field,
@@ -18,7 +18,7 @@
  * Errors: RD.errorOf(frame) returns the error text or null: no connection to the PC, data the page
  * cannot read, an error the bridge reports (frame.error: game not running, no new data, unexpected
  * values ...), or a page check (RD.checks, e.g. a gear above 9 on a one-digit display). While there is
- * an error the gear shows E, the rev lights stay off and the .rd-nodata chip shows "E · <text>".
+ * an error the gear shows E, the rev lights stay off and the .rd-nodata chip shows "E Â· <text>".
  */
 (function () {
   "use strict";
@@ -380,7 +380,7 @@
         const v = error || missing ? null : temps[i];
         const cs = isNone(v) || !core ? null : core[i];
         paint(T[i], isNone(v) ? null : isNone(cs) ? heat(v, tyreScale) : scoreColour(cs), true);
-        const text = isNone(v) ? "–" : Math.round(v) + "°";
+        const text = isNone(v) ? "â€“" : Math.round(v) + "Â°";
         if (T[i].firstChild.textContent !== text) T[i].firstChild.textContent = text;
         const p = error || !press ? null : press[i];
         const pt = isNone(p) ? "" : p.toFixed(1);
@@ -423,7 +423,7 @@
   };
 
   /* The phone pages cycle with an arrow at the left and right edge (owner); HOME, DASH and ANALYSIS do not. */
-  RD.CYCLE = ["gear", "boost", "grip", "tyres", "startup"];
+  RD.CYCLE = ["gear", "boost", "grip", "tyres", "damage", "map", "startup"];
   RD.pageArrows = function () {
     const at = RD.CYCLE.indexOf(document.body.dataset.page);
     if (at < 0) return;
@@ -490,11 +490,11 @@
       const status = document.createElement("div");
       status.className = "rd-ai-status " + (t.ok ? "ok" : t.state === "unchecked" ? "" : "error");
       status.innerHTML = "<i></i><b></b><span></span>";
-      status.querySelector("b").textContent = t.ok ? "CONNECTED" : t.state === "unchecked" ? "CHECKING…" : (t.error || "NOT CONNECTED");
-      status.querySelector("span").textContent = (t.checked ? "checked " + t.checked + (t.ms !== null ? " · " + (t.ms / 1000).toFixed(1) + " s" : "") : "")
-        + (!t.ok && t.detail ? " · " + t.detail : "");
+      status.querySelector("b").textContent = t.ok ? "CONNECTED" : t.state === "unchecked" ? "CHECKINGâ€¦" : (t.error || "NOT CONNECTED");
+      status.querySelector("span").textContent = (t.checked ? "checked " + t.checked + (t.ms !== null ? " Â· " + (t.ms / 1000).toFixed(1) + " s" : "") : "")
+        + (!t.ok && t.detail ? " Â· " + t.detail : "");
       const test = document.createElement("button"); test.className = "rd-choice"; test.textContent = "TEST";
-      test.addEventListener("click", () => { status.querySelector("b").textContent = "CHECKING…"; send("/api/trainer/test"); });
+      test.addEventListener("click", () => { status.querySelector("b").textContent = "CHECKINGâ€¦"; send("/api/trainer/test"); });
       status.appendChild(test);
       grid.append(mk, levels, ck, status);
       row.appendChild(grid);
@@ -523,7 +523,7 @@
       el.innerHTML = "<header><h2>SETTINGS</h2><button class='rd-back'>BACK</button></header><div class='rd-set-body'></div>";
       el.querySelector(".rd-back").addEventListener("click", () => this.close());
       const body = el.querySelector(".rd-set-body");
-      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["boost", "BOOST"], ["grip", "GRIP"], ["tyres", "TYRES"], ["startup", "STARTUP"]];
+      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["boost", "BOOST"], ["grip", "GRIP"], ["tyres", "TYRES"], ["damage", "DAMAGE"], ["map", "MAP"], ["startup", "STARTUP"]];
       body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? RD.HOME : "/" + p; }));
       if (info) {
         body.appendChild(choice("GAME (ALL DEVICES)", info.games.map((g) => [g.id, g.name.toUpperCase()]), info.game, (id) => {

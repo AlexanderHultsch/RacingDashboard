@@ -1,0 +1,46 @@
+/* Map, style TRACK: the whole track in a light grey frame like the gear, boost and grip pages with MAP set into
+   the top line; a red dot with a glow for the car, a white start / finish line. Drawn by js/map.js. */
+
+:root {
+  --seg-label: #e6d23a;
+  --frame: #d9dde2;
+  --frame-w: 1.1vmin;
+  --edge: 2.8vmin;
+  --bg: #050607;
+}
+
+html, body { background: var(--bg); }
+
+.map-page {
+  height: 100%;
+  display: grid;
+  padding: max(5vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
+}
+
+.map-frame {
+  position: relative;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+  min-height: 0;
+}
+
+.map-label {
+  position: absolute;
+  top: calc(var(--frame-w) * -0.5);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 2.4vmin;
+  background: var(--bg);
+}
+.map-label svg { display: block; height: 6vmin; width: auto; }
+.map-label .on { fill: var(--seg-label); }
+
+.rd-map { position: absolute; inset: 6vmin 4vmin 4vmin; }
+.map-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.map-svg polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.map-svg .edge { stroke: #5b6470; }
+.map-svg .track { stroke: #262c33; }
+.map-svg .start { stroke: #ffffff; }
+.map-svg .dot { fill: #ff2a1a; stroke: #ffffff; stroke-width: 0; }
+.map-svg .glow { fill: rgba(255, 42, 26, 0.35); }
+.rd-map.off .map-svg { opacity: 0.35; }

@@ -20,7 +20,7 @@ Principles:
 | --- | --- |
 | First game | Assetto Corsa EVO on PC (shared memory) |
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
-| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST, GRIP, TYRES and STARTUP (phone); every device can open every page |
+| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST, GRIP, TYRES, DAMAGE, MAP and STARTUP (phone); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
 | Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
@@ -67,6 +67,7 @@ Phone / tablet pages (ui/)
 | `drive_mode`, `drive_mode_name` | drive / performance mode as a step (range in `limits`) and the game's name for it (e.g. `SPORT+`), `None` = not on this car |
 | `tyre_temp_c`, `tyre_psi`, `brake_temp_c` | tyre temperatures (C), pressures (psi) and brake temperatures (C) as lists [front left, front right, rear left, rear right], `None` = not reported |
 | `tyre_core_score`, `tyre_surface_score` | the game's own judgement of each tyre's temperature, same order, 1 = fine up to 2 = too hot: the core (goes with `tyre_temp_c`) and the tread surface (the hottest of inner / middle / outer); ACE `tyre_normalized_temperature_core` and `_left / _center / _right`; `None` = not reported |
+| `damage_body`, `damage_suspension` | damage page: body damage [front, rear, left, right, centre] and suspension damage [front left, front right, rear left, rear right], 0 = none .. 1 = heavy, `None` = not reported. ACE: graphics `car_damage.damage[9]` in that order (checked with front, rear, left and right hits) |
 | `brake_score` | the game's judgement of each brake temperature, same order: 0 = cold, 1 = at working temperature (more = too hot, if a game sends it); ACE `brake_normalized_temperature`; `None` = not reported |
 | `limits` | range per stepped setting for this car, e.g. `{"tc_level": [0, 11]}` (missing = unknown) |
 | `latched` | set by the bridge: latch actions whose key is held down right now, e.g. `["wipers"]` |
@@ -120,7 +121,7 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 
 | Request | Reply |
 | --- | --- |
-| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/startup` (also `/Startup`), any file in `ui/` | the page or file (a path without extension gets `.html`, a page name in any case is found in lower case; nothing outside `ui/`) |
+| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/startup` (also `/Startup`), any file in `ui/` | the page or file (a path without extension gets `.html`, a page name in any case is found in lower case; nothing outside `ui/`) |
 | `GET /stream?hz=N` | Server-Sent Events, one `data: {frame}` per tick at N Hz (capped at `read_hz`), `retry: 1000` |
 | `GET /state` | the latest frame as JSON (for polling clients, e.g. an ESP32 display) |
 | `GET /api/info` | `{"game", "game_name", "games": [{"id", "name"}], "dash": [...cards with "enabled" and "kinds" per action], "address", "hz_choices", "keys_available"}` |
@@ -145,7 +146,7 @@ The command errors are `unknown action`, `state '...' not valid for a ... button
 - **Widgets.** `.rd-revlights` (`data-colors` one letter per field: `b` blue, `g` green, `y` yellow, `r` red; `data-fill` `outside` or `left`; `data-range`): rev light fields. The scale ends at the game's shift point (learned from its shift signal per gear) and is `range` wide (0.12: from 88 % of it), in pairs from the outside in (or from the left); unlit fields stay dim. (A scale moved 3 % below the shift point was tried and dropped: it did not fit every car.) The innermost (red) pair lights only at the game's `shift_up` (or at the learned shift point); at the shift signal and on the `limiter` all fields are lit, **steady: the rev lights never flash** (owner, November 2026); the red fields lit set the body class `rd-redzone`. `.rd-seg` (`data-field`, `data-fmt`) and `.rd-seg-text` (`data-text`), from `js/seg14.js`: a field or fixed text drawn as a 14-segment display in SVG (segments a–f, g1, g2, i, l and the diagonals h, j, k, m; each diagonal fills its quadrant with the same gap as on a real display); digits use the outer segments and the split middle bar, `R` = a b f e g1 g2 m, `N` = f e b c h m, `E` = a f e d g1 g2; gearbox letters `P` = a b f e g1 g2, `D` = a b c d i l, `S` = a f g1 g2 c d (the standard S, like a 5), `B` = a b c d g2 i l, `L` = f e d, `M` = f e b c h j. Format `gear`: E on errors; P when `gear_mode` is P; else R, N or the number (always the number with an automatic gearbox or electric drive, the owner's decision; the other letters stay in the glyph table). Format `gearseg` also shows E for a number above 9. Widgets register in `RD.widgetInits`.
 - **Styles.** `<body data-page="gear" data-styles="segment">` (one or more styles, comma-separated) and `<link id="rd-style">`: the style is `styles/<page>/<style>.css`. The half-moon button cycles the styles; the choice is stored per page on the device. All styles of a page share the page's markup and only arrange, show or hide its elements. Adding a style is one CSS file plus its name in `data-styles`.
 - **Toolbar and settings.** Top right, the same size and place on every page (`base.css`: 6 px + the top gap from the top, 10 px from the right; DASH and ANALYSIS keep that corner of their header free, the GEAR + REV rev lights leave 54 px at both ends): the style button (if the page has more than one style) and the settings gear (44 px, the accepted exception to the 56 px touch size). `--top-gap` (`base.css`) is 26 px in landscape on a tablet (height 600 px or more: the iPad screen fades at its top edge) and 0 otherwise; pages and the settings overlay start that much lower. The settings overlay has 16 px padding on every side plus the top gap. The settings are listed in the [README](../README.md#settings).
-- **Page arrows.** The phone pages cycle in the order GEAR + REV, BOOST, GRIP, TYRES, STARTUP and round again (`RD.CYCLE` in `rd.js`, owner, 9 November 2026): a thin white chevron at 32 % opacity in the bottom left (previous) and bottom right (next) corner, a 56 × 80 px touch area, brighter while pressed (`.rd-arrow` in `base.css`). HOME, DASH and ANALYSIS have none.
+- **Page arrows.** The phone pages cycle in the order GEAR + REV, BOOST, GRIP, TYRES, DAMAGE, MAP, STARTUP and round again (`RD.CYCLE` in `rd.js`, owner, 9 November 2026): a thin white chevron at 32 % opacity in the bottom left (previous) and bottom right (next) corner, a 56 × 80 px touch area, brighter while pressed (`.rd-arrow` in `base.css`). HOME, DASH and ANALYSIS have none.
 - **Design rules.** Dark background, white bold labels, touch targets at least 56 px, no emoji code points (icons are inline SVG), page locked for home-screen use (no zoom, no selection, no scroll bounce). GEAR + REV works in portrait and landscape on phones; DASH is designed for 1180 × 820 landscape and fits 1024 × 768 and portrait.
 
 ### GEAR + REV
@@ -163,6 +164,14 @@ One style, **TILES** (`styles/grip/tiles.css`, drawn by `js/grip.js`): a light g
 ### TYRES
 
 One style, **FRAME** (`styles/tyres/frame.css`, driven by `js/tyres.js`): the DASH TYRES card on its own (owner, 9 November 2026), in a light grey frame like the gear, boost and grip pages with TYRES (in segments) in its top line; in landscape the four tyres centred in a frame over the whole screen, in portrait a tall box. The view is `RD.tyreView` in `rd.js`, the same code as the DASH card (pressures outside, tiles by the core score, frames by the surface score, brake bars by the brake score, else the scales; see DASH `tyres`), with the fields from the game's tyres card in its dash map. A game without a tyres card leaves the tiles dim and the chip says "<GAME> SENDS NO TYRE DATA". The segment font has Y.
+
+### DAMAGE
+
+One style, **CAR** (`styles/damage/car.css`, drawn by `js/damage.js`), from PNG mockups with the owner (9 November 2026): the car from above like in the ACE HUD (a sports car with front and rear arches, dark windows and mirrors, no wheels) in the frame with DAMAGE in its top line. The body is filled with the centre (overall) damage; bands along the edge show the front (nose), the rear (tail and rear arches) and the left and right flanks, each part divided from the others by a thin dark line. A small shock absorber symbol beside each wheel shows its suspension damage. Colours: light grey none, yellow from a scratch, orange at 0.5, red at 1.0, mixed in between. A game without damage values dims the car and the chip says "<GAME> SENDS NO DAMAGE".
+
+### MAP
+
+One style, **TRACK** (`styles/map/track.css`, drawn by `js/map.js`): the whole track fitted to the frame (not zoomed, the same orientation as the analysis map) with MAP in the top line: the track as a dark band with a grey edge, a white start / finish line across it at the first point, and a red dot with a glow at `pos_x` / `pos_y`. The track is the analysis recorder's outline (`GET /api/analysis`, fetched every 3 s: the best lap, else the last lap or the lap so far); until there is one the chip says "DRIVE A LITTLE: THE MAP IS DRAWN FROM THE LAP", with the analysis switched off "THE MAP NEEDS THE ANALYSIS (OFF IN THE CONFIG)". The segment font has M, A, P.
 
 ### STARTUP
 

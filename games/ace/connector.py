@@ -248,6 +248,16 @@ def temperature_scores(gr) -> dict:
     return {"tyre_core_score": score(core), "tyre_surface_score": score(surface), "brake_score": brakes if hot else None}
 
 
+def damage(gr) -> dict:
+    """Body and suspension damage, 0 .. 1, from graphics car_damage.damage[9]: front, rear, left, right, centre, then
+    the suspension front left, front right, rear left, rear right (checked with crashes in the Camaro ZL1, November
+    2026: a front hit raised [0] and [4] to 1.0 and [5], reversing into a wall [1] and [7], a left side hit [2] with
+    [5] and [7], a right side hit [3] with [6] and [8]; physics carDamage holds the same body values unscaled, up to
+    ~550, and suspensionDamage the same 0 .. 1)."""
+    d = [round(min(1.0, max(0.0, v)), 3) for v in gr.car_damage.damage]
+    return {"damage_body": d[:5], "damage_suspension": d[5:9]}
+
+
 # Warning lamp thresholds (ACE reports the values, not the lamps; these follow common road-car dashes)
 COOLANT_COLD_C = 50
 COOLANT_HOT_C = 108
@@ -341,6 +351,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
         **temperature_scores(gr),
+        **damage(gr),
         "brake_temp_c": tyre_values[2],
         # boost page: graphics turbo_boost in bar (physics turboBoost as a fallback). max_turbo_boost is not used:
         # 0 in the M4 GT3 Evo, 157.4 in the Camaro ZL1 (boost 0.39 bar at turbo_boost_perc 0.65), so no unit
