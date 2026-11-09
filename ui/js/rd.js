@@ -12,8 +12,8 @@
  *
  * A page needs: <body data-page="gear" data-styles="segment"> (one or more styles, comma-separated) and
  * <link id="rd-style" rel="stylesheet">. Everything else is optional.
- * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-maxrev (limiter or
- * rpm at the redline), rd-redzone (the red rev lights are lit), rd-pit, rd-tc, rd-abs.
+ * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-maxrev (the game's
+ * limiter signal), rd-redzone (the red rev lights are lit), rd-pit, rd-tc, rd-abs.
  *
  * Errors: RD.errorOf(frame) returns the error text or null: no connection to the PC, data the page
  * cannot read, an error the bridge reports (frame.error: game not running, no new data, unexpected
@@ -174,7 +174,7 @@
     }
     body.toggle("rd-shift", !!f.shift_up);
     body.toggle("rd-limiter", !!f.limiter);
-    body.toggle("rd-maxrev", !error && (!!f.limiter || (f.rpm_max > 0 && f.rpm >= f.rpm_max * 0.995)));
+    body.toggle("rd-maxrev", !error && !!f.limiter);             // the game's own rev limiter signal only
     body.toggle("rd-pit", !!f.pit_limiter);
     body.toggle("rd-tc", !!f.tc_active);
     body.toggle("rd-abs", !!f.abs_active);
@@ -257,12 +257,11 @@
     });
   };
 
-  /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12" data-early="0.03"></div>
+  /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.12"></div>
      One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
-     from the outside in; "left": one after another from the left. The scale ends `early` below the learned
-     shift point (0.03: the red pair at 97 %, so the driver is not late) and is `range` wide (0.12 of the shift
-     point). Porsche 992 GT3 R in ACE: shift signal ~9,030 rpm, the car's own red 8.7k; ours blue ~7.68k, green
-     ~7.95k, yellow ~8.22k, red ~8.76k; the innermost pair (the red one) only at the game's shift signal
+     from the outside in; "left": one after another from the left. The scale ends at the game's shift point
+     (learned from its shift signal) and is `range` wide (0.12: from 88 % of it); optional data-early moves the
+     end below the shift point (not used: a fixed offset did not fit every car); the innermost pair (the red one) only at the game's shift signal
      (or at the learned shift point), so it means "shift now". The fields never flash: at the shift signal and
      on the limiter all are lit (classes "shift" / "limiter" for styles). Unlit fields stay dim (CSS). */
   RD.widgets.revlights = function (el) {
