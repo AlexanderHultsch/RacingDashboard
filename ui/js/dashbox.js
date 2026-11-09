@@ -12,9 +12,9 @@
  *   value    a value in segments (fmt lap / pct / speed / int), optional bar for a 0..1 share
  *   push     a big button without a state; confirm_ms: hold that long before it fires; a "hold" action is
  *            pressed as long as the finger is on it
- *   tyres    four tyres as the car sees them (front left / right, rear left / right): the temperature in a tile
- *            coloured cold (blue) / ok (green) / hot (red) by the card's cold / hot, the pressure in psi above /
- *            below, and the brake as a bar beside each tyre, its colour by brake_cold / brake_hot
+ *   tyres    four tyres as the car sees them (front left / right, rear left / right): the temperature in a tile,
+ *            the pressure in psi above / below, the brake as a bar beside each tyre; tile and bar coloured along a
+ *            scale (scale / brake_scale: [blue, green from, green to, red], yellow and orange in between)
  *   mode     a drive / performance mode: the game's name for it, one dot per mode, - / + buttons
  *
  * Every value comes from the game, so the card shows what the game applied. A card lights up ("lit")
@@ -423,6 +423,32 @@
     return card;
   }
 
+  /* temperature colour along a scale [blue, green from, green to, red]: blue - light blue - green (the
+     window) - yellow - orange - red, mixed in between (a tyre at 111 C with a window to 100 C is yellowish) */
+  function heat(t, [b, g1, g2, r]) {
+    const stops = [[b, [26, 120, 232]], [(b + g1) / 2, [26, 167, 232]], [g1, [25, 180, 91]], [g2, [25, 180, 91]],
+                   [(g2 + r) / 2, [230, 198, 25]], [g2 + (r - g2) * 0.75, [240, 138, 28]], [r, [229, 65, 47]]];
+    if (t <= stops[0][0]) return stops[0][1];
+    for (let i = 1; i < stops.length; i++) {
+      if (t <= stops[i][0]) {
+        const k = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0] || 1);
+        return stops[i - 1][1].map((c, j) => Math.round(c + (stops[i][1][j] - c) * k));
+      }
+    }
+    return stops[stops.length - 1][1];
+  }
+
+  function paint(node, value, scale, text) {
+    const c = isNone(value) ? null : heat(value, scale);
+    const bg = c ? `rgb(${c.join(",")})` : "";
+    if (node._bg === bg) return;
+    node._bg = bg;
+    node.style.background = bg;
+    node.classList.toggle("hot", !!c);
+    // dark digits on light colours (yellow, orange), white on the others
+    if (text) node.style.color = c && (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255 > 0.6 ? "#14100a" : "";
+  }
+
   function tyres(def) {
     const card = baseCard(def, "tyres");
     card.querySelector(".rng").textContent = def.pressure ? "PSI · °C" : "°C";
@@ -437,25 +463,21 @@
                 T[2], B[2], el("div"), B[3], T[3],
                 P[2], el("div"), el("div"), el("div"), P[3]);
     card.insertBefore(body, card.querySelector(".hint"));
-    const band = (v, low, high) => (isNone(v) ? "" : v < low ? "cold" : v > high ? "hot" : "ok");
-    const cold = Number(def.cold || 70), hot = Number(def.hot || 100);
-    const bCold = Number(def.brake_cold || 150), bHot = Number(def.brake_hot || 650);
+    const tyreScale = def.scale || [50, 80, 100, 130], brakeScale = def.brake_scale || [100, 300, 650, 900];
     card.update = (f, error) => {
       const temps = f[def.field], press = def.pressure ? f[def.pressure] : null, brakes = def.brakes ? f[def.brakes] : null;
       const missing = !Array.isArray(temps) || temps.every(isNone);
       setState(card, error, missing);
       for (let i = 0; i < 4; i++) {
         const v = error || missing ? null : temps[i];
-        const cls = ("tyre " + band(v, cold, hot)).trim();
-        if (T[i].className !== cls) T[i].className = cls;
+        paint(T[i], v, tyreScale, true);
         const text = isNone(v) ? "–" : Math.round(v) + "°";
         if (T[i].firstChild.textContent !== text) T[i].firstChild.textContent = text;
         const p = error || !Array.isArray(press) ? null : press[i];
         const pt = isNone(p) ? "" : p.toFixed(1);
         if (P[i].textContent !== pt) P[i].textContent = pt;
         const bv = error || !Array.isArray(brakes) ? null : brakes[i];
-        const bc = ("brake " + band(bv, bCold, bHot)).trim();                 // the bar is the brake: its colour is the temperature
-        if (B[i].className !== bc) B[i].className = bc;
+        paint(B[i], bv, brakeScale, false);                                   // the bar is the brake: its colour is the temperature
       }
     };
     return card;

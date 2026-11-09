@@ -231,15 +231,11 @@ button.lamp { width: 100%; min-height: 56px; }      /* a tappable lamp stays a b
   grid-template-rows: auto 1fr 1fr auto; gap: 5px; align-items: stretch; }
 .tyres-body .psi { text-align: center; font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; min-height: 1.1em; }
 .tyre { border-radius: 12px; display: grid; place-items: center; min-height: 0; background: #1a2027; }
-.tyre b { font-size: 24px; font-weight: 800; line-height: 1; color: var(--dim); }
-.tyre.cold { background: #1aa7e8; }
-.tyre.ok { background: #19b45b; }
-.tyre.hot { background: #e5412f; }
-.tyre.cold b, .tyre.ok b, .tyre.hot b { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+.tyre { color: var(--dim); }                 /* background and digit colour come from the temperature (dashbox.js) */
+.tyre b { font-size: 24px; font-weight: 800; line-height: 1; color: inherit; }
+.tyre.hot { color: #fff; }
+.tyre.hot b { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 .brake { border-radius: 4px; background: #2a313a; }
-.brake.cold { background: #1aa7e8; }
-.brake.ok { background: #22d36b; }
-.brake.hot { background: #ff4d3d; }
 
 /* DRIVE MODE: the game's name for the mode in big yellow letters */
 .mode-name { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center;

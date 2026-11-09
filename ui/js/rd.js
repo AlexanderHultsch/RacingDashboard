@@ -12,7 +12,8 @@
  *
  * A page needs: <body data-page="gear" data-styles="segment"> (one or more styles, comma-separated) and
  * <link id="rd-style" rel="stylesheet">. Everything else is optional.
- * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-pit, rd-tc, rd-abs.
+ * Body classes set while driving: rd-stale (no data), rd-error (any error), rd-shift, rd-limiter, rd-maxrev (limiter or
+ * rpm at the redline), rd-redzone (the red rev lights are lit), rd-pit, rd-tc, rd-abs.
  *
  * Errors: RD.errorOf(frame) returns the error text or null: no connection to the PC, data the page
  * cannot read, an error the bridge reports (frame.error: game not running, no new data, unexpected
@@ -168,6 +169,7 @@
     }
     body.toggle("rd-shift", !!f.shift_up);
     body.toggle("rd-limiter", !!f.limiter);
+    body.toggle("rd-maxrev", !error && (!!f.limiter || (f.rpm_max > 0 && f.rpm >= f.rpm_max * 0.995)));
     body.toggle("rd-pit", !!f.pit_limiter);
     body.toggle("rd-tc", !!f.tc_active);
     body.toggle("rd-abs", !!f.abs_active);
@@ -278,6 +280,8 @@
       if (state) lit = steps;
       if (lit !== lastLit) {
         fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
+        // the red fields are lit (at the game's shift point): the gear page turns its screen red
+        document.body.classList.toggle("rd-redzone", fields.some((field, i) => colors[i] === "r" && step[i] < lit));
         lastLit = lit;
       }
       if (state !== lastState) {

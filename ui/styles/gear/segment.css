@@ -59,6 +59,14 @@ html, body { background: var(--bg); }
 }
 .gear-digit .on { fill: var(--seg); }
 
+/* the screen inside the frame: dark red while the red rev lights are lit (the game's shift point),
+   bright red and flashing at max rev / on the limiter; the rev lights themselves work as before */
+.gear-frame { transition: background-color 0.06s; }
+body.rd-redzone .gear-frame { background: #7d0b0b; }
+body.rd-maxrev .gear-frame { background: #e3150f; animation: rd-frame-flash 0.1s steps(1) infinite; }
+@keyframes rd-frame-flash { 50% { background: #3a0505; } }
+body.rd-error .gear-frame { background: none; animation: none; }
+
 /* settings button: top right as on every page (base.css), faint; the rev lights leave that corner free */
 .rd-tool { opacity: 0.35; }
 

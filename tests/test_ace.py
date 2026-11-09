@@ -101,6 +101,14 @@ class Parse(unittest.TestCase):
         self.assertEqual((values["diff_power_pct"], values["diff_coast_pct"]), (0.25, 0.55))
         self.assertIsNone(telemetry.check(values))
 
+    def test_engine_map_counts_from_one(self):
+        # Porsche 992 GT3 R: ACE sends map 0..2, the car shows 1..3
+        ph, gr, st = self.build()
+        gr.electronics.engine_map_level, gr.electronics_max_limit.engine_map_level = 2, 2
+        gr.electronics_is_modifiable.engine_map_level = 1
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["engine_map"], values["limits"]["engine_map"]), (3, [1, 3]))
+
     def test_tyres_and_drive_mode(self):
         ph, gr, st = self.build()
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))

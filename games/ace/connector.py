@@ -204,6 +204,12 @@ STEPPED = {"tc_level": "tc_level", "tc_cut_level": "tc_cut_level", "abs_level": 
            "drive_mode": "active_performance_mode"}
 
 
+def from_one(step: tuple) -> tuple:
+    """ACE counts the engine map from 0, the car's display and HUD from 1 (Porsche 992 GT3 R: 1-3, ACE 0-2)."""
+    value, adjustable, limit = step
+    return (None if value is None else value + 1, adjustable, [limit[0] + 1, limit[1] + 1] if limit else None)
+
+
 def tyres(ph, gr) -> tuple[list | None, list | None, list | None]:
     """Tyre temperatures (C), pressures (psi) and brake temperatures (C), front left, front right, rear left,
     rear right: from the graphics tyre blocks, else the physics page. A pressure below 6 is taken as bar and
@@ -269,6 +275,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     st = Static.from_buffer_copy(static[:sizeof(Static)])
     el = gr.electronics
     steps = {name: setting(gr, field) for name, field in STEPPED.items()}
+    steps["engine_map"] = from_one(steps["engine_map"])
     rpm_max = max(0, ph.currentMaxRpm)
     rpm_pct = gr.rpm_percent
     if rpm_pct > 1.5:                       # guard in case a build sends percent instead of 0..1
