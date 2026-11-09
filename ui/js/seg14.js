@@ -5,7 +5,8 @@
  * diagonals h (upper left) j (upper right) k (lower left) m (lower right). Every diagonal
  * fills its quadrant from the outer corner to the centre, with the same gap as the others.
  *
- * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M, "-", "." decimal point, ":" colon)
+ * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M O T U C V, "-", "." decimal
+ *                                      point, ":" colon)
  *
  * Widgets (registered with RD when rd.js is loaded first):
  *   <svg class="rd-seg" data-field="gear" data-fmt="gear"></svg>   a live field in segments
@@ -21,6 +22,8 @@
     "R": "a b f e g1 g2 m", "N": "f e b c h m", "G": "a f e d c g2", "E": "a f e d g1 g2", "A": "a b c e f g1 g2",
     // gearbox letters: P park, D drive, S sport (the standard S, like a 5), B regen, L low, M manual
     "P": "a b f e g1 g2", "D": "a b c d i l", "S": "a f g1 g2 c d", "B": "a b c d g2 i l", "L": "f e d", "M": "f e b c h j",
+    // for the boost page: BOOST, NO TURBO, VACUUM, NO DATA (O drawn like 0)
+    "O": "a b c d e f", "T": "a i l", "U": "b c d e f", "C": "a f e d", "V": "f e k j",
     "-": "g1 g2", " ": "",
   };
 

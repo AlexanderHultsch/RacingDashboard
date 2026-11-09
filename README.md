@@ -6,6 +6,7 @@ A universal dashboard for PC racing games on your phone and tablet. A small Pyth
 - **DASH** (`/dash`), for a tablet: the dash box. One big card per setting (TC, TC cut, ABS, stability, engine map, brake bias, fuel, differential, pit limiter, lights with flash, wipers, ignition with starter, warning lamps, tyres and brakes, performance / drive mode) that shows the value the game applied and changes it while driving with large − / + buttons. TC, ABS and stability turn amber while they work; a card lights up when its setting changes, on the tablet or in the car. The warning lamps (brake, engine, oil, coolant) show only a state: grey, blue, yellow or red. Settings a car does not have are greyed out. The cards come from a map per game (`games/<game>/dash.toml`), so the page looks the same for every car of a game.
 - **ANALYSIS** (`/analysis`), for a tablet in landscape: where the time goes. The bridge records every lap; the page shows the track map cut into 250 m sections on the left and graphs of one section on the right (speed, throttle, brake, steering, gear, time delta), each with three lines: **green** your best, **blue** the last lap, **red** the lap now. Always visible: the delta of the lap and of the section against your best ever and the last lap, and a strip with the delta of every section. Tap any section, while driving or afterwards. New best laps and sections wait in the REVIEW tab to SAVE or SKIP, one by one or all at once (nothing is saved without a tap, one backup kept for UNDO); the GRAPHS tab is for the deep dive. Details: [docs/ANALYSIS.md](docs/ANALYSIS.md).
   - **AI trainer**: an AI TRAINER button on the map sends the facts of the whole lap (overview) or of the zoomed section to an AI of your choice (Claude, ChatGPT, Gemini or a local Ollama model, set up in the settings with your own API key, kept on the PC) and shows up to 9 tips in a TRAINER tab: what to change, where, and how much time it is worth. The tips judge the driving against the fundamentals of fast driving (braking, brake release, apex, throttle, line, gear) and against your own best. Only on a tap; greyed out without a working connection. Details: [docs/TRAINER.md](docs/TRAINER.md).
+- **BOOST** (`/boost`), for a phone, portrait or landscape: the turbo boost as a round gauge in a frame like GEAR + REV's, a red needle, a yellow arc up to the value and the value in bar in yellow 14-segment digits; the gauge ends at the car's maximum boost. **NO TURBO** for a car without a turbo (ACE, ACR); in iRacing the manifold pressure, so below 0 the arc turns blue and the page says **VACUUM** (every car shows something); **NO DATA** in DiRT Rally 2.0, which sends no boost.
 - **BUTTONS** (`/buttons`), for a tablet: a telemetry strip and four tabs of buttons sent to the game as keypresses: **AIDS**, **CAR**, **VIEW** and **PIT**.
 
 Every device can open every page. The live data streams at up to 60 updates per second; the rate is chosen per device in the settings.
@@ -63,7 +64,7 @@ The gear button at the top right of every page (same size and place on every pag
 
 | Setting | Applies to | Meaning |
 | --- | --- | --- |
-| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS or BUTTONS |
+| PAGE | this device | HOME, GEAR + REV, DASH, ANALYSIS, BUTTONS or BOOST |
 | GAME | all devices | the connector: Assetto Corsa EVO, Assetto Corsa Rally, DiRT Rally 2.0, iRacing or Demo; remembered on the PC |
 | UPDATE RATE | this device | 10, 20, 30 or 60 updates per second |
 | SPEED | this device | KM/H or MPH |
@@ -108,12 +109,13 @@ games/                    one folder per game
   iracing/                iRacing: connector.py (irsdk shared memory, session YAML), game.toml, dash.toml
   demo/                   simulated car: connector.py, game.toml
 ui/                       the web pages
-  index.html, gear.html, dash.html, analysis.html, buttons.html    the pages
+  index.html, gear.html, dash.html, analysis.html, buttons.html, boost.html    the pages
   icon.ico, racing-dashboard-icon.png icons for the Windows shortcut and the home screen (own name: other dashboards on the same address keep their icon)
   js/rd.js, js/buttons.js             live data, widgets, styles, settings, buttons
   js/seg14.js                         14-segment display drawn as SVG (the gear and its label)
   js/dashbox.js                       the dash box cards, built from the game's dash map
   js/analysis.js                      the analysis page: map, section strip, graphs, offers, AI trainer tab
+  js/boost.js                         the boost gauge
   css/base.css                        colours and shared widgets
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml, settings.json and trainer.json are local and ignored)

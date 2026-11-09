@@ -137,6 +137,14 @@ class Parse(unittest.TestCase):
         self.assertEqual((values["drive_mode"], values["drive_mode_name"]), (None, None))
         self.assertIsNone(telemetry.check(values))
 
+    def test_boost(self):
+        ph, gr, st = self.build()
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))      # no turbo: max_turbo_boost 0
+        self.assertEqual((values["turbo"], values["boost_bar"]), (False, None))
+        gr.turbo_boost, gr.max_turbo_boost = 1.234, 1.8
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["turbo"], values["boost_bar"], values["boost_min_bar"], values["boost_max_bar"]), (True, 1.234, 0.0, 1.8))
+
     def test_lights_and_wipers_unreported_until_seen(self):
         reported = set()
         values = {"lights": 0, "wipers": 0}

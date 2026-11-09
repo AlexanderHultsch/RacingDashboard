@@ -15,7 +15,7 @@ from ctypes import Structure, c_bool, c_byte, c_char, c_float, c_int8, c_int16, 
 import log
 import telemetry
 import winmem
-from kunos import Physics  # noqa: F401  (the physics page is shared with AC / ACC / Assetto Corsa Rally)
+from kunos import Physics, boost  # noqa: F401  (the physics page is shared with AC / ACC / Assetto Corsa Rally)
 
 PHYSICS_TAG = "Local\\acevo_pmf_physics"
 GRAPHICS_TAG = "Local\\acevo_pmf_graphics"
@@ -320,6 +320,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
         "brake_temp_c": tyre_values[2],
+        # boost page: graphics turbo_boost (physics turboBoost as a fallback), max_turbo_boost 0 = no turbo
+        **boost(gr.turbo_boost or ph.turboBoost, gr.max_turbo_boost),
         # ACE's auto_gear assist shifts a manual gearbox for the driver, so the gear page keeps the gear
         # number. ACE reports no P / D / S selector for real automatic or electric cars yet.
         "gear_mode": None,

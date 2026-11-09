@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boost">
+<meta name="theme-color" content="#050607">
+<link rel="apple-touch-icon" href="/racing-dashboard-icon.png">
+<title>Boost</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/boost/gauge.css">
+</head>
+<!-- Boost: the page for a phone. The turbo boost as a round gauge (needle, arc, the value in 14-segment digits)
+     in a frame like the gear page's. NO TURBO for a car without a turbo, VACUUM below 0 (iRacing), NO DATA
+     for a game that sends no boost (DiRT Rally 2.0). The gauge is drawn by js/boost.js. -->
+<body data-page="boost" data-styles="gauge">
+<main class="boost-page">
+  <div class="boost-area">
+    <div class="boost-frame">
+      <div class="rd-boost">
+        <svg class="boost-dial" viewBox="0 0 200 200" aria-hidden="true"></svg>
+        <div class="boost-readout"></div>
+      </div>
+    </div>
+    <div class="boost-label"><svg class="rd-seg-text" data-text="BOOST" aria-hidden="true"></svg></div>
+  </div>
+</main>
+<div class="rd-nodata"></div>
+<script src="js/rd.js"></script>
+<script src="js/seg14.js"></script>
+<script src="js/boost.js"></script>
+<script>RD.start();</script>
+</body>
+</html>

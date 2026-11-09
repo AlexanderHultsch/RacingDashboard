@@ -61,7 +61,7 @@ VARS = {
     "dcTractionControl": (4, 3.0), "dcABS": (4, 5.0), "dcBrakeBias": (4, 54.5), "BrakeABSactive": (1, True),
     "EngineWarnings": (3, 0x10 | 0x04), "IsOnTrack": (1, True), "IsReplayPlaying": (1, False),
     "PlayerTrackSurface": (2, 3), "PlayerCarPosition": (2, 2), "AirTemp": (4, 21.0), "TrackTempCrew": (4, 30.0),
-    "SessionTimeOfDay": (4, 50400.0), "VelocityX": (4, 50.0), "VelocityY": (4, 0.0), "YawNorth": (4, 0.0),
+    "SessionTimeOfDay": (4, 50400.0), "ManifoldPress": (4, 0.4), "VelocityX": (4, 50.0), "VelocityY": (4, 0.0), "YawNorth": (4, 0.0),
 }
 CODES = {1: "?", 2: "i", 3: "I", 4: "f", 5: "d"}
 
@@ -141,6 +141,7 @@ class Parse(unittest.TestCase):
         self.assertEqual(v["status"], "live")
         self.assertTrue(v["lap_valid"])
         self.assertEqual(v["session_id"], "0-0-0")
+        self.assertEqual((v["boost_bar"], v["boost_min_bar"], v.get("turbo")), (-0.613, -1.0, None))    # vacuum
         self.assertTrue(set(v) <= set(telemetry.FIELDS), set(v) - set(telemetry.FIELDS))
         self.assertIsNone(telemetry.check(dict(telemetry.blank(), **v, connected=True)))
 

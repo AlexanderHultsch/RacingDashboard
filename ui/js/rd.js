@@ -490,7 +490,7 @@
       el.innerHTML = "<header><h2>SETTINGS</h2><button class='rd-back'>BACK</button></header><div class='rd-set-body'></div>";
       el.querySelector(".rd-back").addEventListener("click", () => this.close());
       const body = el.querySelector(".rd-set-body");
-      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["buttons", "BUTTONS"]];
+      const pages = [["index", "HOME"], ["gear", "GEAR + REV"], ["dash", "DASH"], ["analysis", "ANALYSIS"], ["buttons", "BUTTONS"], ["boost", "BOOST"]];
       body.appendChild(choice("PAGE", pages, document.body.dataset.page, (p) => { location.href = p === "index" ? RD.HOME : "/" + p; }));
       if (info) {
         body.appendChild(choice("GAME (ALL DEVICES)", info.games.map((g) => [g.id, g.name.toUpperCase()]), info.game, (id) => {

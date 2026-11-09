@@ -21,7 +21,7 @@ from ctypes import Structure, c_float, c_int32, c_uint16, sizeof
 import log
 import telemetry
 import winmem
-from kunos import Physics
+from kunos import Physics, boost
 
 PHYSICS_TAG = "Local\\acpmf_physics"
 GRAPHICS_TAG = "Local\\acpmf_graphics"
@@ -148,6 +148,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "session_id": f"acr-{round(length)}",
         "air_c": celsius(ph.airTemp),
         "road_c": celsius(ph.roadTemp),
+        **boost(ph.turboBoost, st.maxTurboBoost),       # boost page; maxTurboBoost 0 = no turbo
     }
 
 

@@ -48,6 +48,11 @@ FIELDS = {
     "tyre_temp_c": None,     # tyre temperatures [front left, front right, rear left, rear right] in C
     "tyre_psi": None,        # tyre pressures, same order, in psi
     "brake_temp_c": None,    # brake temperatures, same order, in C  # differential locking off throttle, 0..1
+    # boost page: no range check on purpose (an odd boost value must not stop the other pages with E)
+    "turbo": None,           # True = the car has a turbo, False = it has none, None = the game does not say
+    "boost_bar": None,       # boost above the air pressure in bar, negative = vacuum; None = the game sends no boost
+    "boost_min_bar": None,   # lowest value the game sends (iRacing -1: vacuum), None = 0
+    "boost_max_bar": None,   # the car's maximum boost in bar (the end of the gauge), None = unknown
     # warning lamps, as a state (no value): None (not reported), "off", "cold" (blue), "warn" (yellow), "alert" (red)
     "warn_brake": None,      # brake warning (!): handbrake on, brake system
     "warn_engine": None,     # check engine: ignition on with the engine off, engine trouble

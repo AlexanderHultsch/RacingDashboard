@@ -77,6 +77,13 @@ class Parse(unittest.TestCase):
             put(field, raw)
             self.assertEqual(acr.clock_ms(field), ms, raw)
 
+    def test_boost(self):
+        ph, gr, st = build()
+        self.assertFalse(acr.parse(bytes(ph), bytes(gr), bytes(st))["turbo"])          # Lancia: no turbo given
+        ph.turboBoost, st.maxTurboBoost = 0.9, 1.4
+        values = acr.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["turbo"], values["boost_bar"], values["boost_max_bar"]), (True, 0.9, 1.4))
+
     def test_static_rpm_wins(self):
         ph, gr, st = build()
         st.maxRpm = 8000

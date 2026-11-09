@@ -12,6 +12,7 @@ import actions
 import telemetry
 
 RPM_MAX = 8200
+BOOST_MAX = 1.6          # the demo car has a turbo: bar at full throttle and high rpm
 RPM_IDLE = 1100
 SHIFT_PCT = 0.94                         # the "game's" shift point
 RATIOS = [0, 3.3, 2.3, 1.75, 1.4, 1.15, 0.97]   # km/h -> rpm factor per gear, scaled below
@@ -106,6 +107,7 @@ class Connector(telemetry.Connector):
         self.speed = 0.0
         self.gear = 1
         self.shift_until = 0.0
+        self.boost = 0.0
         self.lap_start = self.last
         self.lap = 0
         self.last_ms = None
@@ -230,6 +232,9 @@ class Connector(telemetry.Connector):
             self.fuel = max(0.0, self.fuel - dt * (0.002 + 0.0009 * gas * self.speed / 100))
         lap_ms = int((now - self.lap_start) * 1000)
         rpm_pct = rpm / RPM_MAX
+        # the turbo builds up with throttle and rpm and needs a moment (lag)
+        spool = BOOST_MAX * gas * min(1.0, max(0.0, (rpm_pct - 0.35) / 0.35)) if running else 0.0
+        self.boost += (spool - self.boost) * min(1.0, dt * 3.0)
         delta = None
         if self.best_ms:
             delta = int(lap_ms - self.best_ms * self.pos)
@@ -247,6 +252,7 @@ class Connector(telemetry.Connector):
             "esc_level": None,                                   # the demo car has no stability control
             "diff_power": 5, "diff_coast": 3,
             "drive_mode": s["drive_mode"], "drive_mode_name": MODES[s["drive_mode"]],
+            "turbo": True, "boost_bar": round(self.boost, 3), "boost_min_bar": 0.0, "boost_max_bar": BOOST_MAX,
             **self.tyres(brake),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
