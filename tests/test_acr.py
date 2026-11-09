@@ -84,6 +84,14 @@ class Parse(unittest.TestCase):
         values = acr.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual((values["turbo"], values["boost_bar"], values["boost_max_bar"]), (True, 0.9, 1.4))
 
+    def test_wheel_slip(self):
+        ph, gr, st = build()
+        self.assertIsNone(acr.parse(bytes(ph), bytes(gr), bytes(st))["wheel_slip"])
+        ph.slipRatio[2], ph.slipRatio[3] = 0.4, 9.0                         # far too fast: capped at 3
+        values = acr.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["wheel_slip"], [0.0, 0.0, 0.4, 3.0])
+        self.assertNotIn("wheel_lock", values)                              # ACR has no lock flag
+
     def test_static_rpm_wins(self):
         ph, gr, st = build()
         st.maxRpm = 8000

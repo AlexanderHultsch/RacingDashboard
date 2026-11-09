@@ -28,6 +28,7 @@ ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, b
 | `lap_pos`, `lap_progress`, `track_length_m` | graphics `distanceTraveled` / static `trackSplineLength` | one stage = one lap; the distance is re-projected every frame and may step back a little |
 | `pos_x`, `pos_y` | graphics `carCoordinates[0]` x and z | |
 | `steer` | physics `steerAngle` | −1 left … 1 right |
+| `wheel_slip` | physics `slipRatio[4]` | GRIP page; ACR has no lock flag (a locked wheel shows as −1); **to check** whether ACR fills it |
 | `session_id` | `acr-<stage length>` | a new stage starts a new analysis run |
 | `air_c`, `road_c` | physics `airTemp`, `roadTemp` | Kelvin → °C |
 
@@ -37,6 +38,7 @@ ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, b
 - [ ] Stage start and finish on the analysis page: the distance along the stage may not line up with the start and finish lines (ZTMZ found that), so the stage-end rule (progress ≥ 99.95 % for 1 s) may not fire. Check one complete stage with `python tools\analysis_check.py --last 1`.
 - [ ] `tc_active` / `abs_active` and the TC / ABS levels on a car that has them.
 - [ ] The pause detection (blank physics) and the map orientation.
+- [ ] GRIP: `slipRatio` filled, its sign (braking = negative).
 
 ## Controlling: keypresses
 

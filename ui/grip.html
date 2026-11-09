@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Grip">
+<meta name="theme-color" content="#050607">
+<link rel="apple-touch-icon" href="/racing-dashboard-icon.png">
+<title>Grip</title>
+<link rel="stylesheet" href="css/base.css">
+<link id="rd-style" rel="stylesheet" href="styles/grip/tiles.css">
+</head>
+<!-- Grip: the page for a phone. Four tyres laid out like the car, coloured by the slip of each wheel: braking
+     yellow - orange - red - bright red (locked, flashing), wheelspin light blue - blue-violet - purple - magenta
+     (flashing); dark grey while the tyre grips. ABS between the front tyres and TC between the rear tyres show the
+     selected setting only. Drawn by js/grip.js. -->
+<body data-page="grip" data-styles="tiles">
+<main class="grip-page">
+  <div class="grip-frame">
+    <div class="rd-grip">
+      <div class="grip-tyre" data-wheel="0"></div>
+      <div class="grip-aid" data-field="abs_level"><span class="n">ABS</span><span class="v">–</span></div>
+      <div class="grip-tyre" data-wheel="1"></div>
+      <div class="grip-tyre" data-wheel="2"></div>
+      <div class="grip-aid" data-field="tc_level"><span class="n">TC</span><span class="v">–</span></div>
+      <div class="grip-tyre" data-wheel="3"></div>
+    </div>
+    <div class="grip-label"><svg class="rd-seg-text" data-text="GRIP" aria-hidden="true"></svg></div>
+  </div>
+</main>
+<div class="rd-nodata"></div>
+<script src="js/rd.js"></script>
+<script src="js/seg14.js"></script>
+<script src="js/grip.js"></script>
+<script>RD.start();</script>
+</body>
+</html>

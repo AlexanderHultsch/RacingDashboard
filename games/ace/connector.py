@@ -15,7 +15,7 @@ from ctypes import Structure, c_bool, c_byte, c_char, c_float, c_int8, c_int16, 
 import log
 import telemetry
 import winmem
-from kunos import Physics, boost  # noqa: F401  (the physics page is shared with AC / ACC / Assetto Corsa Rally)
+from kunos import Physics, boost, slips  # noqa: F401  (the physics page is shared with AC / ACC / Assetto Corsa Rally)
 
 PHYSICS_TAG = "Local\\acevo_pmf_physics"
 GRAPHICS_TAG = "Local\\acevo_pmf_graphics"
@@ -285,6 +285,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     best = lap_time(gr.best_laptime_ms)
     xy = player_xy(gr)
     tyre_values = tyres(ph, gr)
+    slip = slips(ph)
     return {
         "status": STATUS.get(gr.status, "live"),
         "car": text(gr.car_model),
@@ -317,6 +318,8 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         # the mode name stays from the last car on cars without modes: only with a mode
         "drive_mode": steps["drive_mode"][0],
         "drive_mode_name": (text(gr.performance_mode_name) or None) if steps["drive_mode"][0] is not None else None,
+        "wheel_slip": slip,
+        "wheel_lock": [bool(b.lock) for b in (gr.tyre_lf, gr.tyre_rf, gr.tyre_lr, gr.tyre_rr)] if slip else None,
         "tyre_temp_c": tyre_values[0],
         "tyre_psi": tyre_values[1],
         "brake_temp_c": tyre_values[2],

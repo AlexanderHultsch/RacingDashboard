@@ -6,7 +6,7 @@ For the next Claude session **in the cloud** (no Windows, no games, no iPad / iP
 
 | Can | Cannot |
 | --- | --- |
-| Read and change all code and docs, run `python -m unittest discover tests` (79 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
+| Read and change all code and docs, run `python -m unittest discover tests` (82 tests, all pass) | Read a game: the connectors use Windows shared memory (`core/winmem.py`) or UDP from a running game |
 | Run the bridge with the **demo game** (`python core/server.py`, GAME → DEMO): a simulated car with every field, a turbo (`boost_bar`) included, and laps for the analysis page | Send keypresses (`core/keys.py` is Windows only; the bridge reports "not available") |
 | Render pages with a headless browser for **PNG mockups** (the owner wants them before every visual change) | Check anything against real game data: say so, and leave a test step for the local session in this file |
 | Commit and push to `main` when the owner says so | See the owner's laps (`data/`), AI key (`config/trainer.json`) or mockups (`mockups/`): local, not in git |
@@ -21,12 +21,13 @@ python -m unittest discover tests
 python core/server.py --check
 ```
 
-`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change (frame field `ui`).
+`--check` lists five games (ace, acr, demo, dr2, iracing) and prints `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`; `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change (frame field `ui`).
 
 ## What the local session did (10 November 2026, newest first)
 
 | Commit | What |
 | --- | --- |
+| cloud, after this handover | **GRIP page** `/grip` (phone): four tyre tiles coloured by the slip of each wheel (braking yellow → orange → red → bright red flashing, wheelspin light blue → blue-violet → purple → magenta flashing, grey = grip; stages from 6 / 12 / 25 / 50 % slip or the game's lock flag), ABS / TC setting between the tyres (white, OFF, grey – without, hidden when the game has none). Fields `wheel_slip`, `wheel_lock` (ACE `slipRatio` + tyre `lock`, ACR `slipRatio`, DR2 wheel speeds, demo simulated; iRacing none). Home tile, settings, startup line |
 | cloud, after this handover | **BUTTONS page removed** (owner): `buttons.html`, `js/buttons.js`, its styles, the home tile and settings entry, the LED strip and RPM bar widgets and formats only it used, `groups` in `/api/info`; `core/actions.py` is now a flat `ACTIONS` table of the 21 actions the dash boxes use (camera, view, indicators, hazards, horn, shifting, pause and replay actions and their keys are gone; the demo car always shifts itself) |
 | `2a636cc` + this one | **BOOST page** `/boost` (phone): round gauge in the gear page's frame style, red needle, yellow arc, BAR under the hub and the value with one decimal below it in the SPEED number style. NO TURBO (ACE / ACR car without a turbo), VACUUM below 0 (iRacing manifold pressure), NO DATA + chip in DR2. Fields `turbo`, `boost_bar`, `boost_min_bar`, `boost_max_bar` (`kunos.boost`, iRacing `ManifoldPress`); demo car with a turbo; O T U C V in the segment font; home tile, settings entry, startup line |
 | `5d1d565` | Rev lights: scale from 88 % of the game's shift point up to it; red pair and dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag** (owner: a simple rule by flags, nothing per car) |
@@ -51,13 +52,14 @@ python core/server.py --check
 ## Open, in the owner's order of interest
 
 1. **BOOST in an ACE turbo car** (local only): which of graphics `turbo_boost`, `turbo_boost_level`, `turbo_boost_perc` or physics `turboBoost` is the boost, its unit (bar assumed) and `max_turbo_boost`. Candidates: BMW M4 GT3, Ferrari 296 GT3, McLaren 720S GT3 Evo. iRacing's `ManifoldPress` is taken as absolute bar (boost = value − 1.013): unconfirmed.
-2. AI trainer quality with the new facts and prompt (local, with ACE): read the facts in `data/trainer.jsonl` with each answer before changing the prompt.
-3. First drives in ACR, iRacing, DR2 (local; the open questions are in each game's NOTES: ACR stage start / end, iRacing map direction, DR2 UDP).
-4. TYRES / PERFORMANCE cards in ACE (local).
-5. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
-6. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
-7. A LICENSE file for the public repository (the owner's decision; MIT suggested).
-8. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, more games ([ASSISTS.md](ASSISTS.md)). Work that a cloud session can do fully: these, docs, tests, the demo car, pages and styles (with mockups).
+2. **GRIP in ACE** (local only): drive with ABS off and on, TC off and on. Check the sign of `slipRatio` (hard braking = front tiles yellow to red, not blue), whether the tyre `lock` flag is ever set, and where the stages should start (`STAGES` in `ui/js/grip.js`: 6 / 12 / 25 / 50 %). `/state` shows `wheel_slip` and `wheel_lock` live.
+3. AI trainer quality with the new facts and prompt (local, with ACE): read the facts in `data/trainer.jsonl` with each answer before changing the prompt.
+4. First drives in ACR, iRacing, DR2 (local; the open questions are in each game's NOTES: ACR stage start / end, iRacing map direction, DR2 UDP).
+5. TYRES / PERFORMANCE cards in ACE (local).
+6. Driving aids in the graphs: bests from before 9 November have no aid data (`NOT RECORDED`) until new bests are saved.
+7. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
+8. A LICENSE file for the public repository (the owner's decision; MIT suggested).
+9. Ideas not built yet: lap picker after the session, damage card, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, more games ([ASSISTS.md](ASSISTS.md)). Work that a cloud session can do fully: these, docs, tests, the demo car, pages and styles (with mockups).
 
 ## Findings from the real data (ACE 0.9.1)
 
@@ -83,6 +85,7 @@ python core/server.py --check
 - Universal UI, one folder per game; UI in `ui/` (plain HTML / CSS / JS); Python standard library only. Every game gets every page; a page a game cannot fill says so (BOOST in DR2: NO DATA).
 - GEAR + REV: yellow 14-segment gear in a light grey frame close to the screen edges, GEAR in the top line; 8 rev lights blue-green-yellow-red-red-yellow-green-blue from the outside in, from 88 % of the game's shift point up to it; the red pair and the dark red screen at the game's shift signal; **bright red flashing only on the game's limiter flag — a simple rule by flags, no rule per car**; the lights never flash; no rpm number; SPEED small in a second frame below (no unit); E for errors with a chip; always the gear number (P only for park); gears above 9 show E.
 - BOOST (phone): a gauge, not a number or bar; BAR under the hub, the value with one decimal below the gauge in the SPEED number style; NO TURBO for ACE cars without a turbo, VACUUM in iRacing, DR2 NO DATA; own link `/boost`, listed in the startup window.
+- GRIP (phone): four tyre tiles, colour only (no text, no LEDs), braking yellow to red, wheelspin light blue to purple, **stage 4 flashes bright**; in portrait a compact frame, not stretched; ABS / TC show only the setting, no colour, no flashing, grey without, hidden when the game has none (owner, 10 November 2026).
 - No BUTTONS page (removed by the owner, 10 November 2026): the dash box is the only page that sends keys.
 - Settings button: same size and place on every page, top right. Home page `/Racing_Dashboard` (the PC also serves flight sim dashboards on the same address and port). On a tablet in landscape every page starts 26 px lower (`--top-gap`).
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; warning lamps as colours only. TYRES like the ACE HUD (no legend, no compound, brake bar full height, colour only). ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE (not DRIVE MODE), no key on Comma (voice chat mute).

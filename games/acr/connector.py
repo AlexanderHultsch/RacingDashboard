@@ -21,7 +21,7 @@ from ctypes import Structure, c_float, c_int32, c_uint16, sizeof
 import log
 import telemetry
 import winmem
-from kunos import Physics, boost
+from kunos import Physics, boost, slips
 
 PHYSICS_TAG = "Local\\acpmf_physics"
 GRAPHICS_TAG = "Local\\acpmf_graphics"
@@ -145,6 +145,7 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
         "pos_x": round(x, 2) if (x or z) else None,
         "pos_y": round(z, 2) if (x or z) else None,
         "steer": round(max(-1.0, min(1.0, ph.steerAngle)), 3),
+        "wheel_slip": slips(ph),                         # ACR has no lock flag: a locked wheel shows as slip -1
         "session_id": f"acr-{round(length)}",
         "air_c": celsius(ph.airTemp),
         "road_c": celsius(ph.roadTemp),

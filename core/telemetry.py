@@ -47,7 +47,11 @@ FIELDS = {
     "drive_mode_name": None, # the game's name of the active mode, e.g. "SPORT+"
     "tyre_temp_c": None,     # tyre temperatures [front left, front right, rear left, rear right] in C
     "tyre_psi": None,        # tyre pressures, same order, in psi
-    "brake_temp_c": None,    # brake temperatures, same order, in C  # differential locking off throttle, 0..1
+    "brake_temp_c": None,    # brake temperatures, same order, in C
+    # grip page: no range check on purpose (an odd slip value must not stop the other pages with E)
+    "wheel_slip": None,      # slip ratio of each wheel, same order: 0 = rolling with the car, negative = slower than
+                             # the car (braking, -1 = stopped / locked), positive = faster (wheelspin); None = not reported
+    "wheel_lock": None,      # same order: True while the game says the wheel is locked; None = the game does not say
     # boost page: no range check on purpose (an odd boost value must not stop the other pages with E)
     "turbo": None,           # True = the car has a turbo, False = it has none, None = the game does not say
     "boost_bar": None,       # boost above the air pressure in bar, negative = vacuum; None = the game sends no boost

@@ -1,0 +1,83 @@
+/* Grip, style TILES: four tyre tiles in a light grey frame like the gear and boost pages, GRIP set into the
+   top line. In portrait the frame is a compact box in the middle of the screen; in landscape it fills the
+   screen. Tile colours: braking l1..l4, wheelspin s1..s4 (js/grip.js); stage 4 flashes bright. */
+
+:root {
+  --seg-label: #e6d23a;
+  --frame: #d9dde2;
+  --frame-w: 1.1vmin;
+  --edge: 2.8vmin;
+  --bg: #050607;
+  --tile: #1a2027;
+  --l1: #e6c619; --l2: #f08a1c; --l3: #e5412f; --l4: #ff1414;
+  --s1: #8fa8ff; --s2: #6f5cff; --s3: #a83cf0; --s4: #e02ce6;
+}
+
+html, body { background: var(--bg); }
+
+.grip-page {
+  height: 100%;
+  display: grid;
+  align-items: center;
+  padding: max(5vmin, var(--safe-t)) max(var(--edge), var(--safe-r)) max(var(--edge), var(--safe-b)) max(var(--edge), var(--safe-l));
+}
+
+.grip-frame {
+  position: relative;
+  border: var(--frame-w) solid var(--frame);
+  box-shadow: inset 0 0 0 0.5vmin #2a2e33;
+  width: 100%;
+  aspect-ratio: 1 / 1.13;     /* portrait: a compact box, not stretched to the top and bottom */
+}
+@media (orientation: landscape) {
+  .grip-page { align-items: stretch; padding-top: max(4.6vmin, var(--safe-t)); }
+  .grip-frame { aspect-ratio: auto; height: 100%; }
+}
+
+.grip-label {
+  position: absolute;
+  top: calc(var(--frame-w) * -0.5);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 2.4vmin;
+  background: var(--bg);
+}
+.grip-label svg { display: block; height: 6vmin; width: auto; }
+.grip-label .on { fill: var(--seg-label); }
+
+/* tyres laid out like the car: front on top; ABS between the front tyres, TC between the rear tyres */
+.rd-grip {
+  position: absolute;
+  inset: 6vmin 4vmin 4vmin;
+  display: grid;
+  grid-template-columns: 1fr 17vmin 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4.5vmin 2.5vmin;
+}
+@media (orientation: landscape) {
+  .rd-grip { inset: 5vmin 12vmin 4vmin; grid-template-columns: 1fr 22vmin 1fr; gap: 4vmin 4vmin; }
+}
+
+.grip-tyre { border-radius: 3.4vmin; background: var(--tile); box-shadow: inset 0 0 0 1px #262d36; }
+.grip-tyre.l1 { background: var(--l1); }
+.grip-tyre.l2 { background: var(--l2); }
+.grip-tyre.l3 { background: var(--l3); }
+.grip-tyre.s1 { background: var(--s1); }
+.grip-tyre.s2 { background: var(--s2); }
+.grip-tyre.s3 { background: var(--s3); }
+/* stage 4 (locked / full spin): flashes between the bright colour with a glow and a dark shade of it */
+.grip-tyre.l4 { --c: var(--l4); --glow: rgba(255, 20, 20, 0.8); animation: grip-flash 0.3s steps(1) infinite; }
+.grip-tyre.s4 { --c: var(--s4); --glow: rgba(224, 44, 230, 0.8); animation: grip-flash 0.3s steps(1) infinite; }
+@keyframes grip-flash {
+  0% { background: var(--c); box-shadow: 0 0 4.5vmin var(--glow); }
+  50% { background: color-mix(in srgb, var(--c) 30%, var(--tile)); box-shadow: none; }
+}
+.rd-grip.off .grip-tyre { opacity: 0.35; }
+
+/* ABS / TC: the selected setting only; no colour, no flashing */
+.grip-aid { align-self: center; display: grid; justify-items: center; gap: 0.6vmin; font-weight: 900; letter-spacing: 0.06em; line-height: 1.05; }
+.grip-aid .n { font-size: 4vmin; color: var(--dim); }
+.grip-aid .v { font-size: 8.5vmin; color: var(--text); }
+@media (orientation: landscape) { .grip-aid .v { font-size: 8vmin; } .grip-aid .n { font-size: 3.8vmin; } }
+.grip-aid.na .n, .grip-aid.na .v { color: #4a525c; }
+.grip-aid.hide { visibility: hidden; }

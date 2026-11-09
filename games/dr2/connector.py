@@ -29,6 +29,7 @@ CONFIG = Path("My Games") / "DiRT Rally 2.0" / "hardware_settings" / "hardware_s
 
 # byte offsets of the fields the dashboard reads (the whole layout: docs/DR2/NOTES.md)
 LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
+WHEEL_SPEEDS = (108, 112, 100, 104)    # m/s; the packet's order is rear left, rear right, front left, front right
 THROTTLE, STEER, BRAKE, CLUTCH, GEAR = 116, 120, 124, 128, 132
 LAP, RPM, POSITION = 144, 148, 156
 TRACK_LENGTH, LAST_LAP = 244, 248
@@ -40,6 +41,18 @@ def f32(data: bytes, offset: int) -> float | None:
         return None
     value = FLOAT.unpack_from(data, offset)[0]
     return value if value == value else None        # NaN -> None
+
+
+def wheel_slip(data: bytes) -> list | None:
+    """Slip ratio of each wheel (front left, front right, rear left, rear right) from the wheel speeds against the
+    car's speed: negative = slower than the car (braking, -1 locked), positive = faster (wheelspin). Below walking
+    pace the ratio means nothing, so the car's speed counts as at least 3 m/s. None without wheel speeds."""
+    car = f32(data, SPEED)
+    wheels = [f32(data, offset) for offset in WHEEL_SPEEDS]
+    if car is None or any(w is None for w in wheels) or not any(wheels):
+        return None
+    base = max(3.0, abs(car))
+    return [round(max(-1.0, min(3.0, (w - abs(car)) / base)), 3) for w in wheels]
 
 
 def names(length: float, rpm_max: float, idle: float, gears: int) -> tuple[str, str]:
@@ -96,6 +109,7 @@ def parse(data: bytes) -> dict:
         "pos_x": round(f32(data, POS_X) or 0.0, 2),
         "pos_y": round(f32(data, POS_Z) or 0.0, 2),
         "steer": round(max(-1.0, min(1.0, f32(data, STEER) or 0.0)), 3),
+        "wheel_slip": wheel_slip(data),
         "session_id": f"stage-{round(length)}",
     }
 

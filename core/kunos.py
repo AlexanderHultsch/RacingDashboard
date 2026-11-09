@@ -41,6 +41,16 @@ class Physics(Structure):
 assert __import__("ctypes").sizeof(Physics) == 800
 
 
+def slips(ph) -> list | None:
+    """Slip ratio of each wheel (front left, front right, rear left, rear right) from the physics page: negative
+    braking, positive wheelspin (the usual sign, not yet checked in the game: docs/ACE/NOTES.md). None while the
+    game leaves them all at 0 (a game or build that does not fill them)."""
+    values = list(ph.slipRatio)
+    if not any(values) or any(v != v for v in values):
+        return None
+    return [round(max(-1.0, min(3.0, v)), 3) for v in values]
+
+
 def boost(value: float, peak: float) -> dict:
     """Boost page fields from a Kunos game's turbo boost and the car's maximum boost (both in bar; 0 = the car
     has no turbo). Not yet checked in a turbo car (docs/ACE/NOTES.md)."""

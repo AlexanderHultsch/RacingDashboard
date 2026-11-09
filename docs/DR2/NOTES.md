@@ -31,6 +31,7 @@ The game sends a packet of little-endian 32-bit floats per frame while driving (
 | `pos_x`, `pos_y` | 16, 24 | world x and z, metres (the map may come out mirrored) |
 | `steer` | 120 | −1..1 |
 | `track`, `car` | 244; 252, 256, 260 | the packet has no names: the stage is named by its length (`Stage 10.01 km`), the car by gear count, redline and idle (`5-speed, 7500 rpm, idle 900`), so stages and cars keep apart in the laps and best times (two cars with the same three values share a name) |
+| `wheel_slip` | 100, 104, 108, 112 (rear left, rear right, front left, front right), 28 | GRIP page: (wheel speed − car speed) / car speed, the car's speed taken as at least 3 m/s; no lock flag, no ABS / TC |
 | `session_id` | – | `stage-<length>`: a new stage starts a new analysis run (as does a new car) |
 
 Not in the packet (or always 0 in DiRT Rally 2.0): the real car and stage names, fuel, ABS / TC level, light and wiper state, warning lamps. After 2 s without packets the pages show "NO NEW DATA FROM THE GAME", after 10 s "GAME NOT RUNNING" (the game sends nothing in the menus either).
@@ -38,6 +39,7 @@ Not in the packet (or always 0 in DiRT Rally 2.0): the real car and stage names,
 ### To check in the game
 
 - [ ] Gear values in reverse and neutral.
+- [ ] GRIP: the wheel speeds are in m/s like the car's speed (a straight at constant speed must leave all tiles grey).
 - [ ] RPM: scaled by 10 or not (the log and `/state` show the values).
 - [ ] Stage progress reaches 100 % at the finish (the analysis needs ≥ 99.95 % to end the stage lap).
 - [ ] Analysis: position x / z gives the right map (not mirrored), steering sign, a restart jumps the distance back to 0.

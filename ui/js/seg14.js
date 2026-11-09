@@ -5,7 +5,7 @@
  * diagonals h (upper left) j (upper right) k (lower left) m (lower right). Every diagonal
  * fills its quadrant from the outer corner to the centre, with the same gap as the others.
  *
- * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M O T U C V, "-", "." decimal
+ * Seg14.draw(svg, "R", Seg14.DIGIT)   draws text into an <svg> (digits, R N E G A P D S B L M O T U C V I, "-", "." decimal
  *                                      point, ":" colon)
  *
  * Widgets (registered with RD when rd.js is loaded first):
@@ -24,6 +24,8 @@
     "P": "a b f e g1 g2", "D": "a b c d i l", "S": "a f g1 g2 c d", "B": "a b c d g2 i l", "L": "f e d", "M": "f e b c h j",
     // for the boost page: BOOST, NO TURBO, VACUUM, NO DATA (O drawn like 0)
     "O": "a b c d e f", "T": "a i l", "U": "b c d e f", "C": "a f e d", "V": "f e k j",
+    // for the grip page: GRIP
+    "I": "a d i l",
     "-": "g1 g2", " ": "",
   };
 

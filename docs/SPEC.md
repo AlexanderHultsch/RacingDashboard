@@ -20,7 +20,7 @@ Principles:
 | --- | --- |
 | First game | Assetto Corsa EVO on PC (shared memory) |
 | Platform | Windows PC with the game, Python 3.12 or newer; devices in the same local network, no login |
-| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST (phone); every device can open every page |
+| Pages | GEAR + REV (phone: 14-segment gear and 8 rev lights), DASH and ANALYSIS (tablet), BOOST and GRIP (phone); every device can open every page |
 | Live data | Server-Sent Events, rate chosen per device: 10, 20, 30 or 60 Hz (default 60) |
 | Buttons | Keypresses with scan codes (SendInput); tap, hold or latch |
 | Shift lights | The game's own shift signal; the lights are scaled to the learned shift point and flash at the signal |
@@ -84,6 +84,7 @@ Phone / tablet pages (ui/)
 | `air_c`, `road_c`, `tyre_compound`, `time_of_day` | ambient values, written once per lap |
 | `lap_ms`, `last_ms`, `best_ms`, `delta_ms`, `lap_valid` | lap times in ms (`None` = no time), delta to best (negative = faster) |
 | `turbo`, `boost_bar`, `boost_min_bar`, `boost_max_bar` | boost page: the car has a turbo (`None` = the game does not say), boost above the air pressure in bar (negative = vacuum, `None` = the game sends none), the lowest value the game sends (iRacing −1, else 0) and the car's maximum boost (`None` = unknown). No range check: an odd boost value must not stop the other pages with E. ACE: graphics `turbo_boost` (physics `turboBoost` as a fallback) and `max_turbo_boost`, ACR: physics `turboBoost` and static `maxTurboBoost` (max 0 = no turbo; `kunos.boost`); iRacing: `ManifoldPress` − 1.013 bar; DR2: none |
+| `wheel_slip`, `wheel_lock` | grip page: the slip ratio of each wheel [front left, front right, rear left, rear right] (0 = rolling with the car, negative = slower: braking, −1 = stopped; positive = faster: wheelspin; capped −1..3; `None` = the game sends none) and the game's own lock flag per wheel (`None` = the game has none). No range check. ACE: physics `slipRatio` (`kunos.slips`, `None` while all 0) and graphics `tyre_*.lock`; ACR: physics `slipRatio`, no lock flag; DR2: the wheel speeds against the car's speed (at least 3 m/s); iRacing: none (no slip per wheel in the live data); demo: simulated |
 | `error`, `error_text` | set by the core, not by a connector: `None` or an error code, and a short text for the pages ([Errors](#errors)) |
 
 Each frame also carries `game` (the active game id).
@@ -117,7 +118,7 @@ The page adds what only it can see (`RD.errorOf` in `js/rd.js`): NO CONNECTION T
 
 | Request | Reply |
 | --- | --- |
-| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
+| `GET /`, `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, any file in `ui/` | the page or file (a path without extension gets `.html`; nothing outside `ui/`) |
 | `GET /stream?hz=N` | Server-Sent Events, one `data: {frame}` per tick at N Hz (capped at `read_hz`), `retry: 1000` |
 | `GET /state` | the latest frame as JSON (for polling clients, e.g. an ESP32 display) |
 | `GET /api/info` | `{"game", "game_name", "games": [{"id", "name"}], "dash": [...cards with "enabled" and "kinds" per action], "address", "hz_choices", "keys_available"}` |
@@ -151,6 +152,10 @@ One style, **SEGMENT** (`styles/gear/segment.css`): 8 rev lights on top (blue, g
 ### BOOST
 
 One style, **GAUGE** (`styles/boost/gauge.css`, drawn by `js/boost.js`): a light grey frame like GEAR + REV's with BOOST (in segments) in its top line and a round gauge as large as the frame allows. The dial runs over 270 degrees from `boost_min_bar` (iRacing −1, else 0) to the car's `boost_max_bar` rounded up to 0.5 bar (2 bar when unknown, at least 1); it grows when the boost goes higher and resets when the car changes. Ticks every 0.5 bar (every 1 bar above a 3 bar range) with numbers, minor ticks between. A red needle, a yellow arc from 0 up to the value (blue from the value up to 0 when below 0, on a faint blue vacuum zone), below the hub BAR, or VACUUM below 0, and in the open bottom of the dial the value with one decimal in yellow segments, in the style of the SPEED number on GEAR + REV (same size, no glow; owner, 10 November 2026). Without a value the dial dims and the middle says **NO TURBO** (`turbo` false), **NO DATA** (the game sends no boost; the chip says "<GAME> SENDS NO BOOST") or **E** (an error; the chip says why). The segment font has O, T, U, C, V for these words.
+
+### GRIP
+
+One style, **TILES** (`styles/grip/tiles.css`, drawn by `js/grip.js`): a light grey frame like the gear and boost pages with GRIP (in segments) in its top line; in portrait a compact box in the middle of the screen (not stretched to the top and bottom), in landscape the whole screen. Inside, four tyre tiles laid out like the car (front on top), colour only, no text (owner, 10 November 2026). A tile's stage comes from the slip ratio of its wheel: 1 from 6 %, 2 from 12 %, 3 from 25 %, 4 from 50 % or when the game's lock flag is set (`STAGES` in `js/grip.js`, the same for every car, **to be checked in the game**). Braking (negative slip) runs yellow `#e6c619`, orange `#f08a1c`, red `#e5412f`, bright red `#ff1414`; wheelspin light blue `#8fa8ff`, blue-violet `#6f5cff`, purple `#a83cf0`, magenta `#e02ce6`; dark grey while the tyre grips. **Stage 4 flashes** bright (with a glow) and dark, 0.3 s each. No colour below 10 km/h (the slip of a standing car means nothing) and none on an error (the tiles dim). Between the front tyres ABS and between the rear tyres TC: the selected setting only, white, no colour, no flashing; 0 shows OFF, `None` a grey –; hidden when the game reports no such setting (its dash map has no card with `abs_level` / `tc_level`, so DR2 shows none). A game without wheel slip (iRacing) leaves the tiles dim and the chip says "<GAME> SENDS NO WHEEL SLIP". The segment font has I for GRIP.
 
 ### DASH (dash box)
 
@@ -211,7 +216,7 @@ Known data sources for later games: AC and ACC (shared memory `Local\acpmf_*` wi
 
 ## 10. Tests
 
-`python -m unittest discover tests` (79 tests): the data checks of the core; the ACE struct layout and translation against synthetic shared memory; the Assetto Corsa Rally ACC layout, clock text, Kelvin and pause detection; the boost values of ACE, ACR and iRacing; the iRacing memory image (header, variables, the newest buffer), the session YAML, the translation and the dead-reckoned map position; the DiRT Rally 2.0 packet translation, stage and car names and a UDP round trip; a bridge smoke test with the demo game (pages, the home link, path safety, state, info, commands, latch keys, stream rate, the analysis and trainer API, the API key never in a reply); the recorder with a simulated car (sections, lap and section times, the game's lap time, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data, driving aids); the AI trainer with simulated providers (facts, the request, answer checks, settings, keys, the rolling history). On Windows with ACE running, `python tools/ace_probe.py` prints the live values and `python tools/analysis_check.py` checks the recorded laps.
+`python -m unittest discover tests` (82 tests): the data checks of the core; the ACE struct layout and translation against synthetic shared memory; the Assetto Corsa Rally ACC layout, clock text, Kelvin and pause detection; the boost values of ACE, ACR and iRacing; the wheel slip of ACE (with the lock flag), ACR and DR2; the iRacing memory image (header, variables, the newest buffer), the session YAML, the translation and the dead-reckoned map position; the DiRT Rally 2.0 packet translation, stage and car names and a UDP round trip; a bridge smoke test with the demo game (pages, the home link, path safety, state, info, commands, latch keys, stream rate, the analysis and trainer API, the API key never in a reply); the recorder with a simulated car (sections, lap and section times, the game's lap time, files, offers, SAVE / SKIP / UNDO, the repeat rule, a spin at a border, backwards driving, invalid and paused laps, a stage with a standing start, end of run, offers after a restart, the section data, driving aids); the AI trainer with simulated providers (facts, the request, answer checks, settings, keys, the rolling history). On Windows with ACE running, `python tools/ace_probe.py` prints the live values and `python tools/analysis_check.py` checks the recorded laps.
 
 ## 11. Future development and out of scope
 

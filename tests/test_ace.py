@@ -145,6 +145,16 @@ class Parse(unittest.TestCase):
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))
         self.assertEqual((values["turbo"], values["boost_bar"], values["boost_min_bar"], values["boost_max_bar"]), (True, 1.234, 0.0, 1.8))
 
+    def test_wheel_slip_and_lock(self):
+        ph, gr, st = self.build()
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual((values["wheel_slip"], values["wheel_lock"]), (None, None))   # not filled: GRIP shows NO DATA
+        ph.slipRatio[0], ph.slipRatio[1], ph.slipRatio[2], ph.slipRatio[3] = -1.0, -0.13, 0.0, 0.25
+        gr.tyre_lf.lock = True
+        values = ace.parse(bytes(ph), bytes(gr), bytes(st))
+        self.assertEqual(values["wheel_slip"], [-1.0, -0.13, 0.0, 0.25])
+        self.assertEqual(values["wheel_lock"], [True, False, False, False])
+
     def test_lights_and_wipers_unreported_until_seen(self):
         reported = set()
         values = {"lights": 0, "wipers": 0}

@@ -26,7 +26,8 @@ def packet(**values) -> bytes:
     """A 264-byte extradata=3 packet with the given fields (byte offset -> value)."""
     floats = [0.0] * 66
     fields = {"lap_time": 4, "lap_distance": 8, "speed": 28, "throttle": 116, "brake": 124, "gear": 132,
-              "rpm": 148, "position": 156, "length": 244, "last": 248, "max_rpm": 252, "idle_rpm": 256, "max_gears": 260}
+              "rpm": 148, "position": 156, "length": 244, "last": 248, "max_rpm": 252, "idle_rpm": 256, "max_gears": 260,
+              "wheel_rl": 100, "wheel_rr": 104, "wheel_fl": 108, "wheel_fr": 112}
     for name, value in values.items():
         floats[fields[name] // 4] = value
     return struct.pack("<66f", *floats)
@@ -49,6 +50,13 @@ class Parse(unittest.TestCase):
         self.assertEqual(v["max_gears"], 6)
         self.assertTrue(set(v) <= set(telemetry.FIELDS))
         self.assertIsNone(telemetry.check(dict(telemetry.blank(), **v, connected=True)))
+
+    def test_wheel_slip(self):
+        v = dr2.parse(packet(speed=20.0, wheel_fl=0.0, wheel_fr=18.0, wheel_rl=20.0, wheel_rr=26.0))
+        self.assertEqual(v["wheel_slip"], [-1.0, -0.1, 0.0, 0.3])          # front left locked, rear right spinning
+        slow = dr2.parse(packet(speed=1.0, wheel_fl=1.0, wheel_fr=1.0, wheel_rl=4.0, wheel_rr=1.0))
+        self.assertEqual(slow["wheel_slip"][2], 1.0)                        # below 3 m/s the car counts as 3 m/s
+        self.assertIsNone(dr2.parse(packet(speed=20.0))["wheel_slip"])      # no wheel speeds
 
     def test_stage_and_car_names(self):
         v = dr2.parse(packet(length=10012.4, max_rpm=7500, idle_rpm=900, max_gears=5))

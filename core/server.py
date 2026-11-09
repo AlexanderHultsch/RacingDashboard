@@ -518,7 +518,8 @@ def banner(port: int) -> None:
     print(f"      Gear + Rev   {address}/gear")
     print(f"      Dash         {address}/dash")
     print(f"      Analysis     {address}/analysis")
-    print(f"      Boost        {address}/boost\n")
+    print(f"      Boost        {address}/boost")
+    print(f"      Grip         {address}/grip\n")
     print("  Tip: Share > Add to Home Screen runs it full screen.")
     print(f"  Close this window (or press Ctrl+C) to stop.\n{line}\n", flush=True)
 

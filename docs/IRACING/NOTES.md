@@ -28,6 +28,7 @@ The connector takes the buffer with the highest `tickCount`, copies it, and acce
 | `speed_kmh`, `gas`, `brake`, `clutch` | `Speed` (m/s), `Throttle`, `Brake`, `Clutch` | iRacing's clutch is 1 = engaged (pedal up): the dashboard shows `1 − Clutch` |
 | `tc_level`, `tc_cut_level`, `abs_level` | `dcTractionControl`, `dcTractionControl2`, `dcABS` | only on cars that have them; ranges per car (not reported: no level dots) |
 | `abs_active` | `BrakeABSactive` | iRacing reports no "TC is cutting now" flag |
+| `wheel_slip` | – | iRacing's live data has no slip or speed per wheel: the GRIP page shows only the ABS / TC settings and says "IRACING SENDS NO WHEEL SLIP" |
 | `brake_bias` | `dcBrakeBias` | percent on most cars (54.5 = 54.5 % front); values outside 20–90 % are shown as not reported. **To check per car** |
 | `engine_map` | `dcThrottleShape`, else `dcFuelMixture` | iRacing has no `dcEngineMap`; which knob a car's MAP is differs per car. **To check** |
 | `engine_running`, `warn_*` | `EngineWarnings` | 0x08 stalled → engine yellow; 0x04 oil pressure → oil red, 0x40 oil temperature → oil yellow; 0x01 water temperature → coolant yellow; brake not reported |

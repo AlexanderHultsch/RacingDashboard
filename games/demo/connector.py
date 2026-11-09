@@ -129,6 +129,22 @@ class Connector(telemetry.Connector):
         self.brakes = [max(60.0, b * 0.997 + h) for b, h in zip(self.brakes, heat)]
         return {"tyre_temp_c": temps, "tyre_psi": psi, "brake_temp_c": [round(b) for b in self.brakes]}
 
+    def grip(self, gas: float, brake: float, dt: float) -> dict:
+        """Wheel slip for the grip page: hard braking slows the fronts (ABS holds them near the limit, without ABS
+        they lock now and then), full throttle at low speed spins the rears (TC holds them, without TC they spin)."""
+        s = self.state
+        r = random.random
+        if brake > 0.9:
+            peak = 0.12 if s["abs_level"] > 0 else (1.0 if r() < 0.3 else 0.3)
+            target = [-peak * (0.7 + 0.3 * r()), -peak * (0.5 + 0.3 * r()), -0.03 * r(), -0.03 * r()]
+        elif gas > 0.9 and self.speed < 160:
+            peak = 0.12 if s["tc_level"] > 0 else 0.6
+            target = [0.0, 0.0, peak * (0.6 + 0.4 * r()), peak * (0.4 + 0.4 * r())]
+        else:
+            target = [0.0, 0.0, 0.0, 0.0]
+        self.slip = [v + (t - v) * min(1.0, dt * 8) for v, t in zip(getattr(self, "slip", target), target)]
+        return {"wheel_slip": [round(v, 3) for v in self.slip], "wheel_lock": [v <= -0.95 for v in self.slip]}
+
     def handle(self, action: str, state: str) -> bool:
         s = self.state
         if state == "up":
@@ -246,6 +262,7 @@ class Connector(telemetry.Connector):
             "drive_mode": s["drive_mode"], "drive_mode_name": MODES[s["drive_mode"]],
             "turbo": True, "boost_bar": round(self.boost, 3), "boost_min_bar": 0.0, "boost_max_bar": BOOST_MAX,
             **self.tyres(brake),
+            **self.grip(gas, brake, dt),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],
