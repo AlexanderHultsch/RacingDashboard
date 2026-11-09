@@ -96,8 +96,7 @@ button {
 .rd-revlights i.on.g { box-shadow: 0 0 3vmin var(--green); }
 .rd-revlights i.on.y { box-shadow: 0 0 3vmin var(--yellow); }
 .rd-revlights i.on.r { box-shadow: 0 0 3vmin var(--red); }
-.rd-revlights.shift i { animation: rd-flash 0.16s steps(1) infinite; }
-.rd-revlights.limiter i { animation: rd-flash 0.1s steps(1) infinite; }
+/* the rev lights never flash (owner, November 2026): at the shift point and on the limiter all stay lit */
 
 /* ------------------------------------------------------------ RPM bar */
 

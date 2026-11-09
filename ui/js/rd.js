@@ -104,6 +104,11 @@
       try {
         const frame = JSON.parse(event.data);
         if (!frame || typeof frame !== "object") throw new Error("not an object");
+        // the bridge serves newer page files (an update, then a restart): load them
+        if (frame.ui) {
+          if (RD.uiVersion === undefined) RD.uiVersion = frame.ui;
+          else if (frame.ui !== RD.uiVersion) { location.reload(); return; }
+        }
         RD.frame = frame;
         RD.badData = false;
       } catch (e) {
@@ -255,8 +260,9 @@
   /* Rev lights: <div class="rd-revlights" data-colors="b g y r r y g b" data-fill="outside" data-range="0.25"></div>
      One field per colour (b blue, g green, y yellow, r red). data-fill "outside": the fields light in pairs
      from the outside in; "left": one after another from the left. They light over the last `range` of the
-     rpm share below the learned shift point; at the game's shift signal all fields flash (class "shift"),
-     on the rev limiter they flash faster (class "limiter"). Unlit fields stay dim (CSS). */
+     rpm share below the learned shift point; the innermost pair (the red one) only at the game's shift signal
+     (or at the learned shift point), so it means "shift now". The fields never flash: at the shift signal and
+     on the limiter all are lit (classes "shift" / "limiter" for styles). Unlit fields stay dim (CSS). */
   RD.widgets.revlights = function (el) {
     const colors = (el.dataset.colors || "b g y r r y g b").trim().split(/\s+/);
     const outside = (el.dataset.fill || "outside") === "outside";
@@ -278,6 +284,7 @@
       let lit = error ? 0 : Math.max(0, Math.min(steps, Math.ceil(share * steps - 1e-6)));
       const state = error ? "" : f.limiter ? "limiter" : f.shift_up ? "shift" : "";
       if (state) lit = steps;
+      else if (lit === steps && share < 1) lit = steps - 1;          // the last pair waits for the shift point
       if (lit !== lastLit) {
         fields.forEach((field, i) => field.classList.toggle("on", step[i] < lit));
         // the red fields are lit (at the game's shift point): the gear page turns its screen red

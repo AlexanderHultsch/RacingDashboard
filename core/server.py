@@ -204,9 +204,22 @@ def reader() -> None:
         time.sleep(1.0 if failed else max(0.0, period - (time.monotonic() - start)))
 
 
+_ui_cache = [0.0, ""]
+
+
+def ui_version() -> str:
+    """The newest change time of the page files (checked at most every 3 s). It goes out with every frame,
+    so an open page reloads itself when the bridge serves newer pages (a page left open keeps its code)."""
+    now = time.monotonic()
+    if now - _ui_cache[0] > 3.0:
+        newest = max((f.stat().st_mtime for f in config.UI.rglob("*") if f.is_file()), default=0.0)
+        _ui_cache[:] = [now, str(int(newest))]
+    return _ui_cache[1]
+
+
 def snapshot() -> tuple[int, dict]:
     with data_lock:
-        return seq, dict(data, game=active["id"])
+        return seq, dict(data, game=active["id"], ui=ui_version())
 
 
 # ---------------------------------------------------------------- commands

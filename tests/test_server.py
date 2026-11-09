@@ -85,6 +85,11 @@ class Bridge(unittest.TestCase):
         code, reply = post("/api/trainer/ask", {"mode": "track"})
         self.assertEqual(code, 409)                                  # no run recorded yet, or no AI
 
+    def test_frames_carry_the_page_version(self):
+        # an open page compares it and reloads itself when the bridge serves newer page files
+        frame = json.loads(get("/state")[2])
+        self.assertTrue(frame["ui"].isdigit())
+
     def test_home_link(self):
         # the home page to save on the tablet: /Racing_Dashboard (other dashboards share the address)
         home = get("/")[2]
