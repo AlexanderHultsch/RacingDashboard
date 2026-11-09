@@ -32,7 +32,7 @@ LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
 THROTTLE, STEER, BRAKE, CLUTCH, GEAR = 116, 120, 124, 128, 132
 LAP, RPM, POSITION = 144, 148, 156
 TRACK_LENGTH, LAST_LAP = 244, 248
-MAX_RPM, MAX_GEARS = 252, 260
+MAX_RPM, IDLE_RPM, MAX_GEARS = 252, 256, 260
 
 
 def f32(data: bytes, offset: int) -> float | None:
@@ -40,6 +40,15 @@ def f32(data: bytes, offset: int) -> float | None:
         return None
     value = FLOAT.unpack_from(data, offset)[0]
     return value if value == value else None        # NaN -> None
+
+
+def names(length: float, rpm_max: float, idle: float, gears: int) -> tuple[str, str]:
+    """(track, car) for the analysis page. The packet carries no names, so the stage is named by its length
+    and the car by its gearbox and engine: different stages and different cars keep apart in the laps and
+    best times. Two cars with the same gear count, redline and idle share one name (rare)."""
+    track = f"Stage {length / 1000:.2f} km" if length > 0 else ""
+    car = f"{gears}-speed, {round(rpm_max)} rpm, idle {round(idle)}" if rpm_max > 0 and gears > 0 else ""
+    return track, car
 
 
 def parse(data: bytes) -> dict:
@@ -60,8 +69,11 @@ def parse(data: bytes) -> dict:
     distance = f32(data, LAP_DISTANCE) or 0.0
     lap_time, last = f32(data, LAP_TIME), f32(data, LAST_LAP)
     rpm_pct = min(1.2, max(0.0, rpm / rpm_max)) if rpm_max > 0 else 0.0
+    track, car = names(length, rpm_max, (f32(data, IDLE_RPM) or 0.0) * scale, max_gears if 0 < max_gears <= 20 else 0)
     return {
         "status": "live",
+        "track": track,
+        "car": car,
         "gear": gear,
         "max_gears": max_gears if 0 < max_gears <= 20 else 0,
         "rpm": round(max(0.0, rpm)),
@@ -78,7 +90,7 @@ def parse(data: bytes) -> dict:
         "lap_ms": int(lap_time * 1000) if lap_time and lap_time > 0 else None,
         "last_ms": int(last * 1000) if last and last > 0 else None,
         "lap_progress": round(min(1.0, max(0.0, distance / length)), 4) if length > 0 else None,
-        # analysis page: one stage = one lap; a new stage length = a new run
+        # analysis page: one stage = one lap; a new stage (length) or car = a new run
         "lap_pos": round(min(1.0, max(0.0, distance / length)), 6) if length > 0 else None,
         "track_length_m": round(length, 1) if length > 0 else None,
         "pos_x": round(f32(data, POS_X) or 0.0, 2),
