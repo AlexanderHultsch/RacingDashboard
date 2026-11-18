@@ -2,7 +2,7 @@
 
 Agreed with the owner in an interview (November 2026). **Built** (November 2026): `core/trainer.py`, `ui/js/analysis.js` (button, TRAINER tab), `ui/js/rd.js` (settings), tests in `tests/test_trainer.py`. Works with Claude on the owner's PC (see [First real answers](#first-real-answers-november-2026)); ChatGPT, Gemini and Ollama are written from the providers' documentation and never called for real; the owner uses Claude only, so **testing them is not planned** (open point, November 2026). This replaces the earlier rule "no coaching, no tips" on the analysis page: tips come only from the trainer, and only when the driver taps it.
 
-Next step (proposal, not built): the coach judges every corner by racing knowledge per phase and scenario, not only against BEST: [COACHING.md](COACHING.md).
+Since 18 November 2026 the facts include the car's motion (grip use, balance, wheel slip, body slip, wheels off), so the AI can judge the driving by racing knowledge and not only against the best lap; what each game offers and why these values: [COACHING.md](COACHING.md).
 
 ## What it does
 
@@ -82,11 +82,15 @@ Per section and per line (`best`, `last`, `now`; a line that does not exist is `
 | `gears`, `shifts` | gear sequence through the section, e.g. `"4-3-4"` (neutral while shifting left out), and where each change happened (`at_m`, `to`) |
 | `full_throttle_m` | where the throttle is back above 95 % (held for 30 m) after the slowest point |
 | `steer_max` | largest steering, 0–1 of full lock |
-| `trace` | the line every 10 m: `[metres, km/h, throttle %, brake %, steering −100..100, off]`; `off` (`last` and `now` only, and only in a corner) is the distance in metres from the best line, positive towards the inside of the corner, negative towards the outside. This is what lets the AI judge the line and the shape of the inputs, not only a few points |
+| `trace` | the line every 10 m: `[metres, km/h, throttle %, brake %, steering −100..100, off, grip %, balance, front slip %, rear slip %]`. `off` (`last` and `now` only, and only in a corner; otherwise `null` when the motion columns follow) is the distance in metres from the best line, positive towards the inside of the corner, negative towards the outside. The last four come from the car's motion (since 18 November 2026; a lap recorded before, or a game without them, has the first six only, and a value the game does not send is `null`): **grip** = combined g (√(lateral² + longitudinal²)) as % of the car's peak in this run (`car_limits_g`); **balance** = front minus rear slip angle in degrees (> 0 the front slides more: understeer; < 0 the rear: oversteer); **front / rear slip** = the slip ratio of the axle's most slipping wheel in % (negative = slower than the car, −100 locked; positive = wheelspin). This is what lets the AI judge the line, the inputs and the use of the grip, not only a few points |
+| `body_slip_max_deg`, `body_slip_at_m` | how sideways the car got (degrees between where it points and where it goes) and where (when recorded) |
+| `wheels_out_m` | metres with a wheel off the track (when recorded) |
 | `delta_by_50m` | time behind best (positive = slower) at every 50 m and at the section end (`now` and `last` only) |
 | `aids` | driving aids, when recorded: `tc_working_m`, `tc_working_pct`, `tc_first_m` (and the same for `abs`, `esc`), `levels` at the section start (`tc`, `tc_cut`, `abs`, `esc`, `engine_map`), `level_changes` (`at_m`, `setting`, `to`) |
 
 Per section, measured from the recorded track outline (`corner`, next to the three lines): `type` (straight, fast / medium / slow corner, chicane), `turn_deg` (how much the road turns), `tightest_at_m` and `radius_m` (the geometric apex). `next_section` says what follows (a straight after a slow corner makes the exit the priority) and `lap_m` where the section lies in the lap, so the AI can place the corner on the real circuit and use what it knows about it.
+
+Every request also carries `car_limits_g` when the run has the car's motion: its peak lateral, braking, accelerating and combined g in this run (held for 5 samples, so a kerb strike or a crash does not count; the saved best lap counts too). The grip column is measured against it, so the same facts work for every car, track and game without fixed values (owner, 18 November 2026). What the games offer and why these values were chosen: [COACHING.md](COACHING.md).
 
 Whole-track mode adds a `sections` table (per section: type, best / last / now time and the deltas) and the lap times; the full facts are sent for the 4 sections where now loses the most against best.
 
@@ -111,8 +115,16 @@ Reading DATA (metres count from the section start; a larger value is later):
 - corner: the section's shape from the recorded track. type (straight, fast / medium / slow corner,
   chicane), turn_deg, tightest_at_m and radius_m (the geometric apex). next_section: what follows.
   lap_m: where the section lies in the lap, metres from the start / finish line.
-- trace: every 10 m [metres, km/h, throttle %, brake %, steering -100..100, off]. off (LAST and NOW,
-  corners only) is the distance from the BEST line: positive = inside of the corner, negative = outside.
+- trace: every 10 m [metres, km/h, throttle %, brake %, steering -100..100, off, grip %, balance,
+  front slip %, rear slip %]. off (LAST and NOW, corners only, else null) is the distance from the BEST
+  line: positive = inside of the corner, negative = outside. The last four exist where the game sends the
+  car's motion (null where one is missing): grip = how much of the car's grip is in use, the combined
+  braking / cornering / accelerating force as % of the most this car reached in this run (car_limits_g);
+  balance = front minus rear tyre slip angle in degrees, more than 0 = the front slides more (understeer),
+  less than 0 = the rear slides more (oversteer); front / rear slip = the slip ratio of the axle's most
+  slipping wheel, negative = slower than the car (braking, -100 = locked), positive = wheelspin.
+- car_limits_g: the car's peak lateral, braking, accelerating and combined g in this run. body_slip_max_deg
+  and body_slip_at_m: how sideways the car got and where. wheels_out_m: metres with a wheel off the track.
 - lift_m, brake_on_m, brake_peak_pct, brake_off_m: where the throttle lifts, the brake comes on, how
   hard, where it is released. coast_m: total metres with neither pedal (a distance, not a place).
 - min_kmh, min_at_m, gear_at_min, rpm_at_min: the slowest point. full_throttle_m: where the throttle is
@@ -136,6 +148,12 @@ The fundamentals, each with the numbers that show it:
    shifts.
 7. Driving aids, only when the data shows it: if NOW differs from BEST in a level or in how much an aid
    worked, and that is where the time goes, say whether a higher or lower setting may help.
+8. Grip and balance: the tyres' grip is one budget for braking, cornering and accelerating. A fast driver
+   keeps grip high and steady from the braking point to the exit and hands it over smoothly (brake easing
+   off as the steering comes in, throttle rising as the steering opens). Where grip drops in a corner while
+   speed could be higher, time is left; a large balance either way, a growing body slip, a wheel far beyond
+   the slip where this car's ABS / TC start, or wheels off show the limit was passed. Judge by the car's own
+   numbers, not by fixed values: cars, tracks and games differ.
 
 Rules:
 - Every number in a tip comes from DATA; never invent one. The time at stake is measured (delta_by_50m,
@@ -155,7 +173,7 @@ Answer with JSON only, no markdown, exactly this shape, tips ordered by gain_s, 
 
 title: at most 4 words, an instruction in capitals, the action only (the place is shown next to it); it
 must say the same as the text, and it starts with the category: BRAKING, RELEASE, APEX, THROTTLE, LINE,
-GEAR, AIDS or TIME (a loss against BEST without a fundamental). text: at most 35 words, metres, km/h and
+GEAR, AIDS, GRIP, BALANCE or TIME (a loss against BEST without a fundamental). text: at most 35 words, metres, km/h and
 seconds, addressed to the driver, with the numbers from DATA.
 ```
 

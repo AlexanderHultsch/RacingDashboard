@@ -4,8 +4,10 @@ The bridge feeds it every telemetry frame. While the game delivers live data wit
 samples at [analysis] hz (30), cuts the track into sections of [analysis] section_m (250 m) along the
 track (lap position x track length, not the driven distance) and keeps per lap:
 
-- the samples (time, lap position, x / y, speed, throttle, brake, steering, gear, and the driving aids:
-  TC / ABS / stability working, and the set levels of TC, TC cut, ABS, stability and engine map), forward only;
+- the samples (time, lap position, x / y, speed, throttle, brake, steering, gear, the driving aids: TC / ABS /
+  stability working and the set levels of TC, TC cut, ABS, stability and engine map, rpm, and the car's motion:
+  lateral / longitudinal g, yaw rate, body slip, slip angle and slip ratio per wheel, wheels off the track),
+  forward only;
 - per section the attempts. An attempt starts when the car drives into the section from the section
   before it and ends when it drives into the next one. Entering N-1 and then N again (practice: turned
   around) starts a new attempt for N; a spin that rolls back over a border replaces nothing.
@@ -38,15 +40,72 @@ OUTLINE_STEP_M = 5.0
 LINE_STEP = 2                # every 2nd sample for the full-lap race lines on the map
 AMBIENT = ("air_c", "road_c", "tyre_compound", "time_of_day", "fuel_l")
 
-# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line, tc_on, abs_on, esc_on, levels, rpm]
+# sample row: [now, p, x, y, v, thr, brk, str, g, sec, att, line, tc_on, abs_on, esc_on, levels, rpm,
+#              g_lat, g_long, yaw, body_slip, slip_angle, slip_ratio, wheels_out]
 # line = 1: part of the lap's line; *_on: the aid works right now (None = the game does not say);
-# levels: [tc, tc_cut, abs, esc, engine_map] as set (None = not on this car / not reported)
-NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE, TC_ON, ABS_ON, ESC_ON, LV, RPM = range(17)
+# levels: [tc, tc_cut, abs, esc, engine_map] as set (None = not on this car / not reported);
+# slip_angle, slip_ratio: per wheel [FL, FR, RL, RR] or None; the motion values are None where the game sends none
+(NOW, P, X, Y, V, THR, BRK, STR, G, SEC, ATT, LINE, TC_ON, ABS_ON, ESC_ON, LV, RPM,
+ GLAT, GLONG, YAW, BETA, SA, SR, OUT) = range(24)
 LEVELS = ("tc_level", "tc_cut_level", "abs_level", "esc_level", "engine_map")
+# motion values in the sample lines: the frame's field, the key in the file, decimals
+MOTION = (("g_lat", "ga", 3), ("g_long", "gl", 3), ("yaw_rate", "yaw", 1), ("body_slip", "bs", 2))
+PEAK_SAMPLES = 5             # a grip peak counts only when held this many samples (~0.17 s): no kerb or crash spikes
 
 
 def _flag(value):
     return None if value is None else (1 if value else 0)
+
+
+def _num(value, digits: int):
+    return None if not isinstance(value, (int, float)) or isinstance(value, bool) or value != value else round(value, digits)
+
+
+def _wheels(value, digits: int):
+    """A per-wheel list of four numbers, or None."""
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return None
+    out = [_num(v, digits) for v in value]
+    return None if all(v is None for v in out) else out
+
+
+def axles(sa, sr) -> list:
+    """[front slip angle, rear slip angle, front slip ratio, rear slip ratio] from the per-wheel values: the angle
+    as the mean size of the axle's two wheels (degrees), the ratio as the axle's wheel that slips most (signed:
+    negative = slower than the car, -1 locked; positive = wheelspin). None where not recorded."""
+    out = []
+    for values, size in ((sa, True), (sr, False)):
+        for pair in ((0, 1), (2, 3)):
+            got = [values[i] for i in pair if values and values[i] is not None]
+            if not got:
+                out.append(None)
+            elif size:
+                out.append(round(sum(abs(v) for v in got) / len(got), 2))
+            else:
+                out.append(max(got, key=abs))
+    return [out[0], out[1], out[2], out[3]]
+
+
+class Peaks:
+    """The car's grip as it showed it in this run: the highest lateral, braking, accelerating and combined g held
+    for PEAK_SAMPLES samples in a row (a kerb strike or a crash is shorter). The AI trainer measures grip use
+    against these, so the same facts work for every car and game."""
+
+    def __init__(self):
+        self.best = {"lat_g": 0.0, "brake_g": 0.0, "accel_g": 0.0, "combined_g": 0.0}
+        self.recent = []
+
+    def add(self, g_lat, g_long) -> None:
+        if g_lat is None or g_long is None:
+            self.recent = []
+            return
+        self.recent = (self.recent + [(abs(g_lat), max(0.0, -g_long), max(0.0, g_long), math.hypot(g_lat, g_long))])[-PEAK_SAMPLES:]
+        if len(self.recent) == PEAK_SAMPLES:
+            for k, name in enumerate(self.best):
+                self.best[name] = max(self.best[name], min(r[k] for r in self.recent))
+
+    def public(self) -> dict | None:
+        return {k: round(v, 2) for k, v in self.best.items()} if self.best["combined_g"] > 0 else None
 
 
 def slug(text) -> str:
@@ -147,6 +206,7 @@ class Recorder:
         self.lap_no, self.laps_written, self.run_best, self.paused = 0, 0, None, False
         self.game_last, self.waiting = None, None      # the game's last_ms now; (lap, deadline) waiting for it
         self.held = 0.0                                # time the clock stood still (pauses): clock = now - held
+        self.peaks = Peaks()                           # the car's grip in this run (and its saved best lap)
         self.version += 1
 
     def _start_run(self, key: tuple, frame: dict) -> None:
@@ -242,7 +302,11 @@ class Recorder:
                float(frame.get("gas") or 0.0), float(frame.get("brake") or 0.0), float(frame.get("steer") or 0.0),
                int(frame.get("gear") or 0), sec, 0, 0,
                _flag(frame.get("tc_active")), _flag(frame.get("abs_active")), _flag(frame.get("esc_active")),
-               [frame.get(name) for name in LEVELS], int(frame.get("rpm") or 0)]
+               [frame.get(name) for name in LEVELS], int(frame.get("rpm") or 0),
+               *[_num(frame.get(name), digits) for name, _, digits in MOTION],
+               _wheels(frame.get("slip_angle"), 2), _wheels(frame.get("wheel_slip"), 3),
+               frame.get("wheels_out") if isinstance(frame.get("wheels_out"), int) else None]
+        self.peaks.add(row[GLAT], row[GLONG])
         last = self.last
         self.paused = False
         self.last = row
@@ -422,6 +486,15 @@ class Recorder:
             line["a"] = list(aids)                         # TC, ABS, stability working: 1 / 0
         if any(v is not None for v in row[LV]):
             line["lv"] = list(row[LV])                     # set levels: TC, TC cut, ABS, stability, engine map
+        for (_, key, _), value in zip(MOTION, row[GLAT:BETA + 1]):
+            if value is not None:
+                line[key] = value                          # g lateral / longitudinal, yaw rate, body slip
+        if row[SA] is not None:
+            line["sa"] = row[SA]                           # slip angle per wheel, degrees
+        if row[SR] is not None:
+            line["sr"] = row[SR]                           # slip ratio per wheel
+        if row[OUT] is not None:
+            line["out"] = row[OUT]                         # wheels off the track
         return line
 
     @staticmethod
@@ -488,6 +561,9 @@ class Recorder:
     def _load_baselines(self) -> None:
         folder = self._baseline_dir()
         self.base = {"lap": self._read_baseline(folder / "lap.jsonl"), "sections": {}}
+        for s in (self.base["lap"] or {}).get("samples", []):        # the saved best lap shows the car's grip too
+            self.peaks.add(s.get("ga"), s.get("gl"))
+        self.peaks.recent = []
         for n in range(self.sections):
             entry = self._read_baseline(folder / "sections" / f"section-{n + 1:02d}.jsonl")
             if entry:
@@ -776,6 +852,7 @@ class Recorder:
                           "last": self._xy(blue.line()) if blue else []},
                 "red_lap": red.no if red else None, "blue_lap": blue.no if blue else None,
                 "base_lap": base["time"] if base else None,
+                "limits": self.peaks.public() if self.key else None,
                 "offers": self._offers(), "undo": self.undo_stack[-1]["label"] if self.undo_stack else None,
                 "ended": self.ended,
             }
@@ -804,8 +881,10 @@ class Recorder:
 
     def section(self, n: int, laps=None) -> dict:
         """One section's three lines: best (baseline), last, now. Rows: [d, t, v, thr, brk, str, g, x, y,
-        tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map, rpm], d = metres from the
-        section start, t = seconds from the section start; aids and rpm are None where they were not recorded."""
+        tc_on, abs_on, esc_on, tc_level, tc_cut, abs_level, esc_level, engine_map, rpm, g_lat, g_long, yaw,
+        body_slip, slip_angle_front, slip_angle_rear, slip_ratio_front, slip_ratio_rear, wheels_out] (axles()),
+        d = metres from the section start, t = seconds from the section start; aids, rpm and the motion values
+        are None where they were not recorded."""
         with self.lock:
             if not self.key or not 0 <= n < self.sections:
                 return {"n": n, "best": [], "last": [], "now": []}
@@ -817,11 +896,13 @@ class Recorder:
                     return []
                 return [[round(r[P] * self.length - d0, 2), round(r[NOW] - attempt.t_in, 3), round(r[V], 1),
                          round(r[THR], 3), round(r[BRK], 3), round(r[STR], 3), r[G], r[X], r[Y],
-                         r[TC_ON], r[ABS_ON], r[ESC_ON], *r[LV], r[RPM]] for r in attempt.samples]
+                         r[TC_ON], r[ABS_ON], r[ESC_ON], *r[LV], r[RPM], *r[GLAT:BETA + 1], *axles(r[SA], r[SR]), r[OUT]]
+                        for r in attempt.samples]
 
             base = self.base["sections"].get(n)
             best = [[round(s["p"] * self.length - d0, 2), s["t"], s["v"], s["thr"], s["brk"], s["str"], s["g"],
-                     s["x"], s["y"], *(s.get("a") or [None] * 3), *(s.get("lv") or [None] * 5), s.get("rpm")]
+                     s["x"], s["y"], *(s.get("a") or [None] * 3), *(s.get("lv") or [None] * 5), s.get("rpm"),
+                     *[s.get(key) for _, key, _ in MOTION], *axles(s.get("sa"), s.get("sr")), s.get("out")]
                     for s in base["samples"]] if base else []
             now_attempt = red.latest(n) if red else None
             last_attempt = blue.done(n) if blue else None

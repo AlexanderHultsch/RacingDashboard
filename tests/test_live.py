@@ -52,6 +52,19 @@ class Live(unittest.TestCase):
         self.assertNotIn("!!", text)
         self.assertIn("!! the slip is mostly POSITIVE under braking", check(frames(0.13)))
 
+    def test_motion_signs(self):
+        rows = frames(-0.13)
+        for i, r in enumerate(rows):
+            r["steer"] = 0.4 if i % 2 else -0.4
+            r.update(g_lat=r["steer"] * 2.5, g_long=-1.1 if r["brake"] else 0.3, yaw_rate=-r["steer"] * 40,
+                     slip_angle=[3.1, 2.9, 2.5, 2.4], wheels_out=1 if i == 3 else 0)
+        text = check(rows)
+        self.assertIn("g_long under braking: sign OK", text)
+        self.assertIn("g_lat against steering: sign OK", text)
+        self.assertIn("!! yaw_rate against steering: the sign is the other way round", text)
+        self.assertIn("slip angle while turning: median 2.90 deg", text)
+        self.assertIn("wheels off: up to 1, in 1 of 40 frames", text)
+
 
 if __name__ == "__main__":
     unittest.main()

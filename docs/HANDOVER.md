@@ -1,8 +1,8 @@
 # Handover – local session on the Windows PC
 
-For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written at the end of the cloud cleanup session after the local session of 9 November 2026. Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
-**The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then work on the open items with the owner.
+**The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then check the new motion values (step 1b), then work on the open items with the owner.
 
 ## Start
 
@@ -13,9 +13,19 @@ python core\server.py --check
 python core\server.py
 ```
 
-All 85 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
+All 88 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
 
 `tools\ace_probe.py` is gone (see below): use `tools\live.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** (that broke the `°` in `rd.js` once; `tests/test_encoding.py` catches it).
+
+## What the cloud session of 18 November added: the car's motion for the AI coach
+
+The owner wants a coach that works on any track and car, so **no fixed phases, scenarios or thresholds in the code** (owner): the bridge records more and sends clean measurements, the AI decides, and the prompt is fine-tuned with real answers. What each game offers, what was chosen and what was left out: [COACHING.md](COACHING.md).
+
+- New fields `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `slip_angle` (per wheel), `wheels_out`; ACE and ACR from the Kunos physics page (`kunos.motion`), iRacing from `LatAccel` / `LongAccel` / `YawRate` / `VelocityX` / `VelocityY` / `PlayerTrackSurface`, DR2 g forces only; the demo car simulates them.
+- The recorder writes them with every sample (`ga`, `gl`, `yaw`, `bs`, `sa`, `sr`, `out`; `sr` is the existing `wheel_slip`), adds 9 columns to the section rows and keeps the car's grip peaks per run (`limits` in `/api/analysis`).
+- The trainer's trace gets grip % (combined g against the car's own peak), balance (front minus rear slip angle), front and rear slip %; the facts get the largest body slip and the metres with wheels off; the prompt explains them and has a grip-and-balance fundamental and the categories GRIP, BALANCE.
+- `tools/live.py motion` watches them; the check after `--record` tests their signs against braking, throttle and steering and the slip angle unit.
+- **Nothing of this is checked in a game yet**: signs and units are the usual conventions of each game's documentation.
 
 ## What the cloud cleanup session changed (`46c453a`)
 
@@ -58,7 +68,13 @@ One question per recording ("three hard stops with ABS off"). To find an unknown
 5. **ANALYSIS**: drive two laps; the lap time appears and matches the game's; `python tools\analysis_check.py --last 1` has no "!!". The AI TRAINER button answers.
 6. `python tools\live.py --record 60` during a lap: the check prints without "!!" (it lists every field: none of the eight removed ones should be missed by anything).
 
-If something is off, compare with the commit before the cleanup (`git diff 06b1135 46c453a -- <file>`) and fix forward.
+### 1b. The new motion values with ACE (right after step 1)
+
+1. `python tools\live.py motion` while driving: `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `slip_angle`, `wheels_out` must move with the car.
+2. `python tools\live.py --record 90`: hard stops, full throttle out of slow corners, corners both left and right, two wheels over a kerb. The MOTION part of the check must say "sign OK" for each line and a slip angle of a few degrees. A flipped sign: change it in `kunos.motion` (`core/kunos.py`, shared with ACR) and the expected values in `tests/test_ace.py`; slip angles around 0.05: set `SLIP_ANGLE_RAD = False`. The check relies on the steering sign (+ = right), which is itself not confirmed: if every sign looks flipped, check the steering first.
+3. Ask the AI TRAINER on a lap recorded after `git pull` and read the facts sent (`data\trainer.jsonl`, field `data`): the trace has 10 columns, `car_limits_g` is there.
+
+If something is off after the cleanup, compare with the commit before it (`git diff 06b1135 46c453a -- <file>`) and fix forward.
 
 ### 2. The open items with ACE
 
@@ -81,6 +97,8 @@ For each: GAME → the game, then `python tools\live.py` (do the values follow t
 
 | Commit | What |
 | --- | --- |
+| this one | the car's motion for the AI coach (above) |
+| `138abef` | `docs/COACHING.md`, first as a proposal with phases and scenarios in code; replaced by the owner's decision above |
 | `46c453a` | the cloud cleanup (above) |
 | `06b1135` | Encoding test fixed (it matched its own docstring once tracked), the handover |
 | `89fdf10` | **Broken characters**: a PowerShell edit had put a stray A-circumflex before every `°` in `ui/js/rd.js` (tyre tiles showed it after the temperature); restored, byte-order marks removed from seven files, new `tests/test_encoding.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** |
@@ -112,12 +130,13 @@ For each: GAME → the game, then `python tools\live.py` (do the values follow t
 ## Open, in the owner's order of interest
 
 1. The cleanup check in ACE (test plan 1).
-2. A new DASH card: ask the owner what it should show.
-3. MAP on a new track, DAMAGE after a crash, GRIP feel and a recording with ABS / TC on, AI trainer quality (test plan 2).
-4. First drives in ACR, iRacing, DR2 (test plan 3).
-5. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
-6. A LICENSE file for the public repository (the owner's decision; MIT suggested).
-7. Ideas: lap picker after the session, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, MAP turned 90° in portrait for wide tracks (offered, not asked for), more games ([ASSISTS.md](ASSISTS.md)).
+2. The motion values in ACE (test plan 1b), then fine-tuning the AI coach with real answers ([COACHING.md](COACHING.md) section 7).
+3. A new DASH card: ask the owner what it should show.
+4. MAP on a new track, DAMAGE after a crash, GRIP feel and a recording with ABS / TC on, AI trainer quality (test plan 2).
+5. First drives in ACR, iRacing, DR2 (test plan 3).
+6. ChatGPT / Gemini / Ollama in the trainer: never called for real, **not planned to be confirmed** (the owner uses Claude only). Leave the code.
+7. A LICENSE file for the public repository (the owner's decision; MIT suggested).
+8. Ideas: lap picker after the session, two-page dash box, names for light / wiper stages, flags, a clearer "no API credits" message, MAP turned 90° in portrait for wide tracks (offered, not asked for), more games ([ASSISTS.md](ASSISTS.md)).
 
 ## Mockups on the PC
 
@@ -159,6 +178,7 @@ Headless rendering that worked (Edge on Windows, the same idea with Chromium): p
 - Settings button top right on every page; home page `/Racing_Dashboard` (flight sim dashboards share the address); on a tablet in landscape every page starts 26 px lower.
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE, no key on Comma.
 - ANALYSIS ([ANALYSIS.md](ANALYSIS.md)) and AI TRAINER ([TRAINER.md](TRAINER.md)) as described there; trainer only on a tap, FAST / BEST (Claude Haiku 5.5 medium / Opus 5.5 high), up to 9 tips, English.
+- AI COACH ([COACHING.md](COACHING.md), 18 November 2026): it must work on many tracks and cars, so **no fixed phases, scenarios or thresholds in the code**; the bridge records the car's motion (especially grip and slip) and sends the relevant measurements relative to the car's own limits, without overwhelming the AI; the analysis and feedback are fine-tuned afterwards with real answers.
 
 ## Working with the owner
 

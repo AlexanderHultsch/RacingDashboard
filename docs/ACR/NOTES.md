@@ -29,6 +29,7 @@ ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, b
 | `pos_x`, `pos_y` | graphics `carCoordinates[0]` x and z | |
 | `steer` | physics `steerAngle` | −1 left … 1 right |
 | `wheel_slip` | physics `slipRatio[4]` | GRIP page; ACR has no lock flag (a locked wheel shows as −1); **to check** whether ACR fills it |
+| `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `slip_angle`, `wheels_out` | the Kunos physics page as in ACE (`kunos.motion`) | analysis and AI trainer; **to check** whether ACR fills them, their signs and the slip angle unit |
 | `session_id` | `acr-<stage length>` | a new stage starts a new analysis run |
 | `air_c`, `road_c` | physics `airTemp`, `roadTemp` | Kelvin → °C |
 
@@ -39,6 +40,7 @@ ACR fills only part of the pages: physics (pedals, gear, rpm, speed, steering, b
 - [ ] `tc_active` / `abs_active` and the TC / ABS levels on a car that has them.
 - [ ] The pause detection (blank physics) and the map orientation.
 - [ ] GRIP: `slipRatio` filled, its sign (braking = negative).
+- [ ] The motion values: filled, signs, slip angle unit (`python tools/live.py --record 90`).
 
 ## Controlling: keypresses
 

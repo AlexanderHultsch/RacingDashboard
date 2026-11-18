@@ -148,6 +148,22 @@ class Connector(telemetry.Connector):
         self.slip = [v + (t - v) * min(1.0, dt * 8) for v, t in zip(getattr(self, "slip", target), target)]
         return {"wheel_slip": [round(v, 3) for v in self.slip], "wheel_lock": [v <= -0.95 for v in self.slip]}
 
+    def motion(self, v0: float, dt: float) -> dict:
+        """Car motion as a game reports it: lateral g from speed and the track's curvature, longitudinal g from
+        the change of speed, the yaw rate, slip angles that grow with the lateral g (the front a little more:
+        a car that understeers mildly), a small body slip and a wheel off where the line runs wide."""
+        i = track_index(self.pos)
+        k = TRACK["curv"][i]
+        ms = self.speed / 3.6
+        g_lat = -ms * ms * k / 9.81
+        front = abs(g_lat) * 2.4 + random.uniform(0, 0.3)
+        rear = abs(g_lat) * 2.0 + random.uniform(0, 0.3)
+        wide = abs(-k / KMAX * 5.0 + 1.2 * math.sin(2 * math.pi * (3 * self.pos + self.line_phase))) > 5.8
+        return {"g_lat": round(g_lat, 3), "g_long": round((self.speed - v0) / 3.6 / max(dt, 1e-3) / 9.81, 3),
+                "yaw_rate": round(-math.degrees(ms * k), 1), "body_slip": round((rear - front) * 0.3 * (1 if g_lat > 0 else -1), 2),
+                "slip_angle": [round(front, 2), round(front * 0.95, 2), round(rear, 2), round(rear * 0.95, 2)],
+                "wheels_out": 1 if wide else 0}
+
     def handle(self, action: str, state: str) -> bool:
         s = self.state
         if state == "up":
@@ -198,6 +214,7 @@ class Connector(telemetry.Connector):
         dt = min(0.1, now - self.last)
         self.last = now
         s = self.state
+        v0 = self.speed
         running = s["engine_running"]
         drive = running and self.gear > 0 and now >= self.shift_until
         want = target_speed(self.pos) * form_at(self.form, self.pos)
@@ -263,6 +280,7 @@ class Connector(telemetry.Connector):
             # a car with some damage, so the damage page shows something
             "damage_body": [0.35, 0.8, 0.0, 0.15, 0.25], "damage_suspension": [0.2, 0.0, 0.6, 0.0],
             **self.grip(gas, brake, dt),
+            **self.motion(v0, dt),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],

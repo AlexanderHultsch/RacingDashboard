@@ -28,6 +28,7 @@ The connector takes the buffer with the highest `tickCount`, copies it, and acce
 | `speed_kmh`, `gas`, `brake` | `Speed` (m/s), `Throttle`, `Brake` | |
 | `tc_level`, `tc_cut_level`, `abs_level` | `dcTractionControl`, `dcTractionControl2`, `dcABS` | only on cars that have them; ranges per car (not reported: no level dots) |
 | `abs_active` | `BrakeABSactive` | iRacing reports no "TC is cutting now" flag |
+| `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `wheels_out` | `LatAccel`, `LongAccel` (m/s² → g), `YawRate` (rad/s → °/s), `VelocityX` / `VelocityY` (body slip), `PlayerTrackSurface` (off track = 4 wheels out) | analysis and AI trainer; signs follow the SDK (y to the left), **to check** with `python tools/live.py --record 90`; no slip angle per wheel |
 | `wheel_slip` | – | iRacing's live data has no slip or speed per wheel: the GRIP page shows only the ABS / TC settings and says "IRACING SENDS NO WHEEL SLIP" |
 | `brake_bias` | `dcBrakeBias` | percent on most cars (54.5 = 54.5 % front); values outside 20–90 % are shown as not reported. **To check per car** |
 | `engine_map` | `dcThrottleShape`, else `dcFuelMixture` | iRacing has no `dcEngineMap`; which knob a car's MAP is differs per car. **To check** |
@@ -49,6 +50,7 @@ The connector takes the buffer with the highest `tickCount`, copies it, and acce
 - [ ] The map on the analysis page is the track, not mirrored (`VelocityY` sign) and the steering sign.
 - [ ] `lap_valid`: is "four wheels off" the right rule for the owner's practice sessions?
 - [ ] `session_id` stays the same while driving and changes with a new session.
+- [ ] The motion values: signs of `g_lat`, `g_long`, `yaw_rate`, `body_slip` (`python tools/live.py --record 90`).
 
 ## Controlling: keypresses
 

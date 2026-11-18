@@ -66,6 +66,25 @@ class Facts(unittest.TestCase):
         self.assertIn("250", trainer.facts(short, None, best)["delta_by_50m"])
         self.assertIsNone(trainer.facts([], None))
 
+    def test_motion_columns(self):
+        # rows as recorder.section sends them: 18 base columns, then g_lat, g_long, yaw, body slip,
+        # slip angle front / rear, slip ratio front / rear, wheels out
+        plain = rows()
+        moving = []
+        for r in plain:
+            braking = r[4] > 0
+            motion = [0.6, -1.2, 5.0, 1.5 if braking else 0.2, 5.0 if braking else 2.0, 3.0 if braking else 2.0,
+                      -0.12 if braking else 0.0, 0.0 if braking else 0.03, 1 if r[0] == 120 else 0]
+            moving.append(r + [None, None, None, None, None, None, None, None, None, None, None] + motion)
+        f = trainer.facts(moving, moving[-1][1], grip_g=1.5)
+        point = f["trace"][12]                                       # 120 m, braking
+        self.assertEqual(len(point), 10)
+        self.assertIsNone(point[5])                                  # no best line: no offset, but the place stays
+        self.assertEqual(point[6:], [89, 2.0, -12, 0])               # grip 1.34 g of 1.5; front slides more; front -12 %
+        self.assertEqual((f["body_slip_max_deg"], f["body_slip_at_m"], f["wheels_out_m"]), (1.5, 100, 5))
+        self.assertEqual(len(trainer.facts(plain, None)["trace"][0]), 5)   # a lap recorded without motion: as before
+        self.assertNotIn("body_slip_max_deg", trainer.facts(plain, None))
+
 
 def outline(parts, step=5.0):
     """A track outline [x, y, p] from straight and arc parts: ("s", metres) or ("a", radius, degrees, left)."""

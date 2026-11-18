@@ -258,15 +258,34 @@ class RecorderTest(unittest.TestCase):
         car.drive(300, ms=48)                          # into section 2 of the next lap
         data = self.rec.section(1)
         self.assertTrue(data["best"] and data["last"] and data["now"])
-        self.assertEqual(len(data["best"][0]), 18)                # 9 values + 3 aids working + 5 levels + rpm
+        self.assertEqual(len(data["best"][0]), 27)                # 9 values + 3 aids + 5 levels + rpm + 9 motion
         self.assertEqual(data["best"][0][9:17], [None] * 8)       # this game reports no aids
         self.assertEqual(data["best"][0][17], 0)                 # and the test frames have no rpm
+        self.assertEqual(data["best"][0][18:], [None] * 9)       # nor any motion values
+        self.assertIsNone(self.rec.state()["limits"])
         self.assertEqual(data["to_m"], 500.0)
         live = self.rec.live()
         self.assertEqual(live["strip"]["best"][0] > 0, True)   # slower than the baseline
         state = self.rec.state()
         self.assertEqual(len(state["borders"]), 4)
         self.assertTrue(state["outline"])
+
+    def test_motion_is_recorded(self):
+        motion = {"g_lat": 1.21, "g_long": -0.4, "yaw_rate": 18.5, "body_slip": -1.25, "wheels_out": 1,
+                  "slip_angle": [4.0, -5.0, 3.0, 2.0], "wheel_slip": [-0.08, -0.15, 0.02, 0.01]}
+        car = Car(self.rec, p=0.0)
+        car.drive(300, **motion)
+        car.drive(4, g_lat=3.5, g_long=0.0)                       # a kerb strike: two samples, no peak
+        car.drive(800, **motion)
+        car.drive(300, **motion)
+        lap = sorted(self.rec.run_dir.glob("lap-*.jsonl"))[0]
+        sample = next(s for s in map(json.loads, lap.read_text().splitlines()) if s["type"] == "s")
+        self.assertEqual((sample["ga"], sample["gl"], sample["yaw"], sample["bs"], sample["out"]), (1.21, -0.4, 18.5, -1.25, 1))
+        self.assertEqual((sample["sa"], sample["sr"]), ([4.0, -5.0, 3.0, 2.0], [-0.08, -0.15, 0.02, 0.01]))
+        row = self.rec.section(1)["last"][5]
+        self.assertEqual(row[18:22], [1.21, -0.4, 18.5, -1.25])
+        self.assertEqual(row[22:27], [4.5, 2.5, -0.15, 0.02, 1])    # angles: mean size per axle; ratio: the worst wheel
+        self.assertEqual(self.rec.state()["limits"], {"lat_g": 1.21, "brake_g": 0.4, "accel_g": 0.0, "combined_g": 1.27})
 
     def test_driving_aids_are_recorded(self):
         aids = {"tc_active": False, "abs_active": False, "esc_active": False, "tc_level": 3, "tc_cut_level": 2,

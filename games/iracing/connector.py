@@ -219,6 +219,24 @@ def warnings(bits: int, running: bool) -> dict:
 
 
 AIR_BAR = 1.013          # standard air pressure, bar: ManifoldPress minus this = boost (negative = vacuum)
+G = 9.80665              # m/s2 per g
+MIN_BODY_SLIP_MS = 3.0   # below walking pace the body slip angle means nothing
+
+
+def motion(v) -> dict:
+    """Car motion for the analysis page and the AI trainer: LatAccel / LongAccel (m/s2), YawRate (rad/s) and the
+    body slip from VelocityX (forward) / VelocityY (to the left), all in the car's frame. iRacing has no slip angle
+    or slip ratio per wheel in its live data. Signs follow the iRacing SDK (y to the left, yaw positive to the
+    left), not yet checked in the sim (docs/IRACING/NOTES.md)."""
+    lat, lon, yaw, vx, vy = (v(name) for name in ("LatAccel", "LongAccel", "YawRate", "VelocityX", "VelocityY"))
+    out = {}
+    if lat is not None and lon is not None:
+        out["g_lat"], out["g_long"] = round(-lat / G, 3), round(lon / G, 3)
+    if yaw is not None:
+        out["yaw_rate"] = round(-math.degrees(yaw), 1)
+    if vx is not None and vy is not None:
+        out["body_slip"] = round(-math.degrees(math.atan2(vy, vx)), 2) if vx > MIN_BODY_SLIP_MS else 0.0
+    return out
 
 
 def parse(image: Image, row: bytes) -> dict:
@@ -267,6 +285,9 @@ def parse(image: Image, row: bytes) -> dict:
         "last_ms": int(last * 1000) if last and last > 0 else None,
         # iRacing has no live "lap invalid" flag: four wheels off the track invalidates the lap
         "lap_valid": v("PlayerTrackSurface", 3) != OFF_TRACK,
+        # iRacing only says on or off the track: off counts as four wheels out
+        "wheels_out": 4 if v("PlayerTrackSurface", 3) == OFF_TRACK else 0,
+        **motion(v),
         "lap_progress": None,
         # analysis page
         "lap_pos": None,

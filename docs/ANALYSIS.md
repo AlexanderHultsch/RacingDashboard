@@ -30,7 +30,7 @@ In practice you may turn around and drive a section again. The rule:
 
 ## Recording
 
-- **By time, 30 samples per second** while driving (live session, fresh data). Each sample: time since lap start, lap position, x / y position on the map, speed, throttle, brake, steering, gear, and the driving aids (TC / ABS / stability working, the set levels of TC, TC cut, ABS, stability, engine map). The lap position is stored with every sample so laps line up section by section.
+- **By time, 30 samples per second** while driving (live session, fresh data). Each sample: time since lap start, lap position, x / y position on the map, speed, throttle, brake, steering, gear, rpm, the driving aids (TC / ABS / stability working, the set levels of TC, TC cut, ABS, stability, engine map) and, since 18 November 2026, the car's motion where the game sends it (lateral / longitudinal g, yaw rate, body slip, slip angle and slip ratio per wheel, wheels off the track; [COACHING.md](COACHING.md)). The lap position is stored with every sample so laps line up section by section.
 - Samples are kept in memory and written when the lap ends (no disk writes while driving). About 165 KB per 1:30 lap.
 - **Ambient data once per lap**: air and track temperature, grip, weather, time of day, fuel, tyre compound (what the game reports).
 - **DiRT Rally 2.0**: one stage = one lap; sections along the stage.

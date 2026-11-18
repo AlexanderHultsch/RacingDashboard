@@ -30,7 +30,7 @@ CONFIG = Path("My Games") / "DiRT Rally 2.0" / "hardware_settings" / "hardware_s
 # byte offsets of the fields the dashboard reads (the whole layout: docs/DR2/NOTES.md)
 LAP_TIME, LAP_DISTANCE, POS_X, POS_Z, SPEED = 4, 8, 16, 24, 28
 WHEEL_SPEEDS = (108, 112, 100, 104)    # m/s; the packet's order is rear left, rear right, front left, front right
-THROTTLE, STEER, BRAKE, GEAR, RPM = 116, 120, 124, 132, 148
+THROTTLE, STEER, BRAKE, GEAR, G_LAT, G_LONG, RPM = 116, 120, 124, 132, 136, 140, 148
 TRACK_LENGTH, LAST_LAP = 244, 248
 MAX_RPM, IDLE_RPM, MAX_GEARS = 252, 256, 260
 
@@ -105,6 +105,9 @@ def parse(data: bytes) -> dict:
         "pos_y": round(f32(data, POS_Z) or 0.0, 2),
         "steer": round(max(-1.0, min(1.0, f32(data, STEER) or 0.0)), 3),
         "wheel_slip": wheel_slip(data),
+        # g forces (no sign checked in the game yet: docs/DR2/NOTES.md); DR2 sends no slip angle or yaw rate
+        "g_lat": None if f32(data, G_LAT) is None else round(f32(data, G_LAT), 3),
+        "g_long": None if f32(data, G_LONG) is None else round(f32(data, G_LONG), 3),
         "session_id": f"stage-{round(length)}",
     }
 

@@ -54,6 +54,15 @@ FIELDS = {
     "wheel_slip": None,      # slip ratio of each wheel, same order: 0 = rolling with the car, negative = slower than
                              # the car (braking, -1 = stopped / locked), positive = faster (wheelspin); None = not reported
     "wheel_lock": None,      # same order: True while the game says the wheel is locked; None = the game does not say
+    # car motion, recorded for the analysis page and the AI trainer (no range check, as above; None = not reported)
+    "slip_angle": None,      # slip angle of each wheel in degrees, same order (how far the tyre points away from
+                             # where it rolls; the trainer uses the size, front against rear)
+    "g_lat": None,           # lateral acceleration in g, positive = the car turns right
+    "g_long": None,          # longitudinal acceleration in g, positive = speeding up, negative = braking
+    "yaw_rate": None,        # rotation in degrees per second, positive = turning right
+    "body_slip": None,       # degrees between where the car points and where it travels (sideways), positive =
+                             # it travels to the right of where it points
+    "wheels_out": None,      # wheels off the track right now, 0..4
     # boost page: no range check on purpose (an odd boost value must not stop the other pages with E)
     "boost_bar": None,       # boost above the air pressure in bar, negative = vacuum; None = the game sends no boost
     "boost_min_bar": None,   # lowest value the game sends (iRacing -1: vacuum), None = 0

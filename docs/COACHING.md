@@ -1,18 +1,58 @@
-# AI coach – corner knowledge
+# AI coach – data and corner knowledge
 
-**Proposal, 18 November 2026, waiting for the owner's feedback.** Nothing here is built yet.
+How the AI trainer ([TRAINER.md](TRAINER.md)) gets what it needs to coach on any track, car and game. **Owner's decision (18 November 2026): no fixed phases, scenarios or thresholds in the code.** The bridge records the car's motion and sends clean measurements, each relative to the car's own limits; the AI judges with its racing knowledge. The prompt and the analysis are then fine-tuned with real answers.
 
-Today the AI trainer ([TRAINER.md](TRAINER.md)) judges a lap against seven fundamentals and against the driver's own best lap. The owner wants a coach that knows how a fast corner is driven, so that it can help even when the best lap itself is slow. This file lists everything that makes a driver faster through a corner: the parameters, what good looks like, how each one shows in our data, and the scenarios in which the rules change. **Corner entry comes first** (owner); exit and balance follow.
+Built 18 November 2026: the new values in the games, the recorder and the trainer (sections 1 and 2). Sections 3–6 are the knowledge behind it: a reference for tuning the prompt and for judging the answers.
 
-Data column in the tables:
+## 1. What the games offer and what is recorded
 
-| Mark | Meaning |
+Every value below was looked at in the four games' data (ACE graphics and physics pages, the Kunos physics page of Assetto Corsa Rally, iRacing's live variables, the DiRT Rally 2.0 UDP packet). Selected are the values that show how the driver uses the car's grip.
+
+### Selected and recorded
+
+| Value (field) | Why it matters | ACE | ACR | iRacing | DR2 | In the lap files |
+| --- | --- | --- | --- | --- | --- | --- |
+| speed, throttle, brake, steering, gear, rpm | the driver's inputs and the result | yes | yes | yes | yes | `v`, `thr`, `brk`, `str`, `g`, `rpm` (before) |
+| position x / y, lap position | the line, the corner shape | yes | yes | dead-reckoned | yes | `x`, `y`, `p` (before) |
+| TC / ABS / stability working, their levels | aids at work | yes | partly | ABS only | – | `a`, `lv` (before) |
+| **lateral and longitudinal g** (`g_lat`, `g_long`) | grip use: braking, cornering and accelerating force | physics `accG` | physics `accG` | `LatAccel`, `LongAccel` | bytes 136, 140 | `ga`, `gl` |
+| **yaw rate** (`yaw_rate`) | how fast the car rotates | physics `localAngularVel` | the same | `YawRate` | – | `yaw` |
+| **body slip** (`body_slip`) | how sideways the car is | physics `localVelocity` | the same | `VelocityX` / `VelocityY` | – | `bs` |
+| **slip angle per wheel** (`slip_angle`) | cornering slip: front against rear = understeer / oversteer | physics `slipAngle` | the same | – | – | `sa` (4 wheels) |
+| **slip ratio per wheel** (`wheel_slip`) | braking and traction slip: lock-ups, wheelspin | physics `slipRatio` | the same | – | from the wheel speeds | `sr` (4 wheels) |
+| **wheels off the track** (`wheels_out`) | the only hint about the track edges | physics `numberOfTyresOut` | the same | `PlayerTrackSurface` (off = 4) | – | `out` |
+
+Laps recorded before 18 November 2026 have none of the new values; a game that does not send one leaves it out. **Signs and units are not yet checked in any game**: `python tools/live.py --record 60` checks the signs of the g forces and the yaw rate against braking, throttle and steering, and the slip angle unit (radians assumed for the Kunos games, `SLIP_ANGLE_RAD` in `core/kunos.py`).
+
+### Looked at and left out
+
+| Value | Why not |
 | --- | --- |
-| **have** | already in the trainer's facts |
-| **derive** | can be computed from what the recorder already stores (distance, time, speed, throttle, brake, steering, gear, x / y, aids, rpm): works for laps already recorded |
-| **record** | needs a new recorded channel (lateral / longitudinal g, yaw rate, slip angles, wheel slip); only laps recorded after the change have it |
+| wheel load, tyre forces (`fx`, `fy`, `mz`) | the g forces show the same for the driver; the forces are not documented or checked in ACE |
+| suspension travel, ride height, camber, tyre contact points | car setup, not driving technique (owner: no setup) |
+| tyre and brake temperatures per sample | they change slowly; the TYRES page shows them; the lap's `ambient` line keeps the conditions |
+| tyre wear | ACE does not send it |
+| wheel angular speed | the slip ratio already says it |
+| steering in degrees (`steer_degrees`) | the steering ratio differs per car; the share of full lock is enough |
+| ACE's tyre lock flag | never set in the game; a locked wheel shows as slip ratio −100 % |
+| kerb / slip / ABS vibrations | force feedback effects, no information beyond the slip values |
+| heading, pitch, roll | the map position covers the heading |
+| fuel, ERS, DRS, electronics, damage, flags, timing | not driving technique, or already on other pages |
 
-## 1. The physics behind it, in five points
+## 2. What the AI gets
+
+Per section and line (details in [TRAINER.md](TRAINER.md#what-is-sent-the-facts)):
+
+- **trace**, every 10 m: metres, km/h, throttle %, brake %, steering, offset from the best line, and from the motion values **grip %** (combined g as % of the car's peak in this run), **balance** (front minus rear slip angle, degrees), **front slip %** and **rear slip %** (the axle's most slipping wheel; negative braking, positive wheelspin).
+- **body_slip_max_deg** and where, **wheels_out_m**.
+- Per request: **car_limits_g**, the car's peak lateral, braking, accelerating and combined g in this run (held for 5 samples, so a kerb strike or a crash does not count; the saved best lap counts too).
+- Everything that was there before: braking point and release, coasting, minimum speed, apex, full throttle, gears, aids, the corner's shape, deltas against the best.
+
+The yaw rate is recorded but not sent: the balance and the body slip say what matters for coaching more directly. Size: about 3,300 characters per section, so a whole-lap request with 4 focus sections stays small.
+
+The prompt has one fundamental for this (the grip budget, smooth hand-over between braking, cornering and accelerating, the balance, judging by the car's own numbers) and two new tip categories, GRIP and BALANCE. Everything else is the AI's own knowledge.
+
+## 3. The physics behind it, in five points
 
 1. **The grip budget (friction circle).** A tyre has one budget of grip shared by braking, cornering and accelerating. A fast driver uses close to all of it all the time and hands it over smoothly: from braking to cornering on entry (trail braking), from cornering to accelerating on exit (throttle as the steering opens). Every moment with less than the full budget in use (coasting, a gap between brake and steering, a hesitant throttle) is lost time. Measure: combined g, √(lateral² + longitudinal²), against the highest the car has shown.
 2. **Load transfer steers the car.** Braking moves weight to the front: more front grip, a lighter rear, the car rotates (and can oversteer). Throttle moves weight to the rear: a lighter front, the car pushes wide (understeer), and a rear-wheel-drive car can spin its wheels. Brake and throttle are steering tools, not only speed tools.
@@ -20,9 +60,9 @@ Data column in the tables:
 4. **Exit speed is worth more than entry speed** before a long straight: every km/h more at the exit is carried down the whole straight. Into a slow corner after a straight, the late braking point is worth more. The **minimum speed** decides what the corner costs.
 5. **The corner type decides the trade-off.** Slow corners are won on braking and exit (a V-shaped speed trace); fast corners on minimum speed (a U-shaped trace). The apex moves with that.
 
-## 2. The phases of a corner
+## 4. What a fast corner looks like, phase by phase
 
-A corner has four phases. Each gets its parameters below.
+A reference for reading answers and tuning the prompt: the AI is not given these as fixed phases or thresholds (owner: it must work on any track and car), but every row can be seen in the data it gets.
 
 ```
    A braking zone       B turn-in / entry      C mid-corner / apex      D exit
@@ -33,84 +73,84 @@ A corner has four phases. Each gets its parameters below.
 
 ### A. Braking zone (entry part 1)
 
-| # | Parameter | Fast looks like | How it shows in the data | Data |
-| --- | --- | --- | --- | --- |
-| A1 | **Braking point** | As late as still lets the car reach the right minimum speed at the right place | `brake_on_m`; against BEST; and against the distance the car really needs: from entry speed to minimum speed at the car's best measured deceleration | have / derive |
-| A2 | **Brake ramp-up** | Full pressure within about 0.1–0.2 s; no slow squeeze at the start | time from brake on to 90 % of its peak | derive |
-| A3 | **Peak deceleration** | Close to the most the car has shown anywhere (the same car, the same session) | dv/dt from speed and time; directly as longitudinal g | derive / record |
-| A4 | **Brake pressure profile** | Aero cars (GT3, formula): highest at high speed, bled off as the speed and downforce fall. Road cars: nearly flat, then the release | brake % over distance: falling or flat | derive |
-| A5 | **Straight-line braking** | Hard braking with the wheels straight; steering only once the pressure comes down | steering while brake > 70 % | derive |
-| A6 | **Lock-ups / ABS** | ABS on: pressure right at the threshold, ABS working briefly. ABS off: no wheel slower than about −12 %, never locked | wheel slip front / rear, ABS working % of the braking distance | record (slip) / have (ABS) |
-| A7 | **Lift to brake** | Straight from full throttle to the brake, no gap | gap between `lift_m` and `brake_on_m`; `coast_m` | have |
-| A8 | **Downshifts** | During braking, one per gear as the revs allow; no rear-wheel lock from engine braking | `shifts` against brake; rear slip spike at a downshift | have / record |
+| # | Parameter | Fast looks like | How it shows in the data |
+| --- | --- | --- | --- |
+| A1 | **Braking point** | As late as still lets the car reach the right minimum speed at the right place | `brake_on_m`; against BEST; and against the distance the car really needs: from entry speed to minimum speed at the car's best measured deceleration |
+| A2 | **Brake ramp-up** | Full pressure within about 0.1–0.2 s; no slow squeeze at the start | time from brake on to 90 % of its peak |
+| A3 | **Peak deceleration** | Close to the most the car has shown anywhere (the same car, the same session) | dv/dt from speed and time; directly as longitudinal g |
+| A4 | **Brake pressure profile** | Aero cars (GT3, formula): highest at high speed, bled off as the speed and downforce fall. Road cars: nearly flat, then the release | brake % over distance: falling or flat |
+| A5 | **Straight-line braking** | Hard braking with the wheels straight; steering only once the pressure comes down | steering while brake > 70 % |
+| A6 | **Lock-ups / ABS** | ABS on: pressure right at the threshold, ABS working briefly. ABS off: no wheel slower than about −12 %, never locked | wheel slip front / rear, ABS working % of the braking distance |
+| A7 | **Lift to brake** | Straight from full throttle to the brake, no gap | gap between `lift_m` and `brake_on_m`; `coast_m` |
+| A8 | **Downshifts** | During braking, one per gear as the revs allow; no rear-wheel lock from engine braking | `shifts` against brake; rear slip spike at a downshift |
 
 ### B. Turn-in and entry (entry part 2)
 
-| # | Parameter | Fast looks like | How it shows in the data | Data |
-| --- | --- | --- | --- | --- |
-| B1 | **Turn-in point** | One clear turn-in, placed for the apex; not early (forces a second steering input) and not late (too much steering at once) | where the steering passes 5 %; against `tightest_at_m` and against BEST | derive |
-| B2 | **Turn-in rate** | One smooth, quick input; as fast as the car takes it. Too fast: the front saturates (understeer) or the rear snaps (oversteer) | steering %/s at turn-in | derive |
-| B3 | **Trail braking** | Brake pressure comes down as the steering goes up: the two add to the grip budget. Longer and deeper in slow corners, short or none in fast ones | metres with brake > 5 % and steering > 10 %; how evenly brake falls as steering rises | derive |
-| B4 | **Brake release point** | Close to the minimum-speed point in slow corners; earlier in fast ones | `brake_off_m` against `min_at_m` | have |
-| B5 | **Release smoothness** | A smooth taper to zero. A sudden release unloads the front and the car pushes wide | brake drop per 10 m in the last part of the release | derive |
-| B6 | **No coasting** | No metres without a pedal, except a deliberate lift in a fast corner | `coast_m` | have |
-| B7 | **Speed trace shape** | Slow corner: V (a short moment at minimum speed). Fast corner: U (the minimum held). A long flat bottom in a slow corner means braked too early or too much | metres within 2 km/h of the minimum speed | derive |
-| B8 | **Entry line** | Outside of the track at turn-in | `off` against BEST (no track edges are known, see section 6) | have |
-| B9 | **Entry speed against what the corner allows** | Overslowing: minimum speed far below what the car showed in similar corners. Overdriving: entry too fast, then understeer and a late apex | minimum speed against the car's grip (C1); entry understeer signs (section 3) | derive |
+| # | Parameter | Fast looks like | How it shows in the data |
+| --- | --- | --- | --- |
+| B1 | **Turn-in point** | One clear turn-in, placed for the apex; not early (forces a second steering input) and not late (too much steering at once) | where the steering passes 5 %; against `tightest_at_m` and against BEST |
+| B2 | **Turn-in rate** | One smooth, quick input; as fast as the car takes it. Too fast: the front saturates (understeer) or the rear snaps (oversteer) | steering %/s at turn-in |
+| B3 | **Trail braking** | Brake pressure comes down as the steering goes up: the two add to the grip budget. Longer and deeper in slow corners, short or none in fast ones | metres with brake > 5 % and steering > 10 %; how evenly brake falls as steering rises |
+| B4 | **Brake release point** | Close to the minimum-speed point in slow corners; earlier in fast ones | `brake_off_m` against `min_at_m` |
+| B5 | **Release smoothness** | A smooth taper to zero. A sudden release unloads the front and the car pushes wide | brake drop per 10 m in the last part of the release |
+| B6 | **No coasting** | No metres without a pedal, except a deliberate lift in a fast corner | `coast_m` |
+| B7 | **Speed trace shape** | Slow corner: V (a short moment at minimum speed). Fast corner: U (the minimum held). A long flat bottom in a slow corner means braked too early or too much | metres within 2 km/h of the minimum speed |
+| B8 | **Entry line** | Outside of the track at turn-in | `off` against BEST (no track edges are known, see section 6) |
+| B9 | **Entry speed against what the corner allows** | Overslowing: minimum speed far below what the car showed in similar corners. Overdriving: entry too fast, then understeer and a late apex | minimum speed against the car's grip (C1); entry understeer signs (section 3) |
 
 ### C. Mid-corner and apex
 
-| # | Parameter | Fast looks like | How it shows in the data | Data |
-| --- | --- | --- | --- | --- |
-| C1 | **Grip use at minimum speed** | Lateral g near the most the car has shown at that speed. Corner speed limit ≈ √(lateral grip × radius) | lateral g = v² / driven radius (from x / y), or measured | derive / record |
-| C2 | **Apex place** | At or after the geometric apex before a straight (exit first), earlier in a fast corner (carry speed) | `min_at_m` against `tightest_at_m` | have |
-| C3 | **Driven radius** | Larger than the corner's own radius: the full track width used | curvature of the driven path against the corner outline | derive |
-| C4 | **Lateral g plateau** | Steady lateral g through the corner, no dip in the middle (a dip means hesitation or a lift) | lateral g over distance | derive / record |
-| C5 | **Steering at the apex** | The least steering the radius needs. More steering for the same radius and speed than the car's normal means understeer (scrubbing speed) | steering per curvature against the car's own low-g value (section 3) | derive |
-| C6 | **Rotation** | The car points at the exit early, so the throttle can come on | yaw rate against speed / radius; steering already opening | record / derive |
-| C7 | **Maintenance throttle** | In a long corner a light, steady throttle settles the car | throttle 10–40 % held in the middle of a long corner | derive |
+| # | Parameter | Fast looks like | How it shows in the data |
+| --- | --- | --- | --- |
+| C1 | **Grip use at minimum speed** | Lateral g near the most the car has shown at that speed. Corner speed limit ≈ √(lateral grip × radius) | lateral g = v² / driven radius (from x / y), or measured |
+| C2 | **Apex place** | At or after the geometric apex before a straight (exit first), earlier in a fast corner (carry speed) | `min_at_m` against `tightest_at_m` |
+| C3 | **Driven radius** | Larger than the corner's own radius: the full track width used | curvature of the driven path against the corner outline |
+| C4 | **Lateral g plateau** | Steady lateral g through the corner, no dip in the middle (a dip means hesitation or a lift) | lateral g over distance |
+| C5 | **Steering at the apex** | The least steering the radius needs. More steering for the same radius and speed than the car's normal means understeer (scrubbing speed) | steering per curvature against the car's own low-g value (section 3) |
+| C6 | **Rotation** | The car points at the exit early, so the throttle can come on | yaw rate against speed / radius; steering already opening |
+| C7 | **Maintenance throttle** | In a long corner a light, steady throttle settles the car | throttle 10–40 % held in the middle of a long corner |
 
 ### D. Exit
 
-| # | Parameter | Fast looks like | How it shows in the data | Data |
-| --- | --- | --- | --- | --- |
-| D1 | **Throttle pick-up** | First throttle at or just before the apex, once the car is rotated | first throttle > 10 % after the brake release, against `min_at_m` | derive |
-| D2 | **Throttle ramp** | Progressive to full, in step with the steering opening: throttle up as steering comes down | time from 10 % to 95 %; throttle % + steering % roughly constant | derive |
-| D3 | **Full throttle point** | As early as the car's traction allows | `full_throttle_m` | have |
-| D4 | **No lift after pick-up** | Once on the throttle, it stays on. A lift means too early, too much, or the car got loose / ran wide | throttle drops > 20 % after the pick-up | derive |
-| D5 | **Steering unwinding** | Steering opens from the apex to the exit. Steering that grows while the throttle grows means power understeer (running wide) | steering trend after the apex against throttle | derive |
-| D6 | **Wheelspin and TC** | A small slip at the traction limit, TC working little | rear wheel slip on exit; `aids` TC working | record / have |
-| D7 | **Track-out** | To the outside of the track at the exit | `off` against BEST | have |
-| D8 | **Exit speed** | Measured where it pays: 100 m after the exit, not only at the section end | speed at the exit and 100 m into the next section | have / derive |
-| D9 | **Upshifts** | At the shift light; earlier (short shift) only when traction-limited | `shifts`, `rpm` | have |
+| # | Parameter | Fast looks like | How it shows in the data |
+| --- | --- | --- | --- |
+| D1 | **Throttle pick-up** | First throttle at or just before the apex, once the car is rotated | first throttle > 10 % after the brake release, against `min_at_m` |
+| D2 | **Throttle ramp** | Progressive to full, in step with the steering opening: throttle up as steering comes down | time from 10 % to 95 %; throttle % + steering % roughly constant |
+| D3 | **Full throttle point** | As early as the car's traction allows | `full_throttle_m` |
+| D4 | **No lift after pick-up** | Once on the throttle, it stays on. A lift means too early, too much, or the car got loose / ran wide | throttle drops > 20 % after the pick-up |
+| D5 | **Steering unwinding** | Steering opens from the apex to the exit. Steering that grows while the throttle grows means power understeer (running wide) | steering trend after the apex against throttle |
+| D6 | **Wheelspin and TC** | A small slip at the traction limit, TC working little | rear wheel slip on exit; `aids` TC working |
+| D7 | **Track-out** | To the outside of the track at the exit | `off` against BEST |
+| D8 | **Exit speed** | Measured where it pays: 100 m after the exit, not only at the section end | speed at the exit and 100 m into the next section |
+| D9 | **Upshifts** | At the shift light; earlier (short shift) only when traction-limited | `shifts`, `rpm` |
 
 ### Across all phases: input quality
 
-| # | Parameter | Fast looks like | How it shows in the data | Data |
-| --- | --- | --- | --- | --- |
-| X1 | **Steering corrections** | One input in, one out. Several small reversals (sawing) mean the car is not settled or the driver is unsure | sign changes of the steering rate inside the corner | derive |
-| X2 | **Counter-steer** | None. Steering against the corner direction is catching oversteer | steering sign opposite to the corner's turn | derive |
-| X3 | **Pedal overlap** | Only on purpose (left-foot braking, rally) | brake and throttle both > 10 % | derive |
-| X4 | **Consistency** | The same braking point and minimum speed lap after lap | spread of `brake_on_m` and `min_kmh` over the laps of a run | derive |
+| # | Parameter | Fast looks like | How it shows in the data |
+| --- | --- | --- | --- |
+| X1 | **Steering corrections** | One input in, one out. Several small reversals (sawing) mean the car is not settled or the driver is unsure | sign changes of the steering rate inside the corner |
+| X2 | **Counter-steer** | None. Steering against the corner direction is catching oversteer | steering sign opposite to the corner's turn |
+| X3 | **Pedal overlap** | Only on purpose (left-foot braking, rally) | brake and throttle both > 10 % |
+| X4 | **Consistency** | The same braking point and minimum speed lap after lap | spread of `brake_on_m` and `min_kmh` over the laps of a run |
 
-## 3. The car's limits: understeer and oversteer
+## 5. The car's limits: understeer and oversteer
 
 **Understeer:** the front tyres slide more than the rear; the car turns less than the steering asks and runs wide. **Oversteer:** the rear slides more than the front; the car turns more than asked and the rear steps out. A small amount of either at the limit is normal and fast; too much costs time.
 
 ### How to see it in the data (best signal first)
 
-| Signal | Understeer | Oversteer | Data |
-| --- | --- | --- | --- |
-| Front against rear slip angle (ACE, ACR: per wheel) | front clearly larger | rear clearly larger | record |
-| Body slip angle (sideways speed against forward speed) | small | large, growing | record (ACE, ACR, iRacing) |
-| Yaw rate against speed / driven radius | car turns less than its path needs | car turns more | record |
-| Steering per curvature against the car's own low-g value | more steering for the same radius: understeer index above 1 | less steering, or steering falling while the radius stays tight | derive |
-| Counter-steer | – | steering against the corner direction | derive |
-| Speed scrub | speed falling without brake while steering is high | – | derive |
-| Running wide | driven radius grows on exit while throttle and steering both rise | – | derive |
-| Throttle lift after pick-up | sometimes (to regain the front) | often (to catch the rear) | derive |
+| Signal | Understeer | Oversteer |
+| --- | --- | --- |
+| Front against rear slip angle (ACE, ACR: per wheel) | front clearly larger | rear clearly larger |
+| Body slip angle (sideways speed against forward speed) | small | large, growing |
+| Yaw rate against speed / driven radius | car turns less than its path needs | car turns more |
+| Steering against the corner's radius and speed | more steering than the car needs elsewhere for the same radius and speed | less steering, or steering falling while the radius stays tight |
+| Counter-steer | – | steering against the corner direction |
+| Speed scrub | speed falling without brake while steering is high | – |
+| Running wide | driven radius grows on exit while throttle and steering both rise | – |
+| Throttle lift after pick-up | sometimes (to regain the front) | often (to catch the rear) |
 
-The steering-per-curvature method needs no new channel: at low lateral g every car needs a fixed steering for a given curvature (its neutral steering gain). The bridge can learn that per car and lap from the data, and then measure in each corner how much more (understeer) or less (oversteer) steering the driver needed.
+The AI sees the balance directly (front minus rear slip angle, in the trace) where the game sends slip angles (ACE, Assetto Corsa Rally); elsewhere it reads it from steering, speed and grip in the trace.
 
 ### Six kinds, their cause and the fix
 
@@ -125,13 +165,13 @@ The steering-per-curvature method needs no new channel: at low lateral g every c
 
 In-car settings the coach may suggest (they are on the DASH, not the setup): brake bias, TC, TC cut, ABS, engine map. Car setup stays out (owner's rule).
 
-## 4. Scenarios: where the rules change
+## 6. Where the knowledge changes: corner, car, aids, surface
 
-The bridge tags every section with its scenario so that the coach applies the right rules. Most tags come from data we already have.
+Knowledge for the AI and for tuning the prompt, not tags or rules in the code: the AI recognises the corner from `corner`, `next_section` and the trace, and the car from its name and `car_limits_g`.
 
 ### By corner
 
-| Scenario | How the bridge recognises it | What matters most | Rules that change |
+| Scenario | How it shows in the data | What matters most | What changes |
 | --- | --- | --- | --- |
 | **S1 Slow corner before a straight** (hairpin) | radius < 50 m or minimum < 80 km/h; a long straight follows (`next_section`) | exit: rotation on entry, early full throttle, speed 100 m after the exit | late apex; V-shaped speed trace; deep trail braking; a short time at minimum speed |
 | **S2 Medium corner** | radius 50–120 m | balance between braking and minimum speed | apex near the geometric one; moderate trail braking |
@@ -145,15 +185,15 @@ The bridge tags every section with its scenario so that the coach applies the ri
 
 ### By car
 
-| Scenario | How the bridge recognises it | Coaching focus |
+| Scenario | How it shows in the data | Coaching focus |
 | --- | --- | --- |
-| **High downforce** (GT3, formula) | lateral g rises with speed (more grip in fast corners than slow ones) | brake very hard at high speed and bleed off; carry speed in fast corners; slow corners lose aero grip: patience on throttle, mid-corner understeer |
-| **Low downforce road car** (GR86, Camaro) | lateral g about the same at all speeds | weight transfer: trail braking for rotation; longer braking distances; smooth hands |
+| **High downforce** (GT3, formula) | grip in fast corners well above slow ones (`car_limits_g` reached at high speed) | brake very hard at high speed and bleed off; carry speed in fast corners; slow corners lose aero grip: patience on throttle, mid-corner understeer |
+| **Low downforce road car** (GR86, Camaro) | about the same grip at all speeds | weight transfer: trail braking for rotation; longer braking distances; smooth hands |
 | **Rear-wheel drive, high power, little TC** | rear slip and TC on exit | progressive throttle, short-shift if needed, power oversteer |
 | **Front-wheel drive** | the car name (the coach knows the car) | power understeer on exit; lift-off rotation on entry is a tool |
 | **All-wheel drive** (rally) | the car name, the game | throttle earlier, pull the car out of the corner |
 
-The coach also gets the car name; a model that knows the car can add what is commonly known about it.
+The coach gets the car name; a model that knows the car can add what is commonly known about it.
 
 ### By driving aids
 
@@ -167,35 +207,8 @@ The coach also gets the car name; a model that knows the car can add what is com
 
 Loose surfaces follow different rules: a large slip angle is fast on gravel, left-foot braking and weight-transfer techniques (the Scandinavian flick) rotate the car, and the line follows the pace notes. The circuit thresholds above do not apply; the rally scenarios need their own rules (a later step).
 
-## 5. What the bridge would send to the AI
+## 7. Next
 
-Per section, on top of today's facts:
-
-- **Scenario tags**: corner class (S1–S9), car class (downforce, drive), aids.
-- **Phase points**: turn-in, trail-brake length and shape, release smoothness, throttle pick-up, ramp time, throttle drops, steering corrections, counter-steer.
-- **Limits**: the car's best deceleration and lateral g on this lap (the reference for "using the grip"), grip use at minimum speed, the understeer index per phase (entry, mid, exit), wheel slip and slip angles once recorded.
-
-The prompt would get the knowledge of sections 1–4: the phases, the balance table, and the scenario rules, so that the AI judges each corner by its type. New title categories: TURN-IN, TRAIL, BALANCE, INPUTS (next to BRAKING, RELEASE, APEX, THROTTLE, LINE, GEAR, AIDS, TIME).
-
-All thresholds are relative to what the car itself has shown (its best deceleration, its best lateral g, its neutral steering gain), so the rules work for every car and game without a table per car.
-
-## 6. What our data cannot tell
-
-- **Track edges**: no game sends the track width, so "use all the track" is judged against BEST and the corner outline, not against the real edges. An estimate is possible from the spread of all recorded laps.
-- **Kerbs and bumps**: not in the data.
-- **Steering in degrees**: the games send a share of full lock, and the steering ratio differs per car; the understeer index uses the car's own neutral value instead.
-- **iRacing**: no slip per wheel; the map position is dead-reckoned (good enough for curvature). **DiRT Rally 2.0**: no slip angles or yaw rate.
-- **Sample rate**: 30 per second; rates of change (ramp-up, turn-in rate) are smoothed over a few samples.
-
-## 7. Proposed steps
-
-1. **Entry first, from data we already have** (works for laps already recorded): A1–A8, B1–B9 and the entry rows of the balance table: turn-in point and rate, trail braking, release smoothness, peak deceleration, speed trace shape, steering-per-curvature understeer index, counter-steer. Prompt: the entry knowledge and the scenario tags. Test against recorded ACE laps.
-2. **New recorded channels**: lateral and longitudinal g, yaw rate, slip angle front / rear, body slip, wheel slip ratio front / rear (ACE and ACR from the physics page; iRacing `LatAccel`, `LongAccel`, `YawRate`, `VelocityX` / `VelocityY`; DR2 lateral and longitudinal g). Older laps simply lack them, as they lack the aids.
-3. **Mid-corner and exit** (C, D) and the full balance table.
-4. **Car and surface scenarios**, rally rules.
-
-Open questions for the owner:
-
-1. Start with step 1 (entry, no new recording), or record the new channels at the same time?
-2. May the coach suggest in-car settings (brake bias, TC, ABS, engine map) when the data shows the cause there?
-3. How many tips: keep up to 9, or fewer but deeper per corner?
+1. **Check the new values in ACE** (local): `python tools/live.py motion` while driving, then `python tools/live.py --record 90` with hard braking, full throttle out of slow corners and both directions of corner: the check says whether each sign is right and whether the slip angles are in degrees. Then the same in ACR, iRacing, DR2.
+2. **Fine-tune with real answers**: ask the AI TRAINER on laps recorded with the new values, read the facts sent with each answer (`data/trainer.jsonl`, field `data`) and adjust the prompt where the answers miss or misread something.
+3. Later: rally knowledge for loose surfaces; the yaw rate in the facts if the answers need it.

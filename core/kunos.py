@@ -3,6 +3,7 @@ Corsa EVO (Local\\acevo_pmf_physics) and Assetto Corsa Rally (Local\\acpmf_physi
 SPageFilePhysics layout. The first 416 bytes are AC1's; the rest follows ACC (ACE documents it as the same
 page). Used by games/ace and games/acr.
 """
+import math
 from ctypes import Structure, c_float, c_int32
 
 
@@ -49,6 +50,32 @@ def slips(ph) -> list | None:
     if not any(values) or any(v != v for v in values):
         return None
     return [round(max(-1.0, min(3.0, v)), 3) for v in values]
+
+
+SLIP_ANGLE_RAD = True      # slipAngle in radians (as ACC documents it); checked against live values: docs/ACE/NOTES.md
+MIN_BODY_SLIP_MS = 3.0     # below walking pace the body slip angle means nothing
+
+
+def motion(ph) -> dict:
+    """Car motion from the physics page (ACE, Assetto Corsa Rally): g forces, yaw rate, body slip, slip angles,
+    wheels off the track. Axes as in AC / ACC: x left / right, y up, z forward. The signs of g_lat, yaw_rate and
+    body_slip are the usual Kunos ones and not yet checked in the game (docs/ACE/NOTES.md); the trainer works
+    with sizes where a sign is unsure."""
+    gx, _, gz = ph.accG
+    vx, _, vz = ph.localVelocity
+    yaw = ph.localAngularVel[1]
+    angles = [math.degrees(a) if SLIP_ANGLE_RAD else a for a in ph.slipAngle]
+    filled = any(ph.accG) or any(angles)
+    if not filled or any(v != v for v in (gx, gz, yaw, vx, vz, *angles)):
+        return {}
+    return {
+        "g_lat": round(-gx, 3),
+        "g_long": round(gz, 3),
+        "yaw_rate": round(-math.degrees(yaw), 1),
+        "body_slip": round(-math.degrees(math.atan2(vx, vz)), 2) if vz > MIN_BODY_SLIP_MS else 0.0,
+        "slip_angle": [round(a, 2) for a in angles] if any(angles) else None,
+        "wheels_out": max(0, min(4, int(ph.numberOfTyresOut))),
+    }
 
 
 def boost(value: float, peak: float) -> dict:

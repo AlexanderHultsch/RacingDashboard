@@ -5,7 +5,7 @@ for ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0 and the demo. Start the br
 window:
 
   python tools/live.py                         watch the basic values (5 lines a second)
-  python tools/live.py grip                    watch a preset: basic grip boost revs aids tyres car analysis
+  python tools/live.py grip                    watch a preset: basic grip motion boost revs aids tyres car analysis
   python tools/live.py grip --changes          print a line only when a shown value changes
   python tools/live.py --fields rpm,boost_bar  watch any fields
   python tools/live.py --once                  the whole frame once, as JSON
@@ -14,7 +14,8 @@ window:
   python tools/live.py --check last            check the newest recording again (or give a file)
 
 The check prints what each open question needs (docs/HANDOVER.md): the sign of the wheel slip under braking
-and on wheelspin, the GRIP stages per wheel, the slip where ABS / TC start to work, the rpm of the shift signal
+and on wheelspin, the GRIP stages per wheel, the signs of the g forces and the yaw rate against braking,
+throttle and steering and the slip angle unit, the slip where ABS / TC start to work, the rpm of the shift signal
 and the limiter per gear, the boost range, and min / max / values of every field. Problems are marked "!!".
 The recordings stay in logs/ (not in git); paste the check's output into the chat.
 """
@@ -35,6 +36,7 @@ import config  # noqa: E402
 PRESETS = {
     "basic": "status error_text gear rpm rpm_pct speed_kmh gas brake",
     "grip": "speed_kmh gas brake abs_level abs_active tc_level tc_active wheel_slip wheel_lock",
+    "motion": "speed_kmh steer gas brake g_lat g_long yaw_rate body_slip slip_angle wheels_out",
     "boost": "rpm rpm_pct gas boost_bar boost_min_bar boost_max_bar",
     "revs": "gear rpm rpm_max rpm_pct shift_up limiter",
     "aids": "tc_level tc_cut_level tc_active abs_level abs_active esc_level esc_active engine_map brake_bias "
@@ -170,6 +172,7 @@ def check(path: Path) -> None:
     if not live:
         return
     check_grip(live)
+    check_motion(live)
     check_aids(live)
     check_revs(live)
     check_boost(live)
@@ -243,6 +246,45 @@ def onset(frames: list, flag: str, wheels: tuple) -> list:
             out.append(max(abs(f["wheel_slip"][w]) for w in wheels))
         before = on
     return numbers(out)
+
+
+def sign_check(name: str, pairs: list, want: str) -> None:
+    """pairs: (reference, value); the value should have the same sign as the reference."""
+    pairs = [(r, v) for r, v in pairs if isinstance(v, (int, float)) and abs(r) > 0 and abs(v) > 0.05]
+    if len(pairs) < 10:
+        print(f"   {name}: too few samples to check the sign ({want})")
+        return
+    same = sum((r > 0) == (v > 0) for r, v in pairs)
+    if same < len(pairs) * 0.3:
+        print(f"   !! {name}: the sign is the other way round ({want}; {same} of {len(pairs)} agree): flip it in the connector")
+    elif same > len(pairs) * 0.7:
+        print(f"   {name}: sign OK ({want}; {same} of {len(pairs)} agree)")
+    else:
+        print(f"   {name}: no clear sign ({same} of {len(pairs)} agree with {want})")
+
+
+def check_motion(frames: list) -> None:
+    """The car's motion values: are they sent, and do their signs follow the usual convention?"""
+    print("\n-- MOTION (g, yaw rate, body slip, slip angles, wheels off)")
+    if not any(f.get("g_lat") is not None or f.get("slip_angle") is not None for f in frames):
+        print("   no motion values in this game / recording")
+        return
+    moving = [f for f in frames if (f.get("speed_kmh") or 0) >= 40]
+    braking = [f for f in moving if (f.get("brake") or 0) > 0.5]
+    power = [f for f in moving if (f.get("gas") or 0) > 0.9 and (f.get("brake") or 0) < 0.05]
+    turning = [f for f in moving if abs(f.get("steer") or 0) > 0.15]
+    sign_check("g_long under braking", [(-1, f.get("g_long")) for f in braking], "negative while braking")
+    sign_check("g_long on full throttle", [(1, f.get("g_long")) for f in power], "positive while accelerating")
+    sign_check("g_lat against steering", [(f["steer"], f.get("g_lat")) for f in turning], "positive turning right")
+    sign_check("yaw_rate against steering", [(f["steer"], f.get("yaw_rate")) for f in turning], "positive turning right")
+    angles = [abs(a) for f in turning for a in (f.get("slip_angle") or []) if isinstance(a, (int, float))]
+    if angles:
+        typical = sorted(angles)[len(angles) // 2]
+        note = "" if 0.5 <= typical <= 15 else "  !! expected a few degrees: check the unit (SLIP_ANGLE_RAD in core/kunos.py)"
+        print(f"   slip angle while turning: median {typical:.2f} deg, max {max(angles):.1f}{note}")
+    out = [f.get("wheels_out") for f in frames if isinstance(f.get("wheels_out"), int)]
+    if out:
+        print(f"   wheels off: up to {max(out)}, in {sum(1 for v in out if v)} of {len(out)} frames")
 
 
 def check_aids(frames: list) -> None:
