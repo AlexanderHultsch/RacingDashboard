@@ -308,6 +308,7 @@ def info() -> dict:
         "address": f"{address}/{HOME}",
         "hz_choices": [hz for hz in HZ_CHOICES if hz <= cfg["telemetry"]["read_hz"]],
         "keys_available": keys.available,
+        **({"ai_detail": recorder.detail} if recorder is not None else {}),
     }
 
 
@@ -395,6 +396,13 @@ class Handler(BaseHTTPRequestHandler):
             ok, error = command(body)
             return self.reply_json(200 if ok else 409, {"ok": True} if ok else {"error": error})
         if path == "/api/settings":
+            if "ai_detail" in body:                    # the AI DETAIL LOG switch
+                if recorder is None or not isinstance(body["ai_detail"], bool):
+                    return self.reply_json(400, {"error": "bad request"})
+                recorder.detail = settings["ai_detail"] = body["ai_detail"]
+                config.save_settings(settings)
+                log.line("analysis", "ai detail log", "on" if recorder.detail else "off")
+                return self.reply_json(200, info())
             game_id = body.get("game")
             if game_id not in games:
                 return self.reply_json(400, {"error": "unknown game"})
@@ -496,7 +504,8 @@ def setup(file_log: bool = True) -> str:
     settings = config.load_settings()
     if cfg["analysis"]["enabled"]:
         recorder = recording.Recorder(cfg["analysis"]["data_dir"], int(cfg["analysis"]["hz"]),
-                                      float(cfg["analysis"]["section_m"]), log=log.line)
+                                      float(cfg["analysis"]["section_m"]), log=log.line,
+                                      detail=bool(settings.get("ai_detail", cfg["analysis"]["ai_detail"])))
         trainer = training.Trainer(cfg, config.TRAINER_FILE, cfg["analysis"]["data_dir"], log=log.line)
     wanted = settings.get("game") or cfg["dashboard"]["game"]
     if wanted not in games:

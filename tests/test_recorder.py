@@ -260,8 +260,7 @@ class RecorderTest(unittest.TestCase):
         self.assertTrue(data["best"] and data["last"] and data["now"])
         self.assertEqual(len(data["best"][0]), 27)                # 9 values + 3 aids + 5 levels + rpm + 9 motion
         self.assertEqual(data["best"][0][9:17], [None] * 8)       # this game reports no aids
-        self.assertEqual(data["best"][0][17], 0)                 # and the test frames have no rpm
-        self.assertEqual(data["best"][0][18:], [None] * 9)       # nor any motion values
+        self.assertEqual(data["best"][0][17:], [None] * 10)      # the AI detail log is off: no rpm, no motion
         self.assertIsNone(self.rec.state()["limits"])
         self.assertEqual(data["to_m"], 500.0)
         live = self.rec.live()
@@ -270,7 +269,16 @@ class RecorderTest(unittest.TestCase):
         self.assertEqual(len(state["borders"]), 4)
         self.assertTrue(state["outline"])
 
+    def test_detail_log_off_keeps_the_files_small(self):
+        car = Car(self.rec, p=0.0)
+        car.drive(1020, rpm=7000, g_lat=1.2, g_long=-0.4, slip_angle=[4.0, 4.0, 3.0, 3.0])
+        lap = sorted(self.rec.run_dir.glob("lap-*.jsonl"))[0]
+        sample = next(s for s in map(json.loads, lap.read_text().splitlines()) if s["type"] == "s")
+        self.assertFalse({"rpm", "ga", "gl", "yaw", "bs", "sa", "sr", "out"} & set(sample))
+        self.assertIsNone(self.rec.state()["limits"])
+
     def test_motion_is_recorded(self):
+        self.rec.detail = True                                    # the AI detail log on
         motion = {"g_lat": 1.21, "g_long": -0.4, "yaw_rate": 18.5, "body_slip": -1.25, "wheels_out": 1,
                   "slip_angle": [4.0, -5.0, 3.0, 2.0], "wheel_slip": [-0.08, -0.15, 0.02, 0.01]}
         car = Car(self.rec, p=0.0)

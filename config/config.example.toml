@@ -28,6 +28,10 @@ data_dir = "data"
 # Samples per second while driving, and the length of a section along the track in metres.
 hz = 30
 section_m = 250
+# The AI detail log: rpm and the car's motion (g forces, yaw rate, body slip, slip angle and slip ratio per wheel,
+# wheels off) with every sample, for the AI trainer and the coach's checks. Off, the laps keep only what the pages
+# show (smaller files, less work). The AI DETAIL LOG switch in the settings overrides this and is remembered.
+ai_detail = false
 
 [trainer]
 # AI trainer of the analysis page (docs/TRAINER.md). Provider, FAST / BEST and the API keys are chosen in

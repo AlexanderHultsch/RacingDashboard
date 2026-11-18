@@ -194,9 +194,12 @@ class Lap:
 
 
 class Recorder:
-    def __init__(self, data_dir, hz: int = 30, section_m: float = 250.0, log=None):
+    def __init__(self, data_dir, hz: int = 30, section_m: float = 250.0, log=None, detail: bool = False):
         self.dir = Path(data_dir)
         self.hz, self.period, self.section_m = hz, 1.0 / hz, float(section_m)
+        # the AI detail log (setting AI DETAIL LOG): rpm and the car's motion with every sample. Off, the laps keep
+        # only what the pages show (position, speed, pedals, steering, gear, aids): smaller files, less work
+        self.detail = detail
         self.log = log or (lambda *_: None)
         self.lock = threading.RLock()
         self.offers, self.next_offer, self.undo_stack = [], 1, []
@@ -313,11 +316,14 @@ class Recorder:
                float(frame.get("gas") or 0.0), float(frame.get("brake") or 0.0), float(frame.get("steer") or 0.0),
                int(frame.get("gear") or 0), sec, 0, 0,
                _flag(frame.get("tc_active")), _flag(frame.get("abs_active")), _flag(frame.get("esc_active")),
-               [frame.get(name) for name in LEVELS], int(frame.get("rpm") or 0),
-               *[_num(frame.get(name), digits) for name, _, digits in MOTION],
-               _wheels(frame.get("slip_angle"), 2), _wheels(frame.get("wheel_slip"), 3),
-               frame.get("wheels_out") if isinstance(frame.get("wheels_out"), int) else None]
-        self.peaks.add(row[GLAT], row[GLONG], row[V])
+               [frame.get(name) for name in LEVELS]]
+        if self.detail:
+            row += [int(frame.get("rpm") or 0), *[_num(frame.get(name), digits) for name, _, digits in MOTION],
+                    _wheels(frame.get("slip_angle"), 2), _wheels(frame.get("wheel_slip"), 3),
+                    frame.get("wheels_out") if isinstance(frame.get("wheels_out"), int) else None]
+            self.peaks.add(row[GLAT], row[GLONG], row[V])
+        else:
+            row += [None] * 8
         last = self.last
         self.paused = False
         self.last = row
@@ -491,7 +497,9 @@ class Recorder:
     def _sample_line(row, t0: float) -> dict:
         line = {"type": "s", "t": round(row[NOW] - t0, 3), "p": round(row[P], 6), "x": row[X], "y": row[Y],
                 "v": round(row[V], 1), "thr": round(row[THR], 3), "brk": round(row[BRK], 3), "str": round(row[STR], 3),
-                "g": row[G], "rpm": row[RPM], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
+                "g": row[G], "sec": row[SEC] + 1, "att": row[ATT], "line": row[LINE]}
+        if row[RPM] is not None:
+            line["rpm"] = row[RPM]                         # the AI detail log only
         aids = row[TC_ON:ESC_ON + 1]
         if any(a is not None for a in aids):
             line["a"] = list(aids)                         # TC, ABS, stability working: 1 / 0

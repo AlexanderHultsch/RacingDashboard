@@ -86,6 +86,22 @@ class Bridge(unittest.TestCase):
         code, reply = post("/api/trainer/ask", {"mode": "track"})
         self.assertEqual(code, 409)                                  # no run recorded yet, or no AI
 
+    def test_ai_detail_switch(self):
+        saved, file = server.settings.copy(), server.config.SETTINGS_FILE
+        server.config.SETTINGS_FILE = Path(tempfile.mkdtemp()) / "settings.json"   # never the owner's own file
+        try:
+            self.assertIs(json.loads(get("/api/info")[2])["ai_detail"], False)          # off unless switched on
+            code, reply = post("/api/settings", {"ai_detail": True})
+            self.assertEqual((code, reply["ai_detail"], server.recorder.detail), (200, True, True))
+            self.assertEqual(post("/api/settings", {"ai_detail": "yes"})[0], 400)
+            post("/api/settings", {"ai_detail": False})
+            self.assertFalse(server.recorder.detail)
+        finally:
+            server.settings.clear()
+            server.settings.update(saved)
+            server.recorder.detail = False
+            server.config.SETTINGS_FILE = file
+
     def test_coach_report(self):
         status, _, body = get("/api/coach")
         report = json.loads(body)

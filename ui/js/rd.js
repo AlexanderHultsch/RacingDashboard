@@ -513,6 +513,12 @@
       }
       const awakeNote = "wakeLock" in navigator ? "" : "Not available on this connection: set Auto-Lock to Never in the iPhone / iPad settings.";
       body.appendChild(choice("KEEP SCREEN ON (THIS DEVICE)", [[false, "OFF"], [true, "ON"]], store.get("awake", false), (on) => RD.keepAwake(on), awakeNote));
+      if (info && "ai_detail" in info) {
+        body.appendChild(choice("AI DETAIL LOG (ALL DEVICES, KEPT ON THE PC)", [[false, "OFF"], [true, "ON"]], info.ai_detail, (on) => {
+          fetch("/api/settings", { method: "POST", body: JSON.stringify({ ai_detail: on }) }).catch(() => RD.toast("no connection to the PC"));
+        }, "ON records the car's motion with every lap (g forces, slip, balance, rpm) for the AI trainer and the coach's "
+          + "checks: lap files about 70 % larger. OFF records only what the pages show. Laps already recorded keep what they have."));
+      }
       const ai = document.createElement("div");
       body.appendChild(ai);
       fetch("/api/trainer", { cache: "no-store" }).then((r) => r.json()).then((t) => { if (t.providers) aiRows(ai, t); }).catch(() => {});

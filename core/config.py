@@ -15,7 +15,7 @@ DEFAULTS = {
     "telemetry": {"read_hz": 60, "stale_s": 2.0},
     "input": {"tap_ms": 80, "hold_max_s": 10.0},
     # Analysis page: lap recording (core/recorder.py); data_dir relative to the program folder
-    "analysis": {"enabled": True, "data_dir": "data", "hz": 30, "section_m": 250},
+    "analysis": {"enabled": True, "data_dir": "data", "hz": 30, "section_m": 250, "ai_detail": False},
     # AI trainer (core/trainer.py, docs/TRAINER.md): seconds to wait for an answer, the Ollama address,
     # and overrides of the FAST / BEST models, e.g. [trainer.models.claude.best] model = "claude-opus-5-5"
     "trainer": {"timeout_s": 90, "ollama_url": "http://localhost:11434", "models": {}},
