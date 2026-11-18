@@ -22,7 +22,7 @@ Every value below was looked at in the four games' data (ACE graphics and physic
 | **slip ratio per wheel** (`wheel_slip`) | braking and traction slip: lock-ups, wheelspin | physics `slipRatio` | the same | – | from the wheel speeds | `sr` (4 wheels) |
 | **wheels off the track** (`wheels_out`) | the only hint about the track edges | physics `numberOfTyresOut` | the same | `PlayerTrackSurface` (off = 4) | – | `out` |
 
-Laps recorded before 18 November 2026 have none of the new values; a game that does not send one leaves it out. **Signs and units are not yet checked in any game**: `python tools/live.py --record 60` checks the signs of the g forces and the yaw rate against braking, throttle and steering, and the slip angle unit (radians assumed for the Kunos games, `SLIP_ANGLE_RAD` in `core/kunos.py`).
+**Recorded only with the AI DETAIL LOG switched on** (settings, all devices; off by default, owner: keep the lap files small and the work light when the detail is not needed): off, a lap file keeps only what the pages show (position, speed, pedals, steering, gear, aids) and is about 40 % smaller, and rpm is left out too; the AI trainer then works with the pedal and line checks only. Laps recorded before 18 November 2026 have none of the new values; a game that does not send one leaves it out. **Signs and units are not yet checked in any game**: `python tools/live.py --record 60` checks the signs of the g forces and the yaw rate against braking, throttle and steering, and the slip angle unit (radians assumed for the Kunos games, `SLIP_ANGLE_RAD` in `core/kunos.py`).
 
 ### Looked at and left out
 
