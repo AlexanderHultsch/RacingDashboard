@@ -386,6 +386,21 @@ def parse(physics: bytes, graphics: bytes, static: bytes) -> dict:
     }
 
 
+def detail(ph, gr) -> dict:
+    """The extra raw values for the analysis pipeline (telemetry field "detail", docs/PIPELINE.md); only read while
+    the AI detail log is on. Units as ACE sends them; tyre wear is 0 in ACE 0.9.1 (the pipeline then logs it as
+    missing)."""
+    four = lambda values, digits=3: [round(v, digits) for v in values]  # noqa: E731
+    return {
+        "clutch": round(ph.clutch, 3), "torque_nm": round(gr.current_torque, 1),
+        "pitch_rad": round(ph.pitch, 4), "roll_rad": round(ph.roll, 4), "ride_height_m": four(ph.rideHeight, 4),
+        "wheel_load_n": four(ph.wheelLoad, 0), "fx_n": four(ph.fx, 0), "fy_n": four(ph.fy, 0),
+        "suspension_travel_m": four(ph.suspensionTravel, 4), "kerb_vibration": round(ph.kerbVibration, 3),
+        "engine_brake": int(ph.engineBrake), "tc_strength": round(ph.tc, 3), "abs_strength": round(ph.abs, 3),
+        "tyre_wear": four(ph.tyreWear), "delta_ms": int(gr.delta_time_ms), "steer_deg": int(gr.steer_degrees),
+    }
+
+
 def unreported(values: dict, reported: set) -> None:
     """ACE 0.9.1 leaves the live light / wiper stages at 0 even when they work in the car (docs/ACE/NOTES.md),
     so 0 means "not reported" (None) until the game has sent a stage above 0 once in this session."""
@@ -437,6 +452,9 @@ class Connector(telemetry.Connector):
         physics, graphics, static = (block.read() for block in self.blocks)
         values = parse(physics, graphics, static)
         unreported(values, self.reported)
+        if self.detail:
+            values["detail"] = detail(Physics.from_buffer_copy(physics[:sizeof(Physics)]),
+                                      Graphics.from_buffer_copy(graphics[:sizeof(Graphics)]))
         now = time.monotonic()
         packet = (physics[:4], graphics[:4])
         if packet != self.last_packet:

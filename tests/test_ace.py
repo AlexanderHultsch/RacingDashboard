@@ -166,6 +166,16 @@ class Parse(unittest.TestCase):
         self.assertEqual(values["damage_body"], [1.0, 1.0, 0.88, 0.0, 1.0])
         self.assertEqual(values["damage_suspension"], [0.913, 0.0, 0.584, 0.0])
 
+    def test_detail_for_the_pipeline(self):
+        ph, gr, st = self.build()
+        ph.wheelLoad[0], ph.fx[0], ph.fy[0], gr.steer_degrees, gr.current_torque = 3500.0, -1200.0, 2400.0, 45, 512.4
+        d = ace.detail(ph, gr)
+        self.assertEqual((d["wheel_load_n"][0], d["fx_n"][0], d["fy_n"][0], d["steer_deg"], d["torque_nm"]),
+                         (3500.0, -1200.0, 2400.0, 45, 512.4))
+        self.assertEqual(set(d), {"clutch", "torque_nm", "pitch_rad", "roll_rad", "ride_height_m", "wheel_load_n", "fx_n",
+                                  "fy_n", "suspension_travel_m", "kerb_vibration", "engine_brake", "tc_strength",
+                                  "abs_strength", "tyre_wear", "delta_ms", "steer_deg"})
+
     def test_wheel_slip_and_lock(self):
         ph, gr, st = self.build()
         values = ace.parse(bytes(ph), bytes(gr), bytes(st))

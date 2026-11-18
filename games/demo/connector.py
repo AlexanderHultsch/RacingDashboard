@@ -164,6 +164,14 @@ class Connector(telemetry.Connector):
                 "slip_angle": [round(front, 2), round(front * 0.95, 2), round(rear, 2), round(rear * 0.95, 2)],
                 "wheels_out": 1 if wide else 0}
 
+    def extra(self, gas: float, brake: float) -> dict:
+        """The analysis pipeline's extra values as a game would send them (a part of them, for trying the pipeline)."""
+        i = track_index(self.pos)
+        steer = max(-1.0, min(1.0, TRACK["curv"][i] * 40))
+        load = [3200 + 900 * brake - 600 * gas] * 2 + [3400 - 900 * brake + 600 * gas] * 2
+        return {"clutch": 1.0, "torque_nm": round(420 * gas, 1), "steer_deg": round(steer * 240),
+                "wheel_load_n": [round(v) for v in load], "engine_brake": 2, "delta_ms": 0}
+
     def handle(self, action: str, state: str) -> bool:
         s = self.state
         if state == "up":
@@ -281,6 +289,7 @@ class Connector(telemetry.Connector):
             "damage_body": [0.35, 0.8, 0.0, 0.15, 0.25], "damage_suspension": [0.2, 0.0, 0.6, 0.0],
             **self.grip(gas, brake, dt),
             **self.motion(v0, dt),
+            **({"detail": self.extra(gas, brake)} if self.detail else {}),
             **self.warnings(running),
             "limits": {"tc_level": [0, 11], "tc_cut_level": [0, 8], "abs_level": [0, 12], "engine_map": [1, 5], "diff_power": [1, 10], "diff_coast": [1, 10], "drive_mode": [0, 2]},
             "ignition": s["ignition"], "engine_running": running, "lights": s["lights"], "wipers": s["wipers"],

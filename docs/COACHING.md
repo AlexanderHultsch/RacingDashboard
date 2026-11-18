@@ -1,5 +1,7 @@
 # AI coach – data and corner knowledge
 
+The per-sample analysis pipeline (every sample labelled with phase and Good / Potential / Bad, saved per session for an AI) is in [PIPELINE.md](PIPELINE.md).
+
 How the AI trainer ([TRAINER.md](TRAINER.md)) gets what it needs to coach on any track, car and game. **Owner's decision (18 November 2026): no fixed phases, scenarios or thresholds in the code.** The bridge records the car's motion and sends clean measurements, each relative to the car's own limits; the AI judges with its racing knowledge. The prompt and the analysis are then fine-tuned with real answers.
 
 Built 18 November 2026: the new values in the games, the recorder and the trainer (sections 1 and 2). Sections 3–7 are the knowledge behind it (section 7: what value combinations usually mean): a reference for tuning the prompt and for judging the answers.

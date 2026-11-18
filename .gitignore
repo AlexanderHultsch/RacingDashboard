@@ -2,6 +2,7 @@
 config/config.toml
 config/settings.json
 config/trainer.json
+config/analysis.toml
 
 # Logs
 logs/

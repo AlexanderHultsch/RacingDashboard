@@ -132,6 +132,7 @@ class Bridge(unittest.TestCase):
     def test_state_and_info(self):
         state = json.loads(get("/state")[2])
         self.assertTrue(state["connected"])
+        self.assertNotIn("detail", state)                            # the pipeline's extra values stay in the bridge
         self.assertEqual(state["game"], "demo")
         self.assertIsNone(state["error"])
         info = json.loads(get("/api/info")[2])

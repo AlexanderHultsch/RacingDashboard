@@ -23,6 +23,7 @@ import actions  # noqa: E402
 import config  # noqa: E402
 import keys  # noqa: E402
 import log  # noqa: E402
+import pipeline as analysis_pipeline  # noqa: E402
 import recorder as recording  # noqa: E402
 import trainer as training  # noqa: E402
 import telemetry  # noqa: E402
@@ -46,6 +47,7 @@ address = ""
 HOME = "Racing_Dashboard"     # the home page: http://<pc>:8080/Racing_Dashboard (other dashboards share the address)
 recorder: recording.Recorder | None = None    # the analysis page's lap recorder ([analysis] enabled)
 trainer: training.Trainer | None = None       # the AI trainer of the analysis page (docs/TRAINER.md)
+pipe: analysis_pipeline.Pipeline | None = None  # the analysis pipeline (docs/PIPELINE.md), fed while the AI detail log is on
 
 
 # ---------------------------------------------------------------- games and connectors
@@ -158,6 +160,7 @@ def activate(game_id: str) -> None:
                 log.line("game", "close", repr(error))
         active = games[game_id]
         connector = load_connector(active)
+        connector.detail = bool(recorder is not None and recorder.detail)   # the pipeline's extra values
         with data_lock:
             data = telemetry.blank()
         log.line("game", "active", f"{game_id} ({active['game']['name']})")
@@ -197,6 +200,8 @@ def reader() -> None:
                 recorder.feed(fresh, active["id"], time.monotonic())
             except Exception as error:  # noqa: BLE001  recording must never stop the bridge
                 log.line("analysis", "error", repr(error))
+            if pipe is not None and recorder.detail:
+                pipe.put(fresh, active["id"], time.monotonic())   # never blocks: the worker drops when behind
         with data_lock:
             if fresh["error_text"] != data.get("error_text"):
                 log.line("data", "error" if fresh["error"] else "ok", fresh["error_text"] or "data as expected")
@@ -221,7 +226,9 @@ def ui_version() -> str:
 
 def snapshot() -> tuple[int, dict]:
     with data_lock:
-        return seq, dict(data, game=active["id"], ui=ui_version())
+        frame = dict(data, game=active["id"], ui=ui_version())
+    frame.pop("detail", None)                      # the pipeline's extra values stay in the bridge
+    return seq, frame
 
 
 # ---------------------------------------------------------------- commands
@@ -340,6 +347,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(200, info())
         if url.path.startswith("/api/analysis"):
             return self.analysis_get(url.path, parse_qs(url.query))
+        if url.path == "/api/pipeline":
+            if pipe is None:
+                return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+            return self.reply_json(200, dict(pipe.status, ai_detail=bool(recorder and recorder.detail)))
         if url.path == "/api/coach":
             if recorder is None:
                 return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
@@ -400,6 +411,7 @@ class Handler(BaseHTTPRequestHandler):
                 if recorder is None or not isinstance(body["ai_detail"], bool):
                     return self.reply_json(400, {"error": "bad request"})
                 recorder.detail = settings["ai_detail"] = body["ai_detail"]
+                connector.detail = recorder.detail
                 config.save_settings(settings)
                 log.line("analysis", "ai detail log", "on" if recorder.detail else "off")
                 return self.reply_json(200, info())
@@ -411,6 +423,11 @@ class Handler(BaseHTTPRequestHandler):
                 settings["game"] = game_id
                 config.save_settings(settings)
             return self.reply_json(200, info())
+        if path == "/api/pipeline/finalize":
+            if pipe is None:
+                return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+            pipe.request_finalize()                    # done by the worker; GET /api/pipeline shows the result
+            return self.reply_json(202, {"ok": True})
         if path.startswith("/api/analysis/"):
             return self.analysis_post(path, body)
         if path.startswith("/api/trainer/"):
@@ -491,7 +508,7 @@ def lan_ip() -> str:
 
 def setup(file_log: bool = True) -> str:
     """Load config and games; returns the start game."""
-    global cfg, games, settings, recorder, trainer
+    global cfg, games, settings, recorder, trainer, pipe
     cfg = config.load()
     cfg["log"]["enabled"] = cfg["log"]["enabled"] and file_log
     log.setup(cfg["log"])
@@ -507,6 +524,7 @@ def setup(file_log: bool = True) -> str:
                                       float(cfg["analysis"]["section_m"]), log=log.line,
                                       detail=bool(settings.get("ai_detail", cfg["analysis"]["ai_detail"])))
         trainer = training.Trainer(cfg, config.TRAINER_FILE, cfg["analysis"]["data_dir"], log=log.line)
+        pipe = analysis_pipeline.Pipeline(cfg["analysis"]["data_dir"], log=log.line)
     wanted = settings.get("game") or cfg["dashboard"]["game"]
     if wanted not in games:
         log.line("game", "unknown", f"'{wanted}', using '{next(iter(games))}'")
@@ -526,6 +544,8 @@ def check() -> None:
     print(f"  Web port      {port}")
     print(f"  Address       http://{lan_ip()}:{port}")
     print(f"  Keypresses    {'available' if keys.available else 'not available (Windows only)'}")
+    if pipe is not None:
+        print(f"  Pipeline      thresholds version {pipe.cfg.get('config_version')}, {len(analysis_pipeline.rules.NEEDS)} rules")
     print("  Result        OK")
 
 
@@ -570,6 +590,8 @@ def main() -> None:
     threading.Thread(target=hold_watchdog, daemon=True).start()
     if trainer is not None:
         trainer.test_later()                       # greys the AI TRAINER button in or out
+    if pipe is not None:
+        pipe.start()
     address = f"http://{lan_ip()}:{port}"
     log.line("server", "open", address)
     banner(port)
@@ -580,6 +602,8 @@ def main() -> None:
     finally:
         with key_lock:
             release_all()
+        if pipe is not None:
+            pipe.stop()                            # finalizes the open session
         log.line("server", "stopped")
 
 

@@ -13,6 +13,8 @@ window:
                                                logs/live-<game>-<date_time>.jsonl, then check it
   python tools/live.py --check last            check the newest recording again (or give a file)
   python tools/live.py --coach                 the coach's checks per section of the last lap (G1: yes ...), no AI
+  python tools/live.py --pipeline              the analysis pipeline: session folder, laps, samples, missing fields
+  python tools/live.py --finalize              finalize the pipeline's session now (relabel everything, write the files)
 
 The check prints what each open question needs (docs/HANDOVER.md): the sign of the wheel slip under braking
 and on wheelspin, the GRIP stages per wheel, the signs of the g forces and the yaw rate against braking,
@@ -379,6 +381,31 @@ def print_report(report: dict) -> None:
     print("at most half of the time lost against BEST in that stretch, never more than 0.3 s.")
 
 
+def pipeline_status(url: str, finalize: bool) -> None:
+    """The analysis pipeline (GET /api/pipeline); with finalize, ask for the final pass and wait for its result."""
+    get = lambda: json.loads(urllib.request.urlopen(url + "/api/pipeline", timeout=5).read())  # noqa: E731
+    status = get()
+    if finalize:
+        before = json.dumps(status.get("last_finalized"))
+        urllib.request.urlopen(urllib.request.Request(url + "/api/pipeline/finalize", data=b"{}", method="POST"), timeout=5)
+        print("finalizing ...")
+        for _ in range(120):
+            time.sleep(1)
+            status = get()
+            if json.dumps(status.get("last_finalized")) != before:
+                break
+    if not status.get("ai_detail"):
+        print("!! the AI DETAIL LOG is off (settings): the pipeline records nothing")
+    for key in ("active", "folder", "lap_in_progress", "laps_done", "samples_written", "reference_lap",
+                "missing_fields", "dropped_frames"):
+        if key in status:
+            print(f"   {key}: {status[key]}")
+    if status.get("last_lap"):
+        print(f"   last lap: {status['last_lap']}")
+    if status.get("last_finalized"):
+        print(f"   last finalized: {status['last_finalized']}")
+
+
 def newest() -> Path | None:
     files = sorted((ROOT / "logs").glob("live-*.jsonl"), key=lambda p: p.stat().st_mtime)
     return files[-1] if files else None
@@ -394,6 +421,8 @@ def main() -> None:
     parser.add_argument("--record", type=float, metavar="SECONDS", help="record every frame to logs/ and check it")
     parser.add_argument("--check", metavar="FILE", help="check a recording ('last' = the newest in logs/)")
     parser.add_argument("--coach", action="store_true", help="the coach's checks per section of the last lap (no AI)")
+    parser.add_argument("--pipeline", action="store_true", help="the analysis pipeline's status")
+    parser.add_argument("--finalize", action="store_true", help="finalize the analysis pipeline's session now")
     parser.add_argument("--url", help="the bridge, default http://127.0.0.1:<port from the config>")
     args = parser.parse_args()
     if args.check:
@@ -408,6 +437,8 @@ def main() -> None:
             print(json.dumps(frame(url), indent=1, sort_keys=True))
         elif args.coach:
             coach_report(url)
+        elif args.pipeline or args.finalize:
+            pipeline_status(url, args.finalize)
         elif args.record:
             check(record(url, args.record, args.hz or 20))
         else:

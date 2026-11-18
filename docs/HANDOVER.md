@@ -1,6 +1,6 @@
 # Handover – local session on the Windows PC
 
-For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach, the coach's checks in Python, the AI DETAIL LOG switch). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach, the coach's checks in Python, the AI DETAIL LOG switch, the analysis pipeline). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
 **The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then check the new motion values (step 1b), then work on the open items with the owner.
 
@@ -13,7 +13,7 @@ python core\server.py --check
 python core\server.py
 ```
 
-All 100 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
+All 111 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
 
 `tools\ace_probe.py` is gone (see below): use `tools\live.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** (that broke the `°` in `rd.js` once; `tests/test_encoding.py` catches it).
 
@@ -75,7 +75,8 @@ One question per recording ("three hard stops with ABS off"). To find an unknown
 1. `python tools\live.py motion` while driving: `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `slip_angle`, `wheels_out` must move with the car.
 2. `python tools\live.py --record 90`: hard stops, full throttle out of slow corners, corners both left and right, two wheels over a kerb. The MOTION part of the check must say "sign OK" for each line and a slip angle of a few degrees. A flipped sign: change it in `kunos.motion` (`core/kunos.py`, shared with ACR) and the expected values in `tests/test_ace.py`; slip angles around 0.05: set `SLIP_ANGLE_RAD = False`. The check relies on the steering sign (+ = right), which is itself not confirmed: if every sign looks flipped, check the steering first.
 3. Ask the AI TRAINER on a lap recorded after `git pull` and read the facts sent (`data\trainer.jsonl`, field `data`): the trace has 10 columns, `car_limits_g` is there.
-4. `python tools\live.py --coach` after a few laps: ask the owner whether the yes / no of each section matches how the corner felt. A check that fires too often or too harshly: loosen its constant in `core/coach.py` (and its test in `tests/test_coach.py`); write down what was changed and why in [COACHING.md](COACHING.md) section 7.
+4. The analysis pipeline: with the detail log on, drive a few laps, `python tools\live.py --pipeline` (laps, samples, `missing_fields`: which `detail` values ACE really fills), then `--finalize` and look at `data\sessions\...\session.json` and `corners.json`. Check the units of the `detail` values (pitch / roll radians? ride height and suspension travel metres? wheel load and fx / fy newtons?) and whether the phases and labels in `samples.csv` match the owner's driving; calibrate in `config\analysis.toml`.
+5. `python tools\live.py --coach` after a few laps: ask the owner whether the yes / no of each section matches how the corner felt. A check that fires too often or too harshly: loosen its constant in `core/coach.py` (and its test in `tests/test_coach.py`); write down what was changed and why in [COACHING.md](COACHING.md) section 7.
 
 If something is off after the cleanup, compare with the commit before it (`git diff 06b1135 46c453a -- <file>`) and fix forward.
 
@@ -100,7 +101,8 @@ For each: GAME → the game, then `python tools\live.py` (do the values follow t
 
 | Commit | What |
 | --- | --- |
-| this one, `67367bf` | the **AI DETAIL LOG** switch (settings, all devices, off by default): off, the laps keep only what the pages show (about 40 % smaller, no rpm, no motion values, no grip peaks); on, everything for the AI trainer and the coach's checks. `[analysis] ai_detail` in the config is the start value, the switch is remembered in `config/settings.json`. The server test no longer writes the owner's own `config/settings.json` |
+| this one | the **analysis pipeline** ([PIPELINE.md](PIPELINE.md), the owner's proposal from another session): a background worker (queue + thread, never blocks) analyses every sample while the AI DETAIL LOG is on: derived values, phase, corner, Good / Potential / Bad with reasons; live labels after each lap, final relabelling at the session end or on demand; `data/sessions/.../samples.csv`, `laps.json`, `corners.json`, `session.json`, `README.md`. Thresholds in `config/analysis.default.toml` (+ local `config/analysis.toml`); CSV and TOML instead of Parquet and YAML (standard library only). ACE fills a new `detail` block (clutch, torque, pitch, roll, ride height, wheel loads, fx / fy, suspension travel, kerb vibration, engine brake, TC / ABS strength, tyre wear, delta, steering degrees). `tools/live.py --pipeline` / `--finalize` |
+| `67367bf` | the **AI DETAIL LOG** switch (settings, all devices, off by default): off, the laps keep only what the pages show (about 40 % smaller, no rpm, no motion values, no grip peaks); on, everything for the AI trainer and the coach's checks. `[analysis] ai_detail` in the config is the start value, the switch is remembered in `config/settings.json`. The server test no longer writes the owner's own `config/settings.json` |
 | `9adc1f7` | the coach's checks in Python (above) |
 | `5665d1d` | the list of value combinations (COACHING.md section 7) |
 | `53e82b9` | the car's motion for the AI coach (above) |
@@ -184,6 +186,7 @@ Headless rendering that worked (Edge on Windows, the same idea with Chromium): p
 - Settings button top right on every page; home page `/Racing_Dashboard` (flight sim dashboards share the address); on a tablet in landscape every page starts 26 px lower.
 - DASH (iPad): cards, same layout for every car of a game; greyed cards for what a car lacks; values read back from the game; TC / ABS / ESC amber while active; ACE: IGNITION held, WIPERS as a latch, engine map from 1, PERFORMANCE, no key on Comma.
 - ANALYSIS ([ANALYSIS.md](ANALYSIS.md)) and AI TRAINER ([TRAINER.md](TRAINER.md)) as described there; trainer only on a tap, FAST / BEST (Claude Haiku 5.5 medium / Opus 5.5 high), up to 9 tips, English.
+- ANALYSIS PIPELINE (owner's proposal, 18 November 2026): every sample analysed in the background and saved per session for an AI; never blocks the bridge; all thresholds in a config file as starting values; rules off for fields a game does not send; focus on driving skill, not setup or weather.
 - AI DETAIL LOG: off by default; the detail (rpm, the car's motion) is recorded only when the owner switches it on (owner: keep the log small and the work light when it is not needed).
 - AI COACH ([COACHING.md](COACHING.md), 18 November 2026): it must work on many tracks and cars, so **no fixed phases, scenarios or thresholds in the code**; the bridge records the car's motion (especially grip and slip) and sends the relevant measurements relative to the car's own limits, without overwhelming the AI; the analysis and feedback are fine-tuned afterwards with real answers.
 

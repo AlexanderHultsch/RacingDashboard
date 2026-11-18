@@ -63,6 +63,9 @@ FIELDS = {
     "body_slip": None,       # degrees between where the car points and where it travels (sideways), positive =
                              # it travels to the right of where it points
     "wheels_out": None,      # wheels off the track right now, 0..4
+    # analysis pipeline only (core/pipeline.py): extra raw values of the game, filled only while the AI detail log is
+    # on (connector.detail); the bridge leaves it out of what it streams to the pages. Keys: docs/PIPELINE.md
+    "detail": None,
     # boost page: no range check on purpose (an odd boost value must not stop the other pages with E)
     "boost_bar": None,       # boost above the air pressure in bar, negative = vacuum; None = the game sends no boost
     "boost_min_bar": None,   # lowest value the game sends (iRacing -1: vacuum), None = 0
@@ -199,6 +202,7 @@ class Connector:
     def __init__(self, game: dict, cfg: dict):
         self.game = game      # the parsed games/<game>/game.toml
         self.cfg = cfg        # the full config
+        self.detail = False   # True while the AI detail log is on: fill "detail" for the analysis pipeline
 
     def open(self) -> None:
         pass
