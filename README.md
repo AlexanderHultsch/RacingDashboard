@@ -129,7 +129,7 @@ ui/                       the web pages
   styles/<page>/<style>.css           the styles of each page
 config/                   config.example.toml (config.toml, settings.json and trainer.json are local and ignored)
 data/                     recorded laps and baselines (JSON Lines; local, ignored by git)
-docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, ASSISTS.md, HANDOVER.md, notes per game (ACE/, ACR/, DR2/, IRACING/)
+docs/                     SPEC.md (the engine), ANALYSIS.md, TRAINER.md, COACHING.md (corner knowledge for the AI coach, proposal), ASSISTS.md, HANDOVER.md, notes per game (ACE/, ACR/, DR2/, IRACING/)
 tests/                    python -m unittest discover tests
 tools/install.ps1         installer: Python, files, check, firewall, shortcuts; -Uninstall removes it
 tools/live.py             live values of every game from the running bridge: watch presets, record to logs/, check a recording
