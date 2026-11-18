@@ -2,7 +2,7 @@
 
 How the AI trainer ([TRAINER.md](TRAINER.md)) gets what it needs to coach on any track, car and game. **Owner's decision (18 November 2026): no fixed phases, scenarios or thresholds in the code.** The bridge records the car's motion and sends clean measurements, each relative to the car's own limits; the AI judges with its racing knowledge. The prompt and the analysis are then fine-tuned with real answers.
 
-Built 18 November 2026: the new values in the games, the recorder and the trainer (sections 1 and 2). Sections 3–6 are the knowledge behind it: a reference for tuning the prompt and for judging the answers.
+Built 18 November 2026: the new values in the games, the recorder and the trainer (sections 1 and 2). Sections 3–7 are the knowledge behind it (section 7: what value combinations usually mean): a reference for tuning the prompt and for judging the answers.
 
 ## 1. What the games offer and what is recorded
 
@@ -207,8 +207,92 @@ The coach gets the car name; a model that knows the car can add what is commonly
 
 Loose surfaces follow different rules: a large slip angle is fast on gravel, left-foot braking and weight-transfer techniques (the Scandinavian flick) rotate the car, and the line follows the pace notes. The circuit thresholds above do not apply; the rally scenarios need their own rules (a later step).
 
-## 7. Next
+## 7. Value combinations: what they usually mean
+
+The logic for reading the data the AI gets (section 2). No single value says much; **combinations** do, read at the same place in the corner and compared with BEST there. This list is the reference for tuning the prompt; it is not built into the code as rules (owner).
+
+Words used below, always relative to **this car in this run**, never fixed numbers:
+
+| Word | Meaning |
+| --- | --- |
+| high grip | grip % close to the car's peak (about 90–100 %) |
+| low grip | grip % clearly below what the car showed in similar corners (below about 75–80 %) |
+| at the slip limit | slip near where this car's ABS / TC start to work (ACE M4 GT3 Evo: about 6–7 %) |
+| balance + / − | front minus rear slip angle: + the front slides more (understeer), − the rear slides more (oversteer); a small + is normal and safe |
+| hand-over | one input falling while the other rises: brake → steering on entry, steering → throttle on exit |
+
+### Good: the car is used well
+
+| # | Combination | Usually means |
+| --- | --- | --- |
+| G1 | brake high, steering near 0, grip high, front slip at the limit and steady, no lock, ABS working briefly or not at all | braking at the limit in a straight line |
+| G2 | brake falling while steering rises, grip stays high through the change (no dip), balance small | trail braking: the grip is handed from braking to cornering without a gap |
+| G3 | grip high and steady through the middle, balance near 0 or slightly +, steering steady with no corrections, body slip small | the car is at its limit and balanced in the corner |
+| G4 | throttle rising while steering opens, grip stays high, rear slip small + without spikes, no lift, line out to the edge (a wheel out at the exit kerb is fine) | exit hand-over: full use of traction, the car pulled out of the corner |
+| G5 | grip high in braking, corner and exit; low only on straights at full throttle | every part where grip limits the speed is used (on a straight the engine limits, not the grip) |
+| G6 | the same pattern at the same places lap after lap | consistency: the basis for small, safe gains |
+
+### Room to improve
+
+**Braking**
+
+| # | Combination | Usually means | What to try |
+| --- | --- | --- | --- |
+| B1 | brake on, but grip well below the car's peak, front slip small, ABS never works | not braking hard enough: the car could stop shorter | brake harder, then later |
+| B2 | grip rises slowly after the brake comes on | hesitant first pressure | hit the brake hard at once, then ease off |
+| B3 | front slip far beyond the limit or −100 % (locked), or ABS working through the whole zone; grip falls | overbraking: a locked or sliding tyre grips less | a little less pressure, a progressive release |
+| B4 | neither pedal for metres between lift and brake or before turn-in (coast), grip low there | coasting: grip unused | brake straight from full throttle; turn in on the brake |
+| B5 | brake fully off before the steering starts, grip dips between braking and turning | no trail braking: a gap in the grip budget | release more slowly, overlap brake and steering |
+
+**Entry (turn-in to apex)**
+
+| # | Combination | Usually means | What to try |
+| --- | --- | --- | --- |
+| E1 | steering rising while brake is still high, balance strongly +, front slip far negative | entry understeer: the fronts asked to brake and turn too much at once | ease the brake earlier as the steering builds |
+| E2 | brake dropped abruptly at turn-in, balance jumps +, speed falls without brake, line goes outside | entry understeer: the front unloaded, or too fast into the corner | release slowly; or a little slower into the corner |
+| E3 | balance strongly − with brake or a lift, body slip rising, counter-steer, rear slip negative at a downshift | entry oversteer: too much brake while turning, a sudden lift, or engine braking | release earlier as you turn; downshift later, one gear at a time; lift gently |
+| E4 | steering bigger than BEST at the same place and speed, grip not higher | overdriving: more steering does not give more grip | less steering lock, a slower turn-in |
+
+**Middle of the corner**
+
+| # | Combination | Usually means | What to try |
+| --- | --- | --- | --- |
+| M1 | grip dips in the middle, speed below BEST, steering steady, balance near 0 | not committed: the car could go faster here | carry more speed: brake less or later |
+| M2 | grip high, balance strongly +, steering growing, speed falling without brake | mid-corner understeer: scrubbing speed | a slightly slower entry; open the steering |
+| M3 | steering reverses several times, balance flips between + and − | the car is unsettled, the driver corrects | one smooth input; a steady light throttle in long corners |
+| M4 | a long flat minimum speed in a slow corner, grip low there | braked too early or too much, then waited | a later, harder brake and a short minimum (a V, not a U) |
+
+**Exit**
+
+| # | Combination | Usually means | What to try |
+| --- | --- | --- | --- |
+| X1 | steering already opening and grip falling, but the throttle not yet on | late throttle: time lost onto the straight | throttle on as the steering opens |
+| X2 | throttle on early while steering stays large or grows, balance +, line goes outside, wheels out at the exit | power understeer: running wide | rotate the car first (later apex), then open the steering, then throttle |
+| X3 | rear slip big + spikes, TC working long, body slip rising, counter-steer, a throttle lift after the pick-up | power oversteer: too much throttle too early | progressive throttle as the steering opens; a higher gear; more TC |
+| X4 | throttle lifted again after the pick-up, balance and slip normal | too early or unsure | wait a moment, then one progressive pick-up |
+| X5 | line stays inside at the exit (`off` +), no wheel near the edge, speed lower than BEST 50–100 m later | the exit is not used: too tight a line | let the car run out to the edge |
+
+**Limits, line and aids**
+
+| # | Combination | Usually means | What to try |
+| --- | --- | --- | --- |
+| L1 | wheels out at the same place every lap with time gained against BEST | using a kerb: fine if the game keeps the lap valid | keep it, if the lap stays valid |
+| L2 | wheels out with body slip and time lost | an excursion: past the limit | a little less entry speed or throttle there |
+| L3 | grip above 100 % | a new peak: the car can do more than it showed before | compare with the earlier corners: they had grip to spare |
+| L4 | grip low everywhere on this lap | cold tyres (out lap, first laps), or general caution | judge after a few laps; then push corner by corner |
+| L5 | TC working long while the rear slip stays small | TC cuts more than needed | try a lower TC |
+| L6 | ABS working all the way to the apex with balance + at turn-in | leaning on ABS into the corner causes entry understeer | release earlier; or try a lower ABS |
+
+### Read with care
+
+- Cause and effect: a slow exit can come from the entry (E1–E4 make X1 or X2 likely). The first thing that goes wrong in a corner is the tip; the rest follows from it.
+- Speed changes the numbers: a downforce car has less grip in slow corners than in fast ones, so compare grip % with similar corners, not with the lap's peak only.
+- A small + balance, a little rear slip on exit and a few degrees of body slip are normal at the limit.
+- Loose surfaces (rally) turn some of this round: more slip and body slip can be fast on gravel.
+- Missing values: iRacing has no slip angles or slip ratio (no balance, no slip columns), DR2 no slip angles; old laps have none of the motion values. The AI then reads the same patterns from speed, pedals, steering and the line.
+
+## 8. Next
 
 1. **Check the new values in ACE** (local): `python tools/live.py motion` while driving, then `python tools/live.py --record 90` with hard braking, full throttle out of slow corners and both directions of corner: the check says whether each sign is right and whether the slip angles are in degrees. Then the same in ACR, iRacing, DR2.
-2. **Fine-tune with real answers**: ask the AI TRAINER on laps recorded with the new values, read the facts sent with each answer (`data/trainer.jsonl`, field `data`) and adjust the prompt where the answers miss or misread something.
+2. **Fine-tune with real answers**: put the combinations of section 7 into the prompt in a short form (owner to agree), ask the AI TRAINER on laps recorded with the new values, read the facts sent with each answer (`data/trainer.jsonl`, field `data`) and adjust the prompt where the answers miss or misread something.
 3. Later: rally knowledge for loose surfaces; the yaw rate in the facts if the answers need it.
