@@ -209,7 +209,9 @@ Loose surfaces follow different rules: a large slip angle is fast on gravel, lef
 
 ## 7. Value combinations: what they usually mean
 
-The logic for reading the data the AI gets (section 2). No single value says much; **combinations** do, read at the same place in the corner and compared with BEST there. This list is the reference for tuning the prompt; it is not built into the code as rules (owner).
+The logic for reading the data the AI gets (section 2). No single value says much; **combinations** do, read at the same place in the corner and compared with BEST there.
+
+**Python evaluates them, not the AI** (owner, 18 November 2026): `core/coach.py` checks every section the lap has driven through and reports each code as `yes`, `partly` (good checks only), `no` or `n/a` (no braking here, a straight, a game without slip values, a lap recorded before the motion values). A found room-to-improve check also says how clearly (`slight` / `clear`), where (the longest stretch, metres from the section start), what it saw and a rough time. The AI gets these per section (`checks`) and for the whole lap (`lap_checks`) and only turns them into tips; `python tools/live.py --coach` (or `GET /api/coach`) prints the same report without any AI. **Gentle by design** (owner: estimates, not too harsh): every limit is relative to the car (its grip at that speed in this run, its own steering, its own best line), the margins are wide, a pattern must last a few metres, a short lift in a fast corner is not coasting, small throttle wobbles are not lifts, and a time estimate is at most half of what the lap lost against BEST in that stretch, never more than 0.3 s, and none without BEST. The limits are constants at the top of `core/coach.py`, to be tuned after real drives. Computed: G1–G6, B1–B5, E1–E4, M1–M4, X1–X5, L1, L2, L5, L6; L3 and L4 stay knowledge for the AI (the car's peak includes the lap itself, so grip above 100 % cannot happen, and "low all lap" shows in `lap_checks`).
 
 Words used below, always relative to **this car in this run**, never fixed numbers:
 

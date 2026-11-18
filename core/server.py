@@ -339,6 +339,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_json(200, info())
         if url.path.startswith("/api/analysis"):
             return self.analysis_get(url.path, parse_qs(url.query))
+        if url.path == "/api/coach":
+            if recorder is None:
+                return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})
+            return self.reply_json(200, training.coach_report(recorder))
         if url.path == "/api/trainer":
             if trainer is None:
                 return self.reply_json(404, {"error": "analysis is off ([analysis] enabled = false)"})

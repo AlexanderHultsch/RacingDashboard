@@ -76,7 +76,7 @@ class Facts(unittest.TestCase):
             motion = [0.6, -1.2, 5.0, 1.5 if braking else 0.2, 5.0 if braking else 2.0, 3.0 if braking else 2.0,
                       -0.12 if braking else 0.0, 0.0 if braking else 0.03, 1 if r[0] == 120 else 0]
             moving.append(r + [None, None, None, None, None, None, None, None, None, None, None] + motion)
-        f = trainer.facts(moving, moving[-1][1], grip_g=1.5)
+        f = trainer.facts(moving, moving[-1][1], limits={"combined_g": 1.5})
         point = f["trace"][12]                                       # 120 m, braking
         self.assertEqual(len(point), 10)
         self.assertIsNone(point[5])                                  # no best line: no offset, but the place stays

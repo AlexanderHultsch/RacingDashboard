@@ -82,17 +82,18 @@ Per section and per line (`best`, `last`, `now`; a line that does not exist is `
 | `gears`, `shifts` | gear sequence through the section, e.g. `"4-3-4"` (neutral while shifting left out), and where each change happened (`at_m`, `to`) |
 | `full_throttle_m` | where the throttle is back above 95 % (held for 30 m) after the slowest point |
 | `steer_max` | largest steering, 0–1 of full lock |
-| `trace` | the line every 10 m: `[metres, km/h, throttle %, brake %, steering −100..100, off, grip %, balance, front slip %, rear slip %]`. `off` (`last` and `now` only, and only in a corner; otherwise `null` when the motion columns follow) is the distance in metres from the best line, positive towards the inside of the corner, negative towards the outside. The last four come from the car's motion (since 18 November 2026; a lap recorded before, or a game without them, has the first six only, and a value the game does not send is `null`): **grip** = combined g (√(lateral² + longitudinal²)) as % of the car's peak in this run (`car_limits_g`); **balance** = front minus rear slip angle in degrees (> 0 the front slides more: understeer; < 0 the rear: oversteer); **front / rear slip** = the slip ratio of the axle's most slipping wheel in % (negative = slower than the car, −100 locked; positive = wheelspin). This is what lets the AI judge the line, the inputs and the use of the grip, not only a few points |
+| `trace` | the line every 10 m: `[metres, km/h, throttle %, brake %, steering −100..100, off, grip %, balance, front slip %, rear slip %]`. `off` (`last` and `now` only, and only in a corner; otherwise `null` when the motion columns follow) is the distance in metres from the best line, positive towards the inside of the corner, negative towards the outside. The last four come from the car's motion (since 18 November 2026; a lap recorded before, or a game without them, has the first six only, and a value the game does not send is `null`): **grip** = combined g (√(lateral² + longitudinal²)) as % of the car's peak at that speed in this run (`car_limits_g`, `combined_by_speed`; never below 60 % of the overall peak); **balance** = front minus rear slip angle in degrees (> 0 the front slides more: understeer; < 0 the rear: oversteer); **front / rear slip** = the slip ratio of the axle's most slipping wheel in % (negative = slower than the car, −100 locked; positive = wheelspin). This is what lets the AI judge the line, the inputs and the use of the grip, not only a few points |
 | `body_slip_max_deg`, `body_slip_at_m` | how sideways the car got (degrees between where it points and where it goes) and where (when recorded) |
 | `wheels_out_m` | metres with a wheel off the track (when recorded) |
+| `checks` | `now` only, for a section the lap has driven through: the coach's evaluation by Python (`core/coach.py`, [COACHING.md](COACHING.md#7-value-combinations-what-they-usually-mean)): every good-driving check that applies (`G1`–`G6`: `yes`, `partly` or `no`, with what it measured) and the room-to-improve checks that found something, e.g. `"B4": "yes · slight · 40-56 m · about 0.10 s · 16 m with no pedal"` |
 | `delta_by_50m` | time behind best (positive = slower) at every 50 m and at the section end (`now` and `last` only) |
 | `aids` | driving aids, when recorded: `tc_working_m`, `tc_working_pct`, `tc_first_m` (and the same for `abs`, `esc`), `levels` at the section start (`tc`, `tc_cut`, `abs`, `esc`, `engine_map`), `level_changes` (`at_m`, `setting`, `to`) |
 
 Per section, measured from the recorded track outline (`corner`, next to the three lines): `type` (straight, fast / medium / slow corner, chicane), `turn_deg` (how much the road turns), `tightest_at_m` and `radius_m` (the geometric apex). `next_section` says what follows (a straight after a slow corner makes the exit the priority) and `lap_m` where the section lies in the lap, so the AI can place the corner on the real circuit and use what it knows about it.
 
-Every request also carries `car_limits_g` when the run has the car's motion: its peak lateral, braking, accelerating and combined g in this run (held for 5 samples, so a kerb strike or a crash does not count; the saved best lap counts too). The grip column is measured against it, so the same facts work for every car, track and game without fixed values (owner, 18 November 2026). What the games offer and why these values were chosen: [COACHING.md](COACHING.md).
+Every request also carries `car_limits_g` when the run has the car's motion: its peak lateral, braking, accelerating and combined g in this run and the combined peak per 40 km/h band (`combined_by_speed`: a downforce car has less grip slow than fast), each held for 5 samples ( so a kerb strike or a crash does not count; the saved best lap counts too). The grip column is measured against it, so the same facts work for every car, track and game without fixed values (owner, 18 November 2026). What the games offer and why these values were chosen: [COACHING.md](COACHING.md).
 
-Whole-track mode adds a `sections` table (per section: type, best / last / now time and the deltas) and the lap times; the full facts are sent for the 4 sections where now loses the most against best.
+Whole-track mode adds `lap_checks` (for every found check the sections where it was found, for every good check how many sections passed), a `sections` table (per section: type, best / last / now time and the deltas) and the lap times; the full facts are sent for the 4 sections where now loses the most against best.
 
 Since November 2026 the prompt asks for judgement against the fundamentals as well (braking in a straight line and a progressive release towards the apex, no coasting, one apex placed for the exit or for speed, throttle as the steering opens, outside – inside – outside, the gear for the power band), because the driver's own best may be far from a good lap; and it allows the AI to name a corner of a real circuit it knows. Every number in a tip still has to come from DATA.
 
@@ -133,6 +134,12 @@ Reading DATA (metres count from the section start; a larger value is later):
 - gears, shifts: the gears used and where they changed. aids: where TC / ABS / stability worked and the
   set levels.
 - delta_by_50m (LAST and NOW): seconds behind BEST at every 50 m. Where it grows is where the time goes.
+- checks (NOW): the bridge's own evaluation of this section, computed from the values above, each relative
+  to this car. G1-G6 (good driving): yes, partly or no. The others (room to improve) appear only when found:
+  "yes · slight or clear · from-to m · about N s · what was seen". The time is a rough estimate (at most
+  half of what NOW lost against BEST there); none without BEST. lap_checks (whole lap): for each found
+  check the sections where it was found, for each good check how many sections passed.
+  Codes: G1 braking at the limit in a straight line; G2 brake handed over to the steering (trail braking); G3 at the limit and balanced in the middle; G4 throttle handed over from the steering on exit; G5 grip used wherever grip limits the speed; G6 consistent with the last lap; B1 not braking as hard as the car can; B2 slow first brake pressure; B3 overbraking: locking or ABS all the way; B4 coasting: no pedal; B5 brake off before turning in (no trail braking); E1 entry understeer: braking hard while turning; E2 entry understeer: brake dropped at turn-in; E3 entry oversteer; E4 more steering than BEST, no more grip; M1 not committed in the middle; M2 mid-corner understeer: scrubbing speed; M3 car unsettled: steering corrections; M4 long minimum in a slow corner; X1 late throttle; X2 power understeer: running wide; X3 power oversteer; X4 throttle lifted again after the pick-up; X5 exit not used; L1 wheels out with time gained (a kerb); L2 wheels out with time lost; L5 TC cutting more than needed; L6 leaning on ABS into the corner.
 
 The fundamentals, each with the numbers that show it:
 1. Braking point: brake hard and in a straight line. brake_peak_pct high early, brake_on_m before the
@@ -156,6 +163,12 @@ The fundamentals, each with the numbers that show it:
    numbers, not by fixed values: cars, tracks and games differ.
 
 Rules:
+- Build the tips on the checks: a found check is a tip (clear before slight, larger time first), explained
+  with the numbers in DATA and turned into one action. A check that repeats in lap_checks is one tip for
+  all those sections. A good check that says yes is something to keep, not to change. Add a tip from the
+  other data only where the checks clearly miss something.
+- Be encouraging and precise, never harsh: the times are possibilities ("about", "up to"); gain_s is the
+  check's time where it has one.
 - Every number in a tip comes from DATA; never invent one. The time at stake is measured (delta_by_50m,
   time_s) or, for a fundamental with nothing to measure against, estimated from the speeds in DATA with
   "about" in the text.

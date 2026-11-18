@@ -1,6 +1,6 @@
 # Handover – local session on the Windows PC
 
-For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
+For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach and the coach's checks in Python). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
 **The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then check the new motion values (step 1b), then work on the open items with the owner.
 
@@ -13,7 +13,7 @@ python core\server.py --check
 python core\server.py
 ```
 
-All 88 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
+All 98 tests must pass and `--check` must list five games (ace, acr, demo, dr2, iracing) with `Result OK`. Pages: `/Racing_Dashboard` (home), `/gear`, `/dash`, `/analysis`, `/boost`, `/grip`, `/tyres`, `/damage`, `/map`, `/Startup` (page names in any case); `/state` is the live frame, `/api/info` the dash map. An open page reloads itself when files in `ui/` change; **the bridge must be restarted after `git pull` and after every change to Python code** (the owner hit this twice: a bridge started before a commit serves the old fields). Log: `logs\racing-dashboard.log`.
 
 `tools\ace_probe.py` is gone (see below): use `tools\live.py`. **Edit files with the Edit tool or Python (utf-8), never PowerShell Get-Content / Set-Content** (that broke the `°` in `rd.js` once; `tests/test_encoding.py` catches it).
 
@@ -26,6 +26,7 @@ The owner wants a coach that works on any track and car, so **no fixed phases, s
 - The trainer's trace gets grip % (combined g against the car's own peak), balance (front minus rear slip angle), front and rear slip %; the facts get the largest body slip and the metres with wheels off; the prompt explains them and has a grip-and-balance fundamental and the categories GRIP, BALANCE.
 - `tools/live.py motion` watches them; the check after `--record` tests their signs against braking, throttle and steering and the slip angle unit.
 - **Nothing of this is checked in a game yet**: signs and units are the usual conventions of each game's documentation.
+- **The coach's checks in Python** (`core/coach.py`, owner: the evaluation is not left to the AI): for every section the lap has driven through, G1–G6 (good driving: yes / partly / no) and 22 room-to-improve checks (B braking, E entry, M middle, X exit, L limits and aids) with how clearly, where, what was seen and a rough time (at most half of what was lost against BEST there, never more than 0.3 s). Gentle by design, every limit relative to the car (grip against its own peak at that speed). The AI gets them as `checks` and `lap_checks` and is told to build its tips on them; `python tools\live.py --coach` and `GET /api/coach` show them without any AI. The limits are constants at the top of `core/coach.py`.
 
 ## What the cloud cleanup session changed (`46c453a`)
 
@@ -73,6 +74,7 @@ One question per recording ("three hard stops with ABS off"). To find an unknown
 1. `python tools\live.py motion` while driving: `g_lat`, `g_long`, `yaw_rate`, `body_slip`, `slip_angle`, `wheels_out` must move with the car.
 2. `python tools\live.py --record 90`: hard stops, full throttle out of slow corners, corners both left and right, two wheels over a kerb. The MOTION part of the check must say "sign OK" for each line and a slip angle of a few degrees. A flipped sign: change it in `kunos.motion` (`core/kunos.py`, shared with ACR) and the expected values in `tests/test_ace.py`; slip angles around 0.05: set `SLIP_ANGLE_RAD = False`. The check relies on the steering sign (+ = right), which is itself not confirmed: if every sign looks flipped, check the steering first.
 3. Ask the AI TRAINER on a lap recorded after `git pull` and read the facts sent (`data\trainer.jsonl`, field `data`): the trace has 10 columns, `car_limits_g` is there.
+4. `python tools\live.py --coach` after a few laps: ask the owner whether the yes / no of each section matches how the corner felt. A check that fires too often or too harshly: loosen its constant in `core/coach.py` (and its test in `tests/test_coach.py`); write down what was changed and why in [COACHING.md](COACHING.md) section 7.
 
 If something is off after the cleanup, compare with the commit before it (`git diff 06b1135 46c453a -- <file>`) and fix forward.
 
@@ -97,7 +99,9 @@ For each: GAME → the game, then `python tools\live.py` (do the values follow t
 
 | Commit | What |
 | --- | --- |
-| this one | the car's motion for the AI coach (above) |
+| this one | the coach's checks in Python (above) |
+| `5665d1d` | the list of value combinations (COACHING.md section 7) |
+| `53e82b9` | the car's motion for the AI coach (above) |
 | `138abef` | `docs/COACHING.md`, first as a proposal with phases and scenarios in code; replaced by the owner's decision above |
 | `46c453a` | the cloud cleanup (above) |
 | `06b1135` | Encoding test fixed (it matched its own docstring once tracked), the handover |

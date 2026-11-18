@@ -12,6 +12,7 @@ window:
   python tools/live.py --record 60             record every frame for 60 s (20 a second) to
                                                logs/live-<game>-<date_time>.jsonl, then check it
   python tools/live.py --check last            check the newest recording again (or give a file)
+  python tools/live.py --coach                 the coach's checks per section of the last lap (G1: yes ...), no AI
 
 The check prints what each open question needs (docs/HANDOVER.md): the sign of the wheel slip under braking
 and on wheelspin, the GRIP stages per wheel, the signs of the g forces and the yaw rate against braking,
@@ -353,6 +354,31 @@ def check_fields(frames: list) -> None:
             print(f"   {name}: {', '.join(seen[:8])}{' ...' if len(seen) > 8 else ''}")
 
 
+def coach_report(url: str) -> None:
+    """The coach's checks (core/coach.py) per section of the last complete lap, from GET /api/coach."""
+    with urllib.request.urlopen(url + "/api/coach", timeout=10) as reply:
+        print_report(json.loads(reply.read()))
+
+
+def print_report(report: dict) -> None:
+    if not report.get("sections"):
+        print("no lap to check yet (drive a lap with the analysis on)")
+        return
+    names = report["names"]
+    print(f"== {report['game']} / {report['track']} / {report['car']}, lap {report['lap']}")
+    if report.get("limits"):
+        print(f"   car's grip: {report['limits']}")
+    for sec in report["sections"]:
+        checks = sec["checks"]
+        good = "  ".join(f"{c} {v.split(' · ')[0]}" for c, v in checks.items() if c.startswith("G"))
+        print(f"\n-- section {sec['section']} ({sec['type'] or '?'}):  {good}")
+        for code, text in checks.items():
+            if not code.startswith("G") and text.startswith("yes"):
+                print(f"   {code} {names.get(code, '')}: {text}")
+    print("\nG = good driving (yes / partly / no); the others are listed only when found. Estimates are rough:")
+    print("at most half of the time lost against BEST in that stretch, never more than 0.3 s.")
+
+
 def newest() -> Path | None:
     files = sorted((ROOT / "logs").glob("live-*.jsonl"), key=lambda p: p.stat().st_mtime)
     return files[-1] if files else None
@@ -367,6 +393,7 @@ def main() -> None:
     parser.add_argument("--once", action="store_true", help="print the whole frame once as JSON")
     parser.add_argument("--record", type=float, metavar="SECONDS", help="record every frame to logs/ and check it")
     parser.add_argument("--check", metavar="FILE", help="check a recording ('last' = the newest in logs/)")
+    parser.add_argument("--coach", action="store_true", help="the coach's checks per section of the last lap (no AI)")
     parser.add_argument("--url", help="the bridge, default http://127.0.0.1:<port from the config>")
     args = parser.parse_args()
     if args.check:
@@ -379,6 +406,8 @@ def main() -> None:
     try:
         if args.once:
             print(json.dumps(frame(url), indent=1, sort_keys=True))
+        elif args.coach:
+            coach_report(url)
         elif args.record:
             check(record(url, args.record, args.hz or 20))
         else:

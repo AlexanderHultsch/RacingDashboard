@@ -285,7 +285,8 @@ class RecorderTest(unittest.TestCase):
         row = self.rec.section(1)["last"][5]
         self.assertEqual(row[18:22], [1.21, -0.4, 18.5, -1.25])
         self.assertEqual(row[22:27], [4.5, 2.5, -0.15, 0.02, 1])    # angles: mean size per axle; ratio: the worst wheel
-        self.assertEqual(self.rec.state()["limits"], {"lat_g": 1.21, "brake_g": 0.4, "accel_g": 0.0, "combined_g": 1.27})
+        self.assertEqual(self.rec.state()["limits"], {"lat_g": 1.21, "brake_g": 0.4, "accel_g": 0.0, "combined_g": 1.27,
+                                                      "combined_by_speed": {"160-200": 1.27}})
 
     def test_driving_aids_are_recorded(self):
         aids = {"tc_active": False, "abs_active": False, "esc_active": False, "tc_level": 3, "tc_cut_level": 2,

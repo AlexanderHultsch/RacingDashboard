@@ -51,6 +51,7 @@ LEVELS = ("tc_level", "tc_cut_level", "abs_level", "esc_level", "engine_map")
 # motion values in the sample lines: the frame's field, the key in the file, decimals
 MOTION = (("g_lat", "ga", 3), ("g_long", "gl", 3), ("yaw_rate", "yaw", 1), ("body_slip", "bs", 2))
 PEAK_SAMPLES = 5             # a grip peak counts only when held this many samples (~0.17 s): no kerb or crash spikes
+SPEED_BAND = 40              # km/h per band of the car's grip by speed
 
 
 def _flag(value):
@@ -88,24 +89,34 @@ def axles(sa, sr) -> list:
 
 class Peaks:
     """The car's grip as it showed it in this run: the highest lateral, braking, accelerating and combined g held
-    for PEAK_SAMPLES samples in a row (a kerb strike or a crash is shorter). The AI trainer measures grip use
-    against these, so the same facts work for every car and game."""
+    for PEAK_SAMPLES samples in a row (a kerb strike or a crash is shorter), and the combined peak per speed band
+    of SPEED_BAND km/h (a downforce car has less grip slow than fast). The trainer and the coach's checks
+    measure grip use against these, so the same facts work for every car and game."""
 
     def __init__(self):
         self.best = {"lat_g": 0.0, "brake_g": 0.0, "accel_g": 0.0, "combined_g": 0.0}
+        self.bands = {}
         self.recent = []
 
-    def add(self, g_lat, g_long) -> None:
+    def add(self, g_lat, g_long, kmh=None) -> None:
         if g_lat is None or g_long is None:
             self.recent = []
             return
-        self.recent = (self.recent + [(abs(g_lat), max(0.0, -g_long), max(0.0, g_long), math.hypot(g_lat, g_long))])[-PEAK_SAMPLES:]
+        sample = (abs(g_lat), max(0.0, -g_long), max(0.0, g_long), math.hypot(g_lat, g_long), kmh)
+        self.recent = (self.recent + [sample])[-PEAK_SAMPLES:]
         if len(self.recent) == PEAK_SAMPLES:
             for k, name in enumerate(self.best):
                 self.best[name] = max(self.best[name], min(r[k] for r in self.recent))
+            if kmh is not None:
+                band = int(kmh // SPEED_BAND)
+                self.bands[band] = max(self.bands.get(band, 0.0), min(r[3] for r in self.recent))
 
     def public(self) -> dict | None:
-        return {k: round(v, 2) for k, v in self.best.items()} if self.best["combined_g"] > 0 else None
+        if self.best["combined_g"] <= 0:
+            return None
+        out = {k: round(v, 2) for k, v in self.best.items()}
+        out["combined_by_speed"] = {f"{b * SPEED_BAND}-{(b + 1) * SPEED_BAND}": round(g, 2) for b, g in sorted(self.bands.items())}
+        return out
 
 
 def slug(text) -> str:
@@ -306,7 +317,7 @@ class Recorder:
                *[_num(frame.get(name), digits) for name, _, digits in MOTION],
                _wheels(frame.get("slip_angle"), 2), _wheels(frame.get("wheel_slip"), 3),
                frame.get("wheels_out") if isinstance(frame.get("wheels_out"), int) else None]
-        self.peaks.add(row[GLAT], row[GLONG])
+        self.peaks.add(row[GLAT], row[GLONG], row[V])
         last = self.last
         self.paused = False
         self.last = row
@@ -562,7 +573,7 @@ class Recorder:
         folder = self._baseline_dir()
         self.base = {"lap": self._read_baseline(folder / "lap.jsonl"), "sections": {}}
         for s in (self.base["lap"] or {}).get("samples", []):        # the saved best lap shows the car's grip too
-            self.peaks.add(s.get("ga"), s.get("gl"))
+            self.peaks.add(s.get("ga"), s.get("gl"), s.get("v"))
         self.peaks.recent = []
         for n in range(self.sections):
             entry = self._read_baseline(folder / "sections" / f"section-{n + 1:02d}.jsonl")

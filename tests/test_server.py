@@ -86,6 +86,14 @@ class Bridge(unittest.TestCase):
         code, reply = post("/api/trainer/ask", {"mode": "track"})
         self.assertEqual(code, 409)                                  # no run recorded yet, or no AI
 
+    def test_coach_report(self):
+        status, _, body = get("/api/coach")
+        report = json.loads(body)
+        self.assertEqual(status, 200)
+        self.assertIn("sections", report)                            # empty until a lap is done, never an error
+        if report.get("names"):
+            self.assertIn("G1", report["names"])
+
     def test_frames_carry_the_page_version(self):
         # an open page compares it and reloads itself when the bridge serves newer page files
         frame = json.loads(get("/state")[2])

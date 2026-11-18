@@ -17,6 +17,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import coach
 from recorder import interp
 
 PROVIDERS = ("off", "claude", "chatgpt", "gemini", "ollama")
@@ -61,6 +62,12 @@ Reading DATA (metres count from the section start; a larger value is later):
 - gears, shifts: the gears used and where they changed. aids: where TC / ABS / stability worked and the
   set levels.
 - delta_by_50m (LAST and NOW): seconds behind BEST at every 50 m. Where it grows is where the time goes.
+- checks (NOW): the bridge's own evaluation of this section, computed from the values above, each relative
+  to this car. G1-G6 (good driving): yes, partly or no. The others (room to improve) appear only when found:
+  "yes · slight or clear · from-to m · about N s · what was seen". The time is a rough estimate (at most
+  half of what NOW lost against BEST there); none without BEST. lap_checks (whole lap): for each found
+  check the sections where it was found, for each good check how many sections passed.
+  Codes: {codes}.
 
 The fundamentals, each with the numbers that show it:
 1. Braking point: brake hard and in a straight line. brake_peak_pct high early, brake_on_m before the
@@ -84,6 +91,12 @@ The fundamentals, each with the numbers that show it:
    numbers, not by fixed values: cars, tracks and games differ.
 
 Rules:
+- Build the tips on the checks: a found check is a tip (clear before slight, larger time first), explained
+  with the numbers in DATA and turned into one action. A check that repeats in lap_checks is one tip for
+  all those sections. A good check that says yes is something to keep, not to change. Add a tip from the
+  other data only where the checks clearly miss something.
+- Be encouraging and precise, never harsh: the times are possibilities ("about", "up to"); gain_s is the
+  check's time where it has one.
 - Every number in a tip comes from DATA; never invent one. The time at stake is measured (delta_by_50m,
   time_s) or, for a fundamental with nothing to measure against, estimated from the speeds in DATA with
   "about" in the text.
@@ -103,6 +116,8 @@ title: at most 4 words, an instruction in capitals, the action only (the place i
 must say the same as the text, and it starts with the category: BRAKING, RELEASE, APEX, THROTTLE, LINE,
 GEAR, AIDS, GRIP, BALANCE or TIME (a loss against BEST without a fundamental). text: at most 35 words, metres, km/h and
 seconds, addressed to the driver, with the numbers from DATA."""
+
+SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{codes}", "; ".join(f"{c} {n}" for c, n in coach.CHECKS.items()))
 
 SCHEMA = {
     "type": "object",
@@ -151,11 +166,11 @@ class TrainerError(Exception):
 
 
 def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250.0, turn: float = 0.0,
-          grip_g: float | None = None) -> dict | None:
+          limits: dict | None = None) -> dict | None:
     """Facts of one line in one section. rows: [d, t, v, thr, brk, str, g, x, y, ..., rpm, motion ...]
     (recorder.section), d metres and t seconds from the section start. best_rows: the best line, for
     delta_by_50m and the line offset in the trace; turn: the section's signed turn (corner_facts), for the
-    inside / outside sign; grip_g: the car's peak combined g in this run, for the grip column of the trace."""
+    inside / outside sign; limits: the car's grip in this run (recorder Peaks), for the grip column of the trace."""
     if not rows or len(rows) < 2:
         return None
     d = [r[0] for r in rows]
@@ -209,7 +224,7 @@ def facts(rows: list, time_s, best_rows: list | None = None, length: float = 250
             break
     out["full_throttle_m"] = None if full is None else round(d[full])
     out["steer_max"] = round(max(abs(r[5]) for r in rows), 2)
-    out["trace"] = trace(rows, best_rows if best_rows and len(best_rows) > 1 else None, turn, grip_g)
+    out["trace"] = trace(rows, best_rows if best_rows and len(best_rows) > 1 else None, turn, limits)
     out.update(motion_facts(rows, d))
     aids = aid_facts(rows, d)
     if aids:
@@ -297,11 +312,11 @@ def _at(column, at: float):
     return None if column is None else interp(column[0], column[1], max(column[0][0], min(at, column[0][-1])))
 
 
-def trace(rows: list, best_rows: list | None, turn: float = 0.0, grip_g: float | None = None) -> list:
+def trace(rows: list, best_rows: list | None, turn: float = 0.0, limits: dict | None = None) -> list:
     """The line every 10 m: [m, km/h, throttle %, brake %, steering -100..100, off] and, where the car's motion
     was recorded, [grip %, balance, front slip %, rear slip %]. off = metres from the BEST line, positive
     towards the inside of the corner (with a best line and in a corner; else null when motion columns follow).
-    grip = combined g as % of the car's peak in this run; balance = front minus rear slip angle in degrees
+    grip = combined g as % of the car's peak at that speed in this run (coach.grip_reference); balance = front minus rear slip angle in degrees
     (more than 0: the front slides more); front / rear slip = the slip ratio % of the axle's most slipping
     wheel (negative = slower than the car, -100 locked; positive = wheelspin)."""
     d = [r[0] for r in rows]
@@ -332,7 +347,8 @@ def trace(rows: list, best_rows: list | None, turn: float = 0.0, grip_g: float |
             if len(point) == 5:
                 point.append(None)
             la, lo = _at(g_lat, at), _at(g_long, at)
-            grip = None if None in (la, lo) or not grip_g else round(math.hypot(la, lo) / grip_g * 100)
+            ref = coach.grip_reference(limits, point[1])
+            grip = None if None in (la, lo) or not ref else round(math.hypot(la, lo) / ref * 100)
             f, r = _at(sa_f, at), _at(sa_r, at)
             point += [grip, None if None in (f, r) else round(f - r, 1),
                       *[None if v is None else round(v * 100) for v in (_at(sr_f, at), _at(sr_r, at))]]
@@ -380,15 +396,22 @@ def aid_facts(rows: list, d: list) -> dict | None:
     return out or None
 
 
-def section_data(sec: dict, corner: dict | None = None, grip_g: float | None = None) -> dict:
-    """The three lines of one section (recorder.section) as facts, plus the section's shape."""
+def section_data(sec: dict, corner: dict | None = None, limits: dict | None = None) -> dict:
+    """The three lines of one section (recorder.section) as facts, plus the section's shape, and for NOW the
+    coach's checks (core/coach.py): every good-driving check that applies and the room-to-improve checks that
+    found something."""
     length = (sec.get("to_m") or 0) - (sec.get("from_m") or 0) or 250.0
     turn = corner["turn"] if corner else 0.0
     out = {
-        "best": facts(sec["best"], sec.get("best_time"), None, length, turn, grip_g),
-        "last": facts(sec["last"], sec.get("last_time"), sec["best"], length, turn, grip_g),
-        "now": facts(sec["now"], sec.get("now_time"), sec["best"], length, turn, grip_g),
+        "best": facts(sec["best"], sec.get("best_time"), None, length, turn, limits),
+        "last": facts(sec["last"], sec.get("last_time"), sec["best"], length, turn, limits),
+        "now": facts(sec["now"], sec.get("now_time"), sec["best"], length, turn, limits),
     }
+    if out["now"] and out["now"]["complete"]:                # only a section the lap has driven through
+        found = coach.evaluate(sec["now"], sec["best"], sec["last"], corner, limits, out["now"]["trace"])
+        checks = coach.brief(found, found_only=True)
+        if checks:
+            out["now"]["checks"] = checks
     if corner:
         out["corner"] = {k: v for k, v in corner.items() if k != "turn"}
     return out
@@ -414,7 +437,6 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
             "track_length_m": round(state["track_length_m"]), "section_m": state["section_m"]}
     from_game = meta["game"]
     limits = state.get("limits")
-    grip_g = limits["combined_g"] if limits else None
     if limits:
         meta["car_limits_g"] = limits              # the car's grip as it showed it in this run
     laps = {"now": state.get("red_lap"), "last": state.get("blue_lap")}
@@ -424,7 +446,7 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
         if n is None or not 0 <= n < state["sections"]:
             raise TrainerError("NO DATA", "no such section")
         sec = rec.section(n)
-        lines = section_data(sec, shapes[n], grip_g)
+        lines = section_data(sec, shapes[n], limits)
         if not any(lines.get(k) for k in ("best", "last", "now")):
             raise TrainerError("NO DATA", "nothing recorded in this section yet")
         length = round(sec["to_m"] - sec["from_m"])
@@ -460,14 +482,15 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
     losing = sorted((r for r in rows if r["now_vs_best"] is not None and r["now_vs_best"] > 0.05),
                     key=lambda r: -r["now_vs_best"])[:FOCUS_SECTIONS]
     focus = [{"section": r["section"], "lap_m": [round(secs[r["section"] - 1]["from_m"]), round(secs[r["section"] - 1]["to_m"])],
-              "lines": section_data(secs[r["section"] - 1], shapes[r["section"] - 1], grip_g)} for r in losing]
+              "lines": section_data(secs[r["section"] - 1], shapes[r["section"] - 1], limits)} for r in losing]
     driven = [r["section"] for r in rows if r["now_s"] is not None]
     lap_times = {"best_lap_s": state.get("base_lap"),
                  "last_lap_s": None if not last_lap or last_lap.time is None else round(last_lap.time, 3),
                  "now_lap_s": None if not now_lap or now_lap.time is None else round(now_lap.time, 3)}
     data = {"mode": "track", **meta, "sections_count": state["sections"],
             "laps": dict(laps, best="saved best lap and section bests"), "lap_times": lap_times,
-            "now_sections_driven": driven, "sections": rows, "focus": focus}
+            "now_sections_driven": driven, "sections": rows, "focus": focus,
+            "lap_checks": lap_checks(secs, shapes, limits)}
     task = f"TASK: Analyse the WHOLE LAP {head}, BEST is the saved best (lap and section bests)."
     if driven and len(driven) < state["sections"]:
         task += f" NOW has driven sections {driven[0]}-{driven[-1]} so far."
@@ -476,6 +499,51 @@ def build_request(rec, mode: str, n: int | None, game_name: str = "") -> tuple[s
             "times": f"NOW LAP {laps['now']} · {len(driven)} OF {state['sections']} SECTIONS · "
                      f"{'+' if loss >= 0 else '−'}{abs(loss):.3f} VS BEST"}
     return task, data, view
+
+
+def section_checks(sec: dict, corner: dict | None, limits: dict | None) -> dict:
+    """The coach's checks on the NOW line of one section (recorder.section), with every result; nothing for a
+    section the lap has not driven through yet."""
+    if len(sec.get("now") or []) < 4 or sec.get("now_time") is None:
+        return {}
+    turn = corner["turn"] if corner else 0.0
+    points = trace(sec["now"], sec["best"] if len(sec.get("best") or []) > 1 else None, turn, limits)
+    return coach.evaluate(sec["now"], sec["best"], sec["last"], corner, limits, points)
+
+
+def lap_checks(secs: dict, shapes: list, limits: dict | None) -> dict:
+    """The checks over the whole NOW lap: for each room-to-improve check the sections where it found something,
+    for each good-driving check how many sections passed. The AI sees patterns that repeat around the lap."""
+    found, good = {}, {}
+    for k, sec in secs.items():
+        for code, r in section_checks(sec, shapes[k], limits).items():
+            if code in coach.GOOD:
+                if r["result"] != "n/a":
+                    tally = good.setdefault(code, {"yes": 0, "partly": 0, "no": 0})
+                    tally[r["result"]] = tally.get(r["result"], 0) + 1
+            elif r["result"] == "yes":
+                found.setdefault(code, []).append(k + 1)
+    return {"good": good, "room_to_improve": found}
+
+
+def coach_report(rec) -> dict:
+    """Every check for every section of the lap the whole-track mode would analyse (the lap in progress once
+    complete, else the last complete lap), without asking any AI: GET /api/coach, tools/live.py --coach."""
+    state = rec.state()
+    if not state.get("active"):
+        return {"lap": None, "sections": []}
+    now_lap, last_lap = rec.complete_laps()
+    shapes = corners(state)
+    out = []
+    for k in range(state["sections"]):
+        sec = rec.section(k, (now_lap, last_lap))
+        results = section_checks(sec, shapes[k], state.get("limits"))
+        if results:
+            out.append({"section": k + 1, "type": shapes[k]["type"] if shapes[k] else None,
+                        "checks": coach.brief(results)})
+    return {"game": state["game"], "car": state["car"], "track": state["track"],
+            "lap": now_lap.no if now_lap else None, "limits": state.get("limits"), "names": coach.CHECKS,
+            "sections": out}
 
 
 # ------------------------------------------------------------------ answer
