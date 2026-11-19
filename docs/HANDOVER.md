@@ -2,7 +2,9 @@
 
 For the next Claude session **on the owner's Windows PC** (ACE, Assetto Corsa Rally, iRacing, DiRT Rally 2.0, the iPad and the iPhone at hand). Written by the cloud sessions after the local session of 9 November 2026 (last update 18 November 2026: the car's motion for the AI coach, the coach's checks in Python, the AI DETAIL LOG switch, the analysis pipeline). Read this first, then [README.md](../README.md), [SPEC.md](SPEC.md), and as needed [ANALYSIS.md](ANALYSIS.md), [TRAINER.md](TRAINER.md) and the game notes ([ACE](ACE/NOTES.md), [ACR](ACR/NOTES.md), [IRACING](IRACING/NOTES.md), [DR2](DR2/NOTES.md)).
 
-**The job for this session:** first make sure the cleanup changed nothing in the game (step 1 of the test plan, ten minutes with ACE), then check the new motion values (step 1b), then work on the open items with the owner.
+**The job for this session:** steps 1 and 1b.1–2 were done with the owner on 19 November 2026 (results below); go on with step 1b.3–5 (trainer facts, pipeline, coach with three laps and the AI DETAIL LOG on), then the open items.
+
+**Done on 19 November 2026 (local, Toyota Supra MKIV, Brands Hatch):** the cleanup check (step 1) passed: GEAR + REV, DASH, all phone pages and ANALYSIS as before (lap 2:13.171, the game's 2:13.167), a 60 s recording with every field and no error in the log. The motion values (step 1b.1–2): every sign right, `slipAngle` in radians (fast corners front 3.2 / rear 3.1 / body slip 2.4 degrees), grip peaks realistic and a 7 g standing spike ignored. Open from it: the front slip angle reaches 40–50 degrees at big steering lock while the rear stays ~2 (ACE seems to add something there; the coach's balance is unreliable in slow corners), and `wheels_out` was only tried over a kerb (stays 0). Details: [ACE/NOTES.md](ACE/NOTES.md).
 
 ## Start
 
@@ -137,8 +139,8 @@ For each: GAME → the game, then `python tools\live.py` (do the values follow t
 
 ## Open, in the owner's order of interest
 
-1. The cleanup check in ACE (test plan 1).
-2. The motion values in ACE (test plan 1b), then fine-tuning the AI coach with real answers ([COACHING.md](COACHING.md) section 7).
+1. The cleanup check in ACE: **done 19 November 2026**, nothing broken.
+2. The motion values in ACE: signs and units **done 19 November 2026**; still open: the front slip angle at big steering lock, `wheels_out` off the track, then test plan 1b.3–5 (trainer facts, pipeline, coach) and fine-tuning the AI coach with real answers ([COACHING.md](COACHING.md) section 7).
 3. A new DASH card: ask the owner what it should show.
 4. MAP on a new track, DAMAGE after a crash, GRIP feel and a recording with ABS / TC on, AI trainer quality (test plan 2).
 5. First drives in ACR, iRacing, DR2 (test plan 3).
